@@ -2,7 +2,7 @@
   "meshtastic": {
     "interface": {
       "type": "tcp",
-      "host": "192.168.1.91",
+      "host": "192.168.1.1",
       "port": 4403
     },
     "backup_interfaces": [],
