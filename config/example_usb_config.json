@@ -1,0 +1,12 @@
+{
+  "meshtastic": {
+    "interface": {
+      "type": "serial",
+      "port": "/dev/ttyUSB0"
+    }
+  },
+  "dashboard": {
+    "refresh_rate_ms": 5000,
+    "time_format": "DDd:HHh:MMm:SSs"
+  }
+}

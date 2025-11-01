@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+
+# Project specific - data and logs
+logs/
+*.log
+latest_data.json
+archive/
+
+# Config files with sensitive information
+config/app_config.json
+config/node_alert_settings.json
+
+# Keep templates but not actual config
+!config/app_config_template.json
+
+# Personal/sensitive files
+*password*
+*secret*
+*.key
+*token*
+
+# Testing files
+test_*.py
+*_test.py
+*_mockup.py
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# Backup files
+*.bak
+*.backup
+*~

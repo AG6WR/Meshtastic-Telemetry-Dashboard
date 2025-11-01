@@ -1,0 +1,66 @@
+{
+  "meshtastic": {
+    "interface": {
+      "type": "tcp",
+      "host": "192.168.1.91",
+      "port": 4403
+    },
+    "backup_interfaces": [],
+    "connection_timeout": 30,
+    "retry_interval": 60
+  },
+  "dashboard": {
+    "refresh_rate_ms": 5000,
+    "time_format": "DDd:HHh:MMm:SSs",
+    "stale_row_seconds": 300,
+    "recent_field_seconds": 300,
+    "stale_field_seconds": 3600,
+    "window_geometry": "1123x225+28+97"
+  },
+  "data": {
+    "retain_days": 30,
+    "data_file": "latest_data.json",
+    "log_directory": "logs",
+    "backup_enabled": true,
+    "backup_interval_hours": 24
+  },
+  "alerts": {
+    "enabled": true,
+    "check_interval_seconds": 60,
+    "startup_grace_minutes": 10,
+    "email_enabled": false,
+    "email_config": {
+      "smtp_server": "smtp.example.com",
+      "smtp_port": 587,
+      "use_tls": true,
+      "username": "your_email@example.com",
+      "password": "your_app_password_here",
+      "from_address": "your_email@example.com",
+      "to_addresses": [
+        "alerts@example.com"
+      ]
+    },
+    "rules": {
+      "node_offline": {
+        "enabled": true,
+        "threshold_seconds": 960,
+        "cooldown_minutes": 1440
+      },
+      "low_battery": {
+        "enabled": false,
+        "threshold_percent": 20,
+        "cooldown_minutes": 60
+      },
+      "high_temperature": {
+        "enabled": true,
+        "threshold_celsius": 35,
+        "cooldown_minutes": 60
+      },
+      "low_voltage": {
+        "enabled": true,
+        "threshold_volts": 11.0,
+        "cooldown_minutes": 60
+      }
+    }
+  }
+}
