@@ -464,7 +464,8 @@ class TelemetryPlotter:
             14: "2 Weeks",
             30: "30 Days"
         }
-        title_text = f"{param_info['name']} vs Time (Last {time_desc.get(config['days'], f'{config["days"]} Days')})"
+        days_text = time_desc.get(config['days'], f"{config['days']} Days")
+        title_text = f"{param_info['name']} vs Time (Last {days_text})"
         canvas.create_text(width//2, 20, text=title_text, 
                          fill="white", font=("Arial", 16, "bold"))
         
