@@ -10,7 +10,7 @@
 ### Clean Up the Project
 ```bash
 # Navigate to your project directory
-cd "C:\Users\brian\MeshtasticScripts\MultiNode\Enhanced"
+cd "path\to\your\project"
 
 # Remove unnecessary files (add these to .gitignore)
 # - __pycache__ folders
@@ -190,7 +190,7 @@ Created for CERT ICP telemetry monitoring operations.
 ### Method 2: Git Command Line
 ```bash
 # Initialize git in your project
-cd "C:\Users\brian\MeshtasticScripts\MultiNode\Enhanced"
+cd "path\to\your\project"
 git init
 
 # Add remote repository
