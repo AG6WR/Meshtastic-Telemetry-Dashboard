@@ -352,7 +352,8 @@ class TelemetryPlotter:
         }
         
         param_name = param_info[config['parameter']]['name']
-        title = f"{param_name} Plot - Last {time_desc.get(config['days'], f'{config["days"]} Days')}"
+        days_text = time_desc.get(config['days'], f"{config['days']} Days")
+        title = f"{param_name} Plot - Last {days_text}"
         plot_window.title(title)
         plot_window.geometry("900x600")
         plot_window.configure(bg='#1e1e1e')
