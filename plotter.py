@@ -21,8 +21,13 @@ class TelemetryPlotter:
         self.config_manager = config_manager
         self.colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF']
         
-    def show_plot_dialog(self):
-        """Show plot configuration dialog"""
+    def show_plot_dialog(self, preselect_node_id=None, parent_window=None):
+        """Show plot configuration dialog
+        
+        Args:
+            preselect_node_id: Optional node ID to pre-select (all others will be deselected)
+            parent_window: Optional parent window to position relative to (e.g., node detail window)
+        """
         try:
             # First get available nodes
             available_nodes = self.get_available_nodes()
@@ -31,7 +36,7 @@ class TelemetryPlotter:
                 return
                 
             # Show configuration dialog
-            config = self.show_config_dialog(available_nodes)
+            config = self.show_config_dialog(available_nodes, preselect_node_id, parent_window)
             if not config:
                 return  # User cancelled
                 
@@ -91,26 +96,46 @@ class TelemetryPlotter:
         
         return available_nodes
     
-    def show_config_dialog(self, available_nodes):
-        """Show configuration dialog for plot options"""
+    def show_config_dialog(self, available_nodes, preselect_node_id=None, parent_window=None):
+        """Show configuration dialog for plot options
+        
+        Args:
+            available_nodes: Dict of available nodes
+            preselect_node_id: Optional node ID to pre-select (all others will be deselected)
+            parent_window: Optional parent window to position relative to
+        """
         dialog = tk.Toplevel(self.parent)
         dialog.title("Plot Configuration")
-        dialog.geometry("450x800")
+        dialog.geometry("450x560")  # Reduced from 800 to 560 (30% reduction)
         dialog.configure(bg='#1e1e1e')
         dialog.transient(self.parent)
         dialog.grab_set()
         dialog.resizable(True, True)
         
+        # Position dialog relative to parent_window if provided
+        if parent_window:
+            dialog.update_idletasks()  # Ensure geometry is calculated
+            
+            # Get parent window position and size
+            parent_x = parent_window.winfo_x()
+            parent_y = parent_window.winfo_y()
+            
+            # Position slightly down and to the right (30px down, 40px right)
+            x = parent_x + 40
+            y = parent_y + 30
+            
+            dialog.geometry(f"450x560+{x}+{y}")
+        
         result = {}
         
-        # Title
+        # Title - smaller font
         title_label = tk.Label(dialog, text="Telemetry Plot Configuration", 
-                              bg='#1e1e1e', fg='white', font=("Arial", 14, "bold"))
-        title_label.pack(pady=10)
+                              bg='#1e1e1e', fg='white', font=("Arial", 11, "bold"))  # Reduced from 14 to 11
+        title_label.pack(pady=5)  # Reduced padding from 10 to 5
         
         # Parameter selection
         param_frame = tk.LabelFrame(dialog, text="Parameter to Plot", bg='#2d2d2d', fg='white')
-        param_frame.pack(fill="x", padx=20, pady=(0, 10))
+        param_frame.pack(fill="x", padx=20, pady=(0, 5))  # Reduced padding
         
         param_var = tk.StringVar(value="temperature")
         param_options = [
@@ -137,7 +162,7 @@ class TelemetryPlotter:
         
         # Time window selection
         time_frame = tk.LabelFrame(dialog, text="Time Window", bg='#2d2d2d', fg='white')
-        time_frame.pack(fill="x", padx=20, pady=(0, 10))
+        time_frame.pack(fill="x", padx=20, pady=(0, 5))  # Reduced padding
         
         time_var = tk.StringVar(value="7")
         time_options = [
@@ -154,24 +179,25 @@ class TelemetryPlotter:
                                activebackground='#2d2d2d', activeforeground='white')
             rb.pack(anchor="w", padx=10, pady=2)
         
-        # Node selection - fixed height to prevent button overflow
-        node_frame = tk.LabelFrame(dialog, text="Select Nodes", bg='#2d2d2d', fg='white', height=300)
-        node_frame.pack(fill="x", padx=20, pady=(0, 20))
+        # Node selection - reduced height for smaller displays
+        node_frame = tk.LabelFrame(dialog, text="Select Nodes", bg='#2d2d2d', fg='white', height=180)  # Reduced from 300 to 180
+        node_frame.pack(fill="x", padx=20, pady=(0, 10))  # Reduced bottom padding from 20 to 10
         node_frame.pack_propagate(False)  # Prevent frame from shrinking/expanding
         
-        # "Select All" checkbox
-        select_all_var = tk.BooleanVar(value=True)
+        # "Select All" checkbox - default to True unless pre-selecting a specific node
+        select_all_default = (preselect_node_id is None)
+        select_all_var = tk.BooleanVar(value=select_all_default)
         select_all_cb = tk.Checkbutton(node_frame, text="All Nodes", variable=select_all_var,
                                       bg='#2d2d2d', fg='white', selectcolor='#404040',
                                       activebackground='#2d2d2d', activeforeground='white')
-        select_all_cb.pack(anchor="w", padx=10, pady=5)
+        select_all_cb.pack(anchor="w", padx=10, pady=3)  # Reduced padding from 5 to 3
         
         # Individual node checkboxes
         node_vars = {}
         node_checkboxes = []
         
-        # Create scrollable frame for nodes with fixed height
-        canvas = tk.Canvas(node_frame, bg='#2d2d2d', highlightthickness=0, height=220)
+        # Create scrollable frame for nodes with reduced height
+        canvas = tk.Canvas(node_frame, bg='#2d2d2d', highlightthickness=0, height=130)  # Reduced from 220 to 130
         scrollbar = tk.Scrollbar(node_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg='#2d2d2d')
         
@@ -183,9 +209,20 @@ class TelemetryPlotter:
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
         
+        # Debug: Log preselection info
+        if preselect_node_id:
+            logger.info(f"Preselecting node: {preselect_node_id}")
+            logger.info(f"Available nodes: {list(available_nodes.keys())}")
+        
         for node_id, node_info in available_nodes.items():
-            var = tk.BooleanVar(value=True)
+            # If preselect_node_id is specified, only select that node
+            should_select = (node_id == preselect_node_id) if preselect_node_id else True
+            var = tk.BooleanVar(value=should_select)
             node_vars[node_id] = var
+            
+            # Debug: Log selection decision
+            if preselect_node_id:
+                logger.debug(f"Node {node_id}: should_select={should_select} (comparing with {preselect_node_id})")
             
             display_name = f"{node_info['long_name']} ({node_info['short_name']})"
             cb = tk.Checkbutton(scrollable_frame, text=display_name, variable=var,
@@ -205,9 +242,9 @@ class TelemetryPlotter:
         
         select_all_cb.configure(command=toggle_all)
         
-        # Buttons
+        # Buttons - reduced padding
         button_frame = tk.Frame(dialog, bg='#1e1e1e')
-        button_frame.pack(fill="x", padx=20, pady=20, side="bottom")
+        button_frame.pack(fill="x", padx=20, pady=10, side="bottom")  # Reduced padding from 20 to 10
         
         def on_ok():
             selected_nodes = [node_id for node_id, var in node_vars.items() if var.get()]

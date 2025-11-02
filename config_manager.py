@@ -87,7 +87,18 @@ class ConfigManager:
                 "stale_row_seconds": 300,
                 "recent_field_seconds": 300,
                 "stale_field_seconds": 3600,
-                "window_geometry": "1520x780"
+                "window_geometry": "1520x780",
+                "telemetry_fields": {
+                    "voltage": True,
+                    "temperature": True,
+                    "humidity": False,
+                    "pressure": False,
+                    "battery": True,
+                    "snr": True,
+                    "channel_utilization": True,
+                    "current": False,
+                    "uptime": False
+                }
             },
             "data": {
                 "retain_days": 30,

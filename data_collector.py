@@ -48,6 +48,9 @@ class DataCollector:
         self.processing_thread = None
         self.stop_event = Event()
         
+        # Data change callback
+        self.on_data_changed = None
+        
         # Telemetry field mapping
         self.FIELDS = [
             "Temperature", "Humidity", "Pressure", "Voltage", "Current",
@@ -63,6 +66,18 @@ class DataCollector:
         )
         
         logger.info("Data collector initialized")
+    
+    def set_data_change_callback(self, callback):
+        """Set callback to be called when data changes"""
+        self.on_data_changed = callback
+    
+    def _notify_data_changed(self):
+        """Notify dashboard that data has changed"""
+        if self.on_data_changed:
+            try:
+                self.on_data_changed()
+            except Exception as e:
+                logger.error(f"Error in data change callback: {e}")
     
     def start(self):
         """Start the data collection system"""
@@ -321,6 +336,9 @@ class DataCollector:
                 
                 field_times = node_data.setdefault('Field Times', {})
                 field_times['lh'] = rx_time
+                
+            # Notify dashboard of data change
+            self._notify_data_changed()
                 
         except Exception as e:
             logger.error(f"Error updating basic node info: {e}")
