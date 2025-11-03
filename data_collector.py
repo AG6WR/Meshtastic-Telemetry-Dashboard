@@ -277,6 +277,10 @@ class DataCollector:
             if not metrics:
                 return
             
+            # Log when telemetry data arrives
+            timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+            logger.info(f"[{timestamp}] Telemetry data received for {node_id}: {list(metrics.keys())}")
+            
             # Get node names
             long_name, short_name = self.node_info_cache.get(node_id, ('Unknown Node', 'Unknown'))
             
@@ -315,7 +319,8 @@ class DataCollector:
     def _process_motion_packet(self, node_id, rx_time):
         """Process motion detection packet"""
         self.last_motion_by_node[node_id] = rx_time
-        logger.debug(f"Motion detected from {node_id}")
+        timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+        logger.info(f"[{timestamp}] Motion detected from {node_id}")
     
     def _update_node_basic_info(self, node_id, rx_time, rx_snr, hop_limit, portnum):
         """Update basic node information for any packet type"""
@@ -328,6 +333,10 @@ class DataCollector:
                 node_data = self.nodes_data[node_id]
                 node_data['Last Heard'] = rx_time
                 node_data['Last Packet Type'] = portnum
+                
+                # Update Last Motion if we have recent motion data
+                if node_id in self.last_motion_by_node:
+                    node_data['Last Motion'] = self.last_motion_by_node[node_id]
                 
                 field_times = node_data.setdefault('Field Times', {})
                 field_times['lh'] = rx_time

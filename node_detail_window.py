@@ -35,9 +35,6 @@ class NodeDetailWindow:
         logger = logging.getLogger(__name__)
         logger.info(f"NodeDetailWindow callbacks: logs={on_logs is not None}, csv={on_csv is not None}, plot={on_plot is not None}")
         
-        # Test callback for debugging
-        self.on_test = lambda: self._show_test_message()
-        
         # Get parent's color scheme BEFORE creating window
         self.colors = parent.colors
         
@@ -107,18 +104,8 @@ class NodeDetailWindow:
         if self.on_plot:
             tk.Button(button_frame, text="Plot", command=self.on_plot, **btn_config).pack(side="left", padx=(0, 5))
         
-        # TEST BUTTON
-        tk.Button(button_frame, text="TEST", command=self._show_test_message,
-                 bg='#ff6b35', fg='white').pack(side="left", padx=(10, 5))
-        
         # CLOSE BUTTON  
         tk.Button(button_frame, text="Close", command=self.window.destroy, **btn_config).pack(side="right")
-    
-    def _show_test_message(self):
-        """Show a test message box - for debugging button functionality"""
-        from tkinter import messagebox
-        messagebox.showinfo("Test Button", 
-                          f"TEST BUTTON WORKS!\n\nNode: {self.node_id}\n\nIf you see this, button bindings are working on Linux.")
     
     def _create_header(self):
         """Create header with node name and ID"""
@@ -403,13 +390,13 @@ class NodeDetailWindow:
             return self.colors['fg_good']
     
     def _get_snr_color(self, snr):
-        """Get color for SNR"""
-        if snr >= 5:
-            return self.colors['fg_good']
-        elif snr >= 0:
-            return self.colors['fg_warning']
+        """Get color for SNR - matches dashboard thresholds"""
+        if snr > 5:
+            return self.colors['fg_good']      # Green - Good signal (above +5dB)
+        elif snr >= -10:
+            return self.colors['fg_yellow']    # Yellow - OK signal (-10dB to +5dB)
         else:
-            return self.colors['fg_bad']
+            return self.colors['fg_bad']       # Red - Bad signal (below -10dB)
     
     def _bind_mousewheel(self, canvas):
         """Bind mousewheel to canvas for scrolling - supports both Windows and Linux"""

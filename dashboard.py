@@ -420,7 +420,7 @@ class EnhancedDashboard(tk.Tk):
         self.row_labels = {}
         self.card_widgets = {}  # Cache for card widgets to prevent flickering
         self.last_node_data = {}  # Track last data for each node to detect changes
-        self.flash_timers = {}  # Track active flash timers
+        self.flash_timers = {}  # Track active flash timers for cards
         self.selected_node_id = None
         self.last_refresh = 0
         self.view_mode = "table"  # "table" or "cards"
@@ -841,12 +841,8 @@ class EnhancedDashboard(tk.Tk):
                             else:
                                 fg = self.colors['fg_good']  # Green for normal temps (0-30°C)
                         elif key == 'Voltage':
-                            # Voltage fallback: use Ch3 Voltage if main Voltage is null/0
-                            display_voltage = value
-                            if value is None or value == 0.0:
-                                ch3_voltage = node_data.get('Ch3 Voltage')
-                                if ch3_voltage is not None and ch3_voltage != 0.0:
-                                    display_voltage = ch3_voltage
+                            # Prefer Ch3 Voltage (external) over Voltage (battery)
+                            display_voltage = node_data.get('Ch3 Voltage') or value
                             
                             if display_voltage is not None and display_voltage != 0.0:
                                 # Voltage color coding based on battery health ranges
@@ -1082,6 +1078,11 @@ class EnhancedDashboard(tk.Tk):
                 changed_nodes.add(node_id)
                 self.last_node_data[node_id] = node_data.copy()
         
+        # Log when cards are being updated
+        if changed_nodes:
+            timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+            logger.info(f"[{timestamp}] Card display updating for changed nodes: {changed_nodes}")
+        
         # If layout needs rebuild (new/removed nodes or first time)
         existing_nodes = set(self.card_widgets.keys())
         current_nodes = set(dict(sorted_nodes).keys())
@@ -1116,7 +1117,7 @@ class EnhancedDashboard(tk.Tk):
                     current_row_frame = tk.Frame(self.card_scrollable_frame, bg=self.colors['bg_main'])
                     current_row_frame.pack(fill="x", padx=5, pady=2)
                 
-                # Create card - mark as changed if it's new
+                # Create card - mark as changed if in changed_nodes
                 is_changed = node_id in changed_nodes
                 self.create_node_card(current_row_frame, node_id, node_data, current_col, card_width, is_changed)
                 
@@ -1144,7 +1145,9 @@ class EnhancedDashboard(tk.Tk):
         status = "Online" if time_diff <= 300 else "Offline"  # 5 minutes threshold
         
         # Main card frame - start with flash color if changed
-        bg_color = '#1a4d7a' if is_changed else self.colors['bg_frame']  # Dark blue flash
+        bg_color = self.colors['bg_selected'] if is_changed else self.colors['bg_frame']  # Use same dark blue as selected table row
+        if is_changed:
+            logger.info(f"Creating card for {node_id} with BLUE flash background")
         card_frame = tk.Frame(parent, bg=bg_color, relief='raised', bd=2, width=card_width)
         card_frame.pack(side="left", padx=4, pady=3)
         card_frame.pack_propagate(True)
@@ -1191,7 +1194,6 @@ class EnhancedDashboard(tk.Tk):
         # For offline nodes, show static last heard timestamp
         heard_label = None
         if status == "Offline" and last_heard:
-            from datetime import datetime
             heard_dt = datetime.fromtimestamp(last_heard)
             heard_text = f"Last heard: {heard_dt.strftime('%Y-%m-%d %H:%M:%S')}"
             # Small font for compact display
@@ -1222,8 +1224,8 @@ class EnhancedDashboard(tk.Tk):
         col3_frame.pack(side="left", padx=(6, 0))
         col3_frame.pack_propagate(False)
         
-        # Voltage in column 1
-        voltage = node_data.get('Voltage')
+        # Voltage in column 1 - prefer Ch3 Voltage (external) over Voltage (battery)
+        voltage = node_data.get('Ch3 Voltage') or node_data.get('Voltage')
         voltage_label = None
         if voltage is not None:
             voltage_text, voltage_color = self.get_voltage_display(voltage)
@@ -1348,6 +1350,8 @@ class EnhancedDashboard(tk.Tk):
             motion_display_duration = self.config_manager.get('dashboard.motion_display_seconds', 900)  # Default 15 minutes
             time_since_motion = current_time - last_motion
             
+            logger.info(f"Node {node_id}: last_motion={last_motion}, time_since={time_since_motion:.1f}s, threshold={motion_display_duration}s")
+            
             if time_since_motion <= motion_display_duration:
                 # Motion indicator - using text instead of emoji for Linux compatibility
                 motion_text = "Motion detected"
@@ -1395,9 +1399,50 @@ class EnhancedDashboard(tk.Tk):
             'motion_label': motion_label,
         }
         
-        # Schedule flash removal if this is a changed card
+        # If this card was created with blue background (is_changed), schedule restoration
         if is_changed:
-            self.flash_card(node_id, card_frame)
+            # Cancel any existing timer for this node
+            if node_id in self.flash_timers:
+                self.after_cancel(self.flash_timers[node_id])
+            
+            # Schedule restoration to normal background after 2 seconds
+            def restore_normal():
+                # Update the card's background directly instead of full redisplay
+                if node_id in self.card_widgets:
+                    card_info = self.card_widgets[node_id]
+                    normal_bg = self.colors['bg_frame']
+                    
+                    # Update card frame background
+                    card_info['frame'].config(bg=normal_bg)
+                    
+                    # Update all child frames
+                    for key in ['header_frame', 'left_header', 'right_header', 
+                               'lastheard_frame',
+                               'metrics1_frame', 'metrics2_frame', 'metrics3_frame',
+                               'col1_frame', 'col2_frame', 'col3_frame',
+                               'row2_col1_frame', 'row2_col2_frame']:
+                        if key in card_info and card_info[key]:
+                            card_info[key].config(bg=normal_bg)
+                    
+                    # Update all labels
+                    for key in ['name_label', 'nodeid_label', 'status_label', 'heard_label',
+                               'voltage_label', 'temp_label', 'util_label',
+                               'battery_label', 'motion_label']:
+                        if key in card_info and card_info[key]:
+                            card_info[key].config(bg=normal_bg)
+                    
+                    # Update SNR container and all its child labels
+                    if 'snr_label' in card_info and card_info['snr_label']:
+                        card_info['snr_label'].config(bg=normal_bg)
+                        # Update all bar labels inside the SNR container
+                        for child in card_info['snr_label'].winfo_children():
+                            if isinstance(child, tk.Label):
+                                child.config(bg=normal_bg)
+                
+                if node_id in self.flash_timers:
+                    del self.flash_timers[node_id]
+            
+            self.flash_timers[node_id] = self.after(2000, restore_normal)
     
     def update_node_card(self, node_id: str, node_data: Dict[str, Any], current_time: float, is_changed: bool = False):
         """Update existing card without recreating it (prevents flickering)"""
@@ -1405,10 +1450,6 @@ class EnhancedDashboard(tk.Tk):
             return
             
         card_info = self.card_widgets[node_id]
-        
-        # Flash the card if data changed
-        if is_changed:
-            self.flash_card(node_id, card_info['frame'])
         
         # Update node name if it changed (e.g., from "Unknown Node" to actual name)
         long_name = node_data.get('Node LongName', 'Unknown')
@@ -1433,7 +1474,6 @@ class EnhancedDashboard(tk.Tk):
         
         # Update static timestamp for offline nodes, hide for online nodes
         if status == "Offline" and last_heard:
-            from datetime import datetime
             heard_dt = datetime.fromtimestamp(last_heard)
             heard_text = f"Last heard: {heard_dt.strftime('%Y-%m-%d %H:%M:%S')}"
             
@@ -1458,8 +1498,8 @@ class EnhancedDashboard(tk.Tk):
         is_stale = status == "Offline"
         stale_color = self.colors['fg_secondary']  # Grey for stale data
         
-        # Update telemetry fields
-        voltage = node_data.get('Voltage')
+        # Update telemetry fields - prefer Ch3 Voltage (external) over Voltage (battery)
+        voltage = node_data.get('Ch3 Voltage') or node_data.get('Voltage')
         if voltage is not None and card_info['voltage_label']:
             voltage_text, voltage_color = self.get_voltage_display(voltage)
             # Use grey if stale, otherwise use color-coded value
@@ -1610,46 +1650,6 @@ class EnhancedDashboard(tk.Tk):
             messagebox.showwarning("Plotter Not Available", 
                                  "The telemetry plotter is not initialized.")
     
-    def flash_card(self, node_id: str, card_frame):
-        """Flash card background to indicate update - dark blue for 1 second"""
-        # Cancel any existing flash timer for this card
-        if node_id in self.flash_timers:
-            self.after_cancel(self.flash_timers[node_id])
-        
-        # Function to restore normal background
-        def restore_bg():
-            card_info = self.card_widgets.get(node_id)
-            if card_info:
-                normal_bg = self.colors['bg_frame']
-                card_frame.config(bg=normal_bg)
-                # Update all child frames
-                for key in ['header_frame', 'left_header', 'right_header', 
-                           'lastheard_frame',
-                           'metrics1_frame', 'metrics2_frame', 'metrics3_frame',
-                           'col1_frame', 'col2_frame', 'col3_frame',
-                           'row2_col1_frame', 'row2_col2_frame']:
-                    if key in card_info and card_info[key]:
-                        card_info[key].config(bg=normal_bg)
-                # Update all labels
-                for key in ['name_label', 'nodeid_label', 'status_label', 'heard_label',
-                           'voltage_label', 'temp_label', 'util_label',
-                           'battery_label', 'motion_label']:
-                    if key in card_info and card_info[key]:
-                        card_info[key].config(bg=normal_bg)
-                
-                # Update SNR container and all its child labels
-                if 'snr_label' in card_info and card_info['snr_label']:
-                    card_info['snr_label'].config(bg=normal_bg)
-                    # Update all bar labels inside the SNR container
-                    for child in card_info['snr_label'].winfo_children():
-                        if isinstance(child, tk.Label):
-                            child.config(bg=normal_bg)
-            if node_id in self.flash_timers:
-                del self.flash_timers[node_id]
-        
-        # Schedule restoration after 1 second
-        self.flash_timers[node_id] = self.after(1000, restore_bg)
-    
     def get_voltage_display(self, voltage: float):
         """Get voltage display with appropriate color coding"""
         if voltage is not None:
@@ -1754,10 +1754,15 @@ class EnhancedDashboard(tk.Tk):
 
 def main():
     """Main entry point"""
-    # Setup logging
+    # Setup logging to file and console
+    os.makedirs('logs', exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler('logs/meshtastic_monitor.log'),
+            logging.StreamHandler(sys.stdout)
+        ]
     )
     
     try:
