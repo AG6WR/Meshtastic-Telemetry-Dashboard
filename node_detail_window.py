@@ -35,6 +35,9 @@ class NodeDetailWindow:
         logger = logging.getLogger(__name__)
         logger.info(f"NodeDetailWindow callbacks: logs={on_logs is not None}, csv={on_csv is not None}, plot={on_plot is not None}")
         
+        # Test callback for debugging
+        self.on_test = lambda: self._show_test_message()
+        
         # Create top-level window
         # Parent is the dashboard, which has a root attribute or IS the root
         root = getattr(parent, 'root', parent)
@@ -111,9 +114,21 @@ class NodeDetailWindow:
             self.btn_plot = tk.Button(button_frame, text="Plot", **btn_config)
         self.btn_plot.pack(side="left", padx=(0, 5))
         
+        # TEST BUTTON - always has command, should always work
+        self.btn_test = tk.Button(button_frame, text="TEST", 
+                            command=self.on_test,
+                            bg='#ff6b35', fg='white')
+        self.btn_test.pack(side="left", padx=(10, 5))
+        
         self.btn_close = tk.Button(button_frame, text="Close",
                              command=self.window.destroy, **btn_config)
         self.btn_close.pack(side="right")
+    
+    def _show_test_message(self):
+        """Show a test message box - for debugging button functionality"""
+        from tkinter import messagebox
+        messagebox.showinfo("Test Button", 
+                          f"TEST BUTTON WORKS!\n\nNode: {self.node_id}\n\nIf you see this, button bindings are working on Linux.")
     
     def _create_header(self):
         """Create header with node name and ID"""

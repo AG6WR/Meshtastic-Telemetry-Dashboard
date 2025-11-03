@@ -398,7 +398,7 @@ class SettingsDialog:
         self.dialog.destroy()
 
 # Version number - update manually with each release
-VERSION = "1.0.1"
+VERSION = "1.0.1a"
 
 def get_version_info():
     """Get version information"""
