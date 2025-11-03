@@ -18,7 +18,7 @@ from typing import Dict, Any, Optional
 from config_manager import ConfigManager
 from data_collector import DataCollector
 from plotter import TelemetryPlotter
-from node_detail_mockup import NodeDetailWindow
+from node_detail_window import NodeDetailWindow
 
 logger = logging.getLogger(__name__)
 
