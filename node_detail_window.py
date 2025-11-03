@@ -38,19 +38,18 @@ class NodeDetailWindow:
         # Test callback for debugging
         self.on_test = lambda: self._show_test_message()
         
+        # Get parent's color scheme BEFORE creating window
+        self.colors = parent.colors
+        
         # Create top-level window - use exact same pattern as working Plot dialog
         self.window = tk.Toplevel(self.parent)
         self.window.title(f"Node Details: {node_id}")
         self.window.geometry("380x550+50+50")  # 380x550 - reduced width by 25% for compact display
+        self.window.configure(bg=self.colors['bg_main'])
         
         # Make window modal - same as Plot dialog
         self.window.transient(self.parent)
         self.window.grab_set()
-        
-        # Use parent's color scheme
-        self.colors = parent.colors
-        
-        self.window.configure(bg=self.colors['bg_main'])
         
         # Create UI
         self._create_button_bar()  # Buttons at top
