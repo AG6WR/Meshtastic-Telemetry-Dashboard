@@ -501,7 +501,7 @@ class EnhancedDashboard(tk.Tk):
                  bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Refresh", command=self.force_refresh,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
-        self.view_btn = tk.Button(controls_frame, text="📋 Cards", command=self.toggle_view,
+        self.view_btn = tk.Button(controls_frame, text="Cards", command=self.toggle_view,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'])
         self.view_btn.pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Plot", command=self.show_plot,
@@ -1713,12 +1713,12 @@ class EnhancedDashboard(tk.Tk):
         """Toggle between table and card view"""
         if self.view_mode == "table":
             self.view_mode = "cards"
-            self.view_btn.config(text="📊 Table")
+            self.view_btn.config(text="Table")
             self.table_frame.pack_forget()
             self.card_container.pack(fill="both", expand=True, padx=8, pady=8)
         else:
             self.view_mode = "table"
-            self.view_btn.config(text="📋 Cards")
+            self.view_btn.config(text="Cards")
             self.card_container.pack_forget()
             self.table_frame.pack(fill="both", expand=True, padx=8, pady=8)
         

@@ -197,11 +197,6 @@ class DataCollector:
             if not node_id:
                 return
             
-            # Get local node ID to filter out our own packets
-            local_id = self.connection_manager.get_local_node_id()
-            if local_id and node_id == local_id:
-                return
-            
             # Extract packet details
             decoded = packet.get('decoded', {})
             portnum = decoded.get('portnum', 'UNKNOWN_APP')
