@@ -397,6 +397,24 @@ class SettingsDialog:
         self.result = False
         self.dialog.destroy()
 
+def get_version_info():
+    """Get version information from git"""
+    try:
+        import subprocess
+        # Get short commit hash
+        result = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], 
+                              capture_output=True, text=True, timeout=2)
+        if result.returncode == 0:
+            commit_hash = result.stdout.strip()
+            # Check if there are uncommitted changes
+            result = subprocess.run(['git', 'status', '--porcelain'], 
+                                  capture_output=True, text=True, timeout=2)
+            dirty = " (modified)" if result.stdout.strip() else ""
+            return f"v{commit_hash}{dirty}"
+    except Exception:
+        pass
+    return "unknown"
+
 class EnhancedDashboard(tk.Tk):
     """Enhanced dashboard with configurable settings and alert integration"""
     
@@ -432,7 +450,18 @@ class EnhancedDashboard(tk.Tk):
         """Setup the GUI"""
         # Window settings
         self.title("Enhanced Meshtastic Monitor")
+        
+        # Get saved geometry, but reset if it's too wide (from old default)
         geometry = self.config_manager.get('dashboard.window_geometry', '980x800')
+        # Parse width to check if it's from old 1600px default
+        try:
+            width = int(geometry.split('x')[0].split('+')[0])
+            if width > 1400:  # Old oversized geometry
+                geometry = '980x800'
+                self.config_manager.set('dashboard.window_geometry', geometry)
+        except (ValueError, IndexError):
+            geometry = '980x800'
+        
         self.geometry(geometry)
         
         # Dark theme colors
@@ -467,13 +496,25 @@ class EnhancedDashboard(tk.Tk):
         title_frame = tk.Frame(self, bg=self.colors['bg_main'])
         title_frame.pack(fill="x", padx=8, pady=(8, 0))
         
-        title_label = tk.Label(title_frame, 
+        # Title and version in same row
+        title_container = tk.Frame(title_frame, bg=self.colors['bg_main'])
+        title_container.pack(expand=True)
+        
+        title_label = tk.Label(title_container, 
                               text="CERT ICP Telemetry Dashboard",
                               font=self.font_title,
                               bg=self.colors['bg_main'], 
-                              fg=self.colors['fg_normal'],
-                              anchor="center")
-        title_label.pack(expand=True, pady=(0, 8))
+                              fg=self.colors['fg_normal'])
+        title_label.pack(side="left", pady=(0, 8))
+        
+        # Version info
+        version = get_version_info()
+        version_label = tk.Label(title_container,
+                                text=f" {version}",
+                                font=self.font_base,
+                                bg=self.colors['bg_main'],
+                                fg=self.colors['fg_secondary'])
+        version_label.pack(side="left", pady=(0, 8), padx=(8, 0))
         
         # Header frame
         header_frame = tk.Frame(self, bg=self.colors['bg_main'])
