@@ -38,12 +38,14 @@ class NodeDetailWindow:
         # Test callback for debugging
         self.on_test = lambda: self._show_test_message()
         
-        # Create top-level window
-        # Parent is the dashboard, which has a root attribute or IS the root
-        root = getattr(parent, 'root', parent)
-        self.window = tk.Toplevel(root)
+        # Create top-level window - use exact same pattern as working Plot dialog
+        self.window = tk.Toplevel(self.parent)
         self.window.title(f"Node Details: {node_id}")
         self.window.geometry("380x550+50+50")  # 380x550 - reduced width by 25% for compact display
+        
+        # Make window modal - same as Plot dialog
+        self.window.transient(self.parent)
+        self.window.grab_set()
         
         # Use parent's color scheme
         self.colors = parent.colors
