@@ -483,6 +483,16 @@ class EnhancedDashboard(tk.Tk):
                                     bg=self.colors['bg_main'], fg=self.colors['fg_normal'])
         self.status_label.pack(side="left", fill="x", expand=True)
         
+        # Connection status - moved to header frame for small displays
+        conn_frame = tk.Frame(header_frame, bg=self.colors['bg_main'])
+        conn_frame.pack(side="right")
+        
+        tk.Label(conn_frame, text="Connection:", bg=self.colors['bg_main'], 
+                fg=self.colors['fg_secondary']).pack(side="left", padx=(0, 5))
+        self.conn_status = tk.Label(conn_frame, text="Disconnected", fg=self.colors['fg_bad'],
+                                   bg=self.colors['bg_main'])
+        self.conn_status.pack(side="left")
+        
         # Control buttons
         controls_frame = tk.Frame(self, bg=self.colors['bg_main'])
         controls_frame.pack(fill="x", padx=8, pady=(0, 6))
@@ -504,16 +514,6 @@ class EnhancedDashboard(tk.Tk):
         self.btn_csv = tk.Button(controls_frame, text="Today's CSV", command=self.open_today_csv, state="disabled",
                                 bg=self.colors['button_bg'], fg=self.colors['button_fg'])
         self.btn_csv.pack(side="left")
-        
-        # Connection status
-        conn_frame = tk.Frame(controls_frame, bg=self.colors['bg_main'])
-        conn_frame.pack(side="right")
-        
-        tk.Label(conn_frame, text="Connection:", bg=self.colors['bg_main'], 
-                fg=self.colors['fg_secondary']).pack(side="left", padx=(0, 5))
-        self.conn_status = tk.Label(conn_frame, text="Disconnected", fg=self.colors['fg_bad'],
-                                   bg=self.colors['bg_main'])
-        self.conn_status.pack(side="left")
         
         # Table frame
         self.table_frame = tk.Frame(self, bg=self.colors['bg_frame'])
@@ -1204,7 +1204,7 @@ class EnhancedDashboard(tk.Tk):
                 temp_color = self.colors['fg_good']  # Green for normal temps (0-30°C)
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else temp_color
-            temp_text = f"🌡{temp:.1f}°C"
+            temp_text = f"T: {temp:.1f}°C"
             temp_label = tk.Label(col2_frame, text=temp_text,
                                  bg=bg_color, fg=display_color,
                                  font=self.font_data_bold, anchor='w')
@@ -1217,7 +1217,7 @@ class EnhancedDashboard(tk.Tk):
             util_color = self.colors['fg_bad'] if channel_util > 80 else self.colors['fg_warning'] if channel_util > 50 else self.colors['fg_good']
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else util_color
-            util_text = f"📻{channel_util:.1f}%"
+            util_text = f"Ch: {channel_util:.1f}%"
             util_label = tk.Label(col3_frame, text=util_text,
                                  bg=bg_color, fg=display_color,
                                  font=self.font_data, anchor='w')
@@ -1245,8 +1245,8 @@ class EnhancedDashboard(tk.Tk):
             snr_container = tk.Frame(row2_col1_frame, bg=bg_color)
             snr_container.pack(fill="both", expand=True, anchor='w')
             
-            # Icon
-            icon_label = tk.Label(snr_container, text="📶", bg=bg_color, 
+            # Icon - using text instead of emoji for Linux compatibility
+            icon_label = tk.Label(snr_container, text="SNR:", bg=bg_color, 
                                  fg=self.colors['fg_secondary'], font=self.font_data)
             icon_label.pack(side="left", padx=0)  # No padding
             
@@ -1263,12 +1263,11 @@ class EnhancedDashboard(tk.Tk):
                                   size=9)  # Smaller than data font
             
             # Create each bar with its own color - NO spacing between bars
-            # Use anchor='s' to align baselines at the bottom
+            # No anchor specified - use default center alignment to match text baseline
             for i, (char, color) in enumerate(zip(bar_chars, bar_colors)):
                 bar_label = tk.Label(snr_container, text=char, bg=bg_color,
-                                   fg=color, font=bar_font, padx=0, pady=0,
-                                   anchor='s', width=1, height=1)  # Fixed width, bottom aligned
-                bar_label.pack(side="left", padx=0, pady=0, anchor='s')  # Bottom align in container
+                                   fg=color, font=bar_font, padx=0, pady=0)
+                bar_label.pack(side="left", padx=0, pady=0)
             
             snr_label = snr_container  # Store container reference
         
@@ -1287,7 +1286,7 @@ class EnhancedDashboard(tk.Tk):
                 battery_color = self.colors['fg_good']  # Green for good
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else battery_color
-            battery_text = f"🔋{battery:.0f}%"
+            battery_text = f"Bat: {battery:.0f}%"
             battery_label = tk.Label(row2_col2_frame, text=battery_text,
                                    bg=bg_color, fg=display_color,
                                    font=self.font_data, anchor='w')
@@ -1307,8 +1306,8 @@ class EnhancedDashboard(tk.Tk):
             time_since_motion = current_time - last_motion
             
             if time_since_motion <= motion_display_duration:
-                # Motion indicator
-                motion_text = "👀 Motion detected"
+                # Motion indicator - using text instead of emoji for Linux compatibility
+                motion_text = "Motion detected"
                 motion_label = tk.Label(metrics3_frame, text=motion_text,
                                        bg=bg_color, fg=self.colors['fg_good'],
                                        font=self.font_data, anchor='w')
@@ -1435,7 +1434,7 @@ class EnhancedDashboard(tk.Tk):
                 temp_color = self.colors['fg_good']  # Green for normal temps
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else temp_color
-            temp_text = f"🌡{temp:.1f}°C"
+            temp_text = f"T: {temp:.1f}°C"
             card_info['temp_label'].config(text=temp_text, fg=display_color)
             
         channel_util = node_data.get('Channel Utilization')
@@ -1443,7 +1442,7 @@ class EnhancedDashboard(tk.Tk):
             util_color = self.colors['fg_bad'] if channel_util > 80 else self.colors['fg_warning'] if channel_util > 50 else self.colors['fg_good']
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else util_color
-            util_text = f"📻{channel_util:.1f}%"
+            util_text = f"Ch: {channel_util:.1f}%"
             card_info['util_label'].config(text=util_text, fg=display_color)
             
         snr = node_data.get('SNR')
@@ -1457,8 +1456,8 @@ class EnhancedDashboard(tk.Tk):
             # Get current background color
             current_bg = snr_container['bg']
             
-            # Icon
-            icon_label = tk.Label(snr_container, text="📶", bg=current_bg,
+            # Icon - using text instead of emoji for Linux compatibility
+            icon_label = tk.Label(snr_container, text="SNR:", bg=current_bg,
                                  fg=self.colors['fg_secondary'], font=self.font_data)
             icon_label.pack(side="left", padx=0)  # No padding
             
@@ -1472,12 +1471,11 @@ class EnhancedDashboard(tk.Tk):
                                   size=9, weight="bold")  # Bold for wider pipes
             
             # Create each bar with its own color - NO spacing between bars
-            # Use anchor='s' to align baselines at the bottom
+            # No anchor specified - use default center alignment to match text baseline
             for char, color in zip(bar_chars, bar_colors):
                 bar_label = tk.Label(snr_container, text=char, bg=current_bg,
-                                   fg=color, font=bar_font, padx=0, pady=0,
-                                   anchor='s', width=1, height=1)  # Fixed width, bottom aligned
-                bar_label.pack(side="left", padx=0, pady=0, anchor='s')  # Bottom align in container
+                                   fg=color, font=bar_font, padx=0, pady=0)
+                bar_label.pack(side="left", padx=0, pady=0)
             
         battery = node_data.get('Battery Level')
         if battery is not None and card_info['battery_label']:
@@ -1492,7 +1490,7 @@ class EnhancedDashboard(tk.Tk):
                 battery_color = self.colors['fg_good']  # Green for good
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else battery_color
-            battery_text = f"🔋{battery:.0f}%"
+            battery_text = f"Bat: {battery:.0f}%"
             card_info['battery_label'].config(text=battery_text, fg=display_color)
         
         # Motion detection - show/hide based on recency AND online status
@@ -1501,10 +1499,10 @@ class EnhancedDashboard(tk.Tk):
         
         # Only show motion for ONLINE nodes with recent motion
         if status == "Online" and last_motion and (current_time - last_motion) <= motion_display_duration:
-            # Motion is recent and node is online - show indicator
+            # Motion is recent and node is online - show indicator (using text instead of emoji for Linux)
             if card_info['motion_label']:
                 # Update existing label
-                card_info['motion_label'].config(text="👀 Motion detected", fg=self.colors['fg_good'])
+                card_info['motion_label'].config(text="Motion detected", fg=self.colors['fg_good'])
                 card_info['motion_label'].pack(fill="both", expand=True)
             else:
                 # Create new motion label in existing metrics3_frame
@@ -1529,26 +1527,13 @@ class EnhancedDashboard(tk.Tk):
         
         node_data = nodes_data[node_id]
         
-        # Create detail window with button actions
+        # Create detail window
         detail_window = NodeDetailWindow(self, node_id, node_data)
         
-        # Wire up button actions
-        # Note: NodeDetailWindow stores button references, we need to access them
-        # For now, we'll create a custom version that takes callbacks
-        # Or we can configure the buttons after creation
-        
-        # Find the buttons in the window and configure them
-        for widget in detail_window.window.winfo_children():
-            if isinstance(widget, tk.Frame):
-                for button in widget.winfo_children():
-                    if isinstance(button, tk.Button):
-                        text = button.cget('text')
-                        if '📁' in text:  # Open Logs
-                            button.configure(command=lambda: self.open_logs_folder(node_id))
-                        elif '📊' in text:  # Today's CSV
-                            button.configure(command=lambda nid=node_id: self.open_today_csv(nid))
-                        elif '📈' in text:  # Plot Data
-                            button.configure(command=lambda nid=node_id, win=detail_window.window: self.show_plot_for_node(nid, win))
+        # Wire up button actions using stored button references
+        detail_window.btn_logs.configure(command=lambda: self.open_logs_folder(node_id))
+        detail_window.btn_csv.configure(command=lambda: self.open_today_csv(node_id))
+        detail_window.btn_plot.configure(command=lambda: self.show_plot_for_node(node_id, detail_window.window))
     
     def show_plot_for_node(self, node_id: str, parent_window=None):
         """Show telemetry plot for a specific node
@@ -1664,9 +1649,9 @@ class EnhancedDashboard(tk.Tk):
                 color = self.colors['fg_warning']  # Orange for low battery or slightly high
             else:
                 color = self.colors['fg_good']  # Green for good battery (12-14V)
-            return f"⚡{voltage:.1f}V", color
+            return f"V: {voltage:.1f}V", color
         else:
-            return "⚡No voltage", self.colors['fg_secondary']
+            return "V: No voltage", self.colors['fg_secondary']
     
     def get_signal_bars(self, snr: float):
         """Convert SNR to visual signal bar representation using increasing height bars

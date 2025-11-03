@@ -71,30 +71,31 @@ class NodeDetailWindow:
         
         # No font specified - use default tkinter button font like main dashboard
         
-        # Buttons will be configured by parent dashboard
-        btn_logs = tk.Button(button_frame, text="📁 Open Logs",
+        # Buttons will be configured by parent dashboard - store references for easy access
+        # Note: No emojis - Linux often lacks emoji font support
+        self.btn_logs = tk.Button(button_frame, text="Open Logs",
                             bg=self.colors['button_bg'],
                             fg=self.colors['button_fg'],
                             command=lambda: None)
-        btn_logs.pack(side="left", padx=(0, 5))
+        self.btn_logs.pack(side="left", padx=(0, 5))
         
-        btn_csv = tk.Button(button_frame, text="📊 Today's CSV",
+        self.btn_csv = tk.Button(button_frame, text="Today's CSV",
                            bg=self.colors['button_bg'],
                            fg=self.colors['button_fg'],
                            command=lambda: None)
-        btn_csv.pack(side="left", padx=(0, 5))
+        self.btn_csv.pack(side="left", padx=(0, 5))
         
-        btn_plot = tk.Button(button_frame, text="📈 Plot Data",
+        self.btn_plot = tk.Button(button_frame, text="Plot Data",
                             bg=self.colors['button_bg'],
                             fg=self.colors['button_fg'],
                             command=lambda: None)
-        btn_plot.pack(side="left", padx=(0, 5))
+        self.btn_plot.pack(side="left", padx=(0, 5))
         
-        btn_close = tk.Button(button_frame, text="❌ Close",
+        self.btn_close = tk.Button(button_frame, text="Close",
                              bg=self.colors['button_bg'],
                              fg=self.colors['button_fg'],
                              command=self.window.destroy)
-        btn_close.pack(side="right")
+        self.btn_close.pack(side="right")
     
     def _create_header(self):
         """Create header with node name and ID"""
@@ -388,15 +389,31 @@ class NodeDetailWindow:
             return self.colors['fg_bad']
     
     def _bind_mousewheel(self, canvas):
-        """Bind mousewheel to canvas for scrolling"""
+        """Bind mousewheel to canvas for scrolling - supports both Windows and Linux"""
         def _on_mousewheel(event):
+            # Windows/Mac
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         
+        def _on_linux_scroll_up(event):
+            # Linux scroll up
+            canvas.yview_scroll(-1, "units")
+        
+        def _on_linux_scroll_down(event):
+            # Linux scroll down
+            canvas.yview_scroll(1, "units")
+        
+        # Bind for Windows/Mac
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        # Bind for Linux (Button-4 = scroll up, Button-5 = scroll down)
+        canvas.bind_all("<Button-4>", _on_linux_scroll_up)
+        canvas.bind_all("<Button-5>", _on_linux_scroll_down)
         
         # Clean up binding when window is closed
         def _on_closing():
             canvas.unbind_all("<MouseWheel>")
+            canvas.unbind_all("<Button-4>")
+            canvas.unbind_all("<Button-5>")
             self.window.destroy()
         
         self.window.protocol("WM_DELETE_WINDOW", _on_closing)
