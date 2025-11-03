@@ -963,34 +963,38 @@ class EnhancedDashboard(tk.Tk):
             # Configuration changed, restart data collector if needed
             messagebox.showinfo("Settings", "Settings saved. Restart the application for all changes to take effect.")
     
-    def open_logs_folder(self):
-        """Open logs folder for selected node"""
-        if not self.selected_node_id:
+    def open_logs_folder(self, node_id: str = None):
+        """Open logs folder for selected node or specified node"""
+        target_node_id = node_id if node_id else self.selected_node_id
+        
+        if not target_node_id:
             return
         
         log_dir = self.config_manager.get('data.log_directory', 'logs')
-        clean_id = self.selected_node_id[1:] if self.selected_node_id.startswith('!') else self.selected_node_id
+        clean_id = target_node_id[1:] if target_node_id.startswith('!') else target_node_id
         node_log_path = os.path.join(log_dir, clean_id)
         
         if os.path.exists(node_log_path):
             self.open_path(node_log_path)
         else:
-            messagebox.showinfo("No Logs", f"No log directory found for {self.selected_node_id}")
+            messagebox.showinfo("No Logs", f"No log directory found for {target_node_id}")
     
-    def open_today_csv(self):
-        """Open today's CSV file for selected node"""
-        if not self.selected_node_id:
+    def open_today_csv(self, node_id: str = None):
+        """Open today's CSV file for selected node or specified node"""
+        target_node_id = node_id if node_id else self.selected_node_id
+        
+        if not target_node_id:
             return
         
         log_dir = self.config_manager.get('data.log_directory', 'logs')
-        clean_id = self.selected_node_id[1:] if self.selected_node_id.startswith('!') else self.selected_node_id
+        clean_id = target_node_id[1:] if target_node_id.startswith('!') else target_node_id
         today = datetime.now()
         csv_path = os.path.join(log_dir, clean_id, today.strftime('%Y'), today.strftime('%Y%m%d') + '.csv')
         
         if os.path.exists(csv_path):
             self.open_path(csv_path)
         else:
-            messagebox.showinfo("No CSV", f"No CSV file found for today for {self.selected_node_id}")
+            messagebox.showinfo("No CSV", f"No CSV file found for today for {target_node_id}")
     
     def open_path(self, path: str):
         """Open file or folder in system default application"""
@@ -1605,53 +1609,6 @@ class EnhancedDashboard(tk.Tk):
         else:
             messagebox.showwarning("Plotter Not Available", 
                                  "The telemetry plotter is not initialized.")
-    
-    def open_today_csv(self, node_id: str):
-        """Open today's CSV file for the node in the default editor"""
-        # Get the logs directory from config
-        logs_dir = self.config_manager.get('data_collector.log_directory', 'logs')
-        
-        # Build path to today's CSV
-        from datetime import datetime
-        today_str = datetime.now().strftime('%Y-%m-%d')
-        csv_path = os.path.join(logs_dir, f"{node_id}_{today_str}.csv")
-        
-        if not os.path.exists(csv_path):
-            messagebox.showwarning("File Not Found", 
-                                 f"No CSV file found for today:\n{csv_path}")
-            return
-        
-        # Open with default application
-        try:
-            if sys.platform.startswith('win'):
-                os.startfile(csv_path)
-            elif sys.platform.startswith('darwin'):
-                subprocess.run(['open', csv_path])
-            else:
-                subprocess.run(['xdg-open', csv_path])
-        except Exception as e:
-            messagebox.showerror("Error Opening File", 
-                               f"Could not open CSV file:\n{str(e)}")
-    
-    def open_logs_folder(self, node_id: str):
-        """Open the logs directory in the file explorer"""
-        logs_dir = self.config_manager.get('data_collector.log_directory', 'logs')
-        
-        if not os.path.exists(logs_dir):
-            messagebox.showwarning("Directory Not Found", 
-                                 f"Logs directory does not exist:\n{logs_dir}")
-            return
-        
-        try:
-            if sys.platform.startswith('win'):
-                os.startfile(logs_dir)
-            elif sys.platform.startswith('darwin'):
-                subprocess.run(['open', logs_dir])
-            else:
-                subprocess.run(['xdg-open', logs_dir])
-        except Exception as e:
-            messagebox.showerror("Error Opening Folder", 
-                               f"Could not open logs folder:\n{str(e)}")
     
     def flash_card(self, node_id: str, card_frame):
         """Flash card background to indicate update - dark blue for 1 second"""
