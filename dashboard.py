@@ -1060,8 +1060,17 @@ class EnhancedDashboard(tk.Tk):
             
             # Calculate grid layout - 3 cards across for wide screens, adjust for 80% width
             window_width = self.winfo_width()
-            cards_per_row = 3 if window_width > 1200 else 2
-            card_width = 256 if cards_per_row == 3 else 320  # 80% of original (320->256, 400->320)
+            # Use 3 columns if width > 900, 2 if width > 600, else 1
+            # Default 1600x800 window should easily support 3 columns
+            if window_width > 900:
+                cards_per_row = 3
+                card_width = 280  # Fits 3 across with padding
+            elif window_width > 600:
+                cards_per_row = 2
+                card_width = 320
+            else:
+                cards_per_row = 1
+                card_width = 380
             
             # Create cards in grid layout
             current_row_frame = None

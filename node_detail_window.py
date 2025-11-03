@@ -73,22 +73,20 @@ class NodeDetailWindow:
         
         # Buttons will be configured by parent dashboard - store references for easy access
         # Note: No emojis - Linux often lacks emoji font support
-        self.btn_logs = tk.Button(button_frame, text="Open Logs",
+        # Shortened text for compact display on small screens
+        self.btn_logs = tk.Button(button_frame, text="Logs",
                             bg=self.colors['button_bg'],
-                            fg=self.colors['button_fg'],
-                            command=lambda: None)
+                            fg=self.colors['button_fg'])
         self.btn_logs.pack(side="left", padx=(0, 5))
         
-        self.btn_csv = tk.Button(button_frame, text="Today's CSV",
+        self.btn_csv = tk.Button(button_frame, text="CSV",
                            bg=self.colors['button_bg'],
-                           fg=self.colors['button_fg'],
-                           command=lambda: None)
+                           fg=self.colors['button_fg'])
         self.btn_csv.pack(side="left", padx=(0, 5))
         
-        self.btn_plot = tk.Button(button_frame, text="Plot Data",
+        self.btn_plot = tk.Button(button_frame, text="Plot",
                             bg=self.colors['button_bg'],
-                            fg=self.colors['button_fg'],
-                            command=lambda: None)
+                            fg=self.colors['button_fg'])
         self.btn_plot.pack(side="left", padx=(0, 5))
         
         self.btn_close = tk.Button(button_frame, text="Close",
@@ -113,7 +111,7 @@ class NodeDetailWindow:
         
         # Node ID and short name
         short_name = self.node_data.get('Node ShortName', 'N/A')
-        id_font = tkfont.Font(family="Consolas", size=9)
+        id_font = tkfont.Font(family="Consolas", size=11)
         id_label = tk.Label(header_frame, text=f"{self.node_id} ({short_name})",
                            bg=self.colors['bg_frame'],
                            fg=self.colors['fg_secondary'],
@@ -136,8 +134,8 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_label = tkfont.Font(family="Segoe UI", size=9)
-        font_value = tkfont.Font(family="Segoe UI", size=9)
+        font_label = tkfont.Font(family="Segoe UI", size=11)
+        font_value = tkfont.Font(family="Segoe UI", size=11)
         
         # Status - check Last Heard to determine actual status
         last_heard = self.node_data.get('Last Heard', 0)
@@ -198,8 +196,8 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_label = tkfont.Font(family="Segoe UI", size=9)
-        font_value = tkfont.Font(family="Segoe UI", size=9)
+        font_label = tkfont.Font(family="Segoe UI", size=11)
+        font_value = tkfont.Font(family="Segoe UI", size=11)
         
         # Temperature
         temp = self.node_data.get('Temperature')
@@ -236,8 +234,8 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_label = tkfont.Font(family="Segoe UI", size=9)
-        font_value = tkfont.Font(family="Segoe UI", size=9)
+        font_label = tkfont.Font(family="Segoe UI", size=11)
+        font_value = tkfont.Font(family="Segoe UI", size=11)
         
         # Battery
         battery = self.node_data.get('Battery Level')
@@ -301,8 +299,8 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_label = tkfont.Font(family="Segoe UI", size=9)
-        font_value = tkfont.Font(family="Segoe UI", size=9)
+        font_label = tkfont.Font(family="Segoe UI", size=11)
+        font_value = tkfont.Font(family="Segoe UI", size=11)
         
         # Last motion time
         motion_dt = datetime.fromtimestamp(last_motion)
