@@ -397,23 +397,12 @@ class SettingsDialog:
         self.result = False
         self.dialog.destroy()
 
+# Version number - update manually with each release
+VERSION = "1.0.1"
+
 def get_version_info():
-    """Get version information from git"""
-    try:
-        import subprocess
-        # Get short commit hash
-        result = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], 
-                              capture_output=True, text=True, timeout=2)
-        if result.returncode == 0:
-            commit_hash = result.stdout.strip()
-            # Check if there are uncommitted changes
-            result = subprocess.run(['git', 'status', '--porcelain'], 
-                                  capture_output=True, text=True, timeout=2)
-            dirty = " (modified)" if result.stdout.strip() else ""
-            return f"v{commit_hash}{dirty}"
-    except Exception:
-        pass
-    return "unknown"
+    """Get version information"""
+    return f"v{VERSION}"
 
 class EnhancedDashboard(tk.Tk):
     """Enhanced dashboard with configurable settings and alert integration"""
@@ -1579,12 +1568,15 @@ class EnhancedDashboard(tk.Tk):
         
         # Define callbacks that capture node_id properly (avoiding lambda closure issues on Linux)
         def open_logs():
+            logger.info(f"open_logs callback triggered for {node_id}")
             self.open_logs_folder(node_id)
         
         def open_csv():
+            logger.info(f"open_csv callback triggered for {node_id}")
             self.open_today_csv(node_id)
         
         def show_plot():
+            logger.info(f"show_plot callback triggered for {node_id}")
             self.show_plot_for_node(node_id, detail_window.window)
         
         # Create detail window with callback functions

@@ -30,6 +30,11 @@ class NodeDetailWindow:
         self.on_csv = on_csv
         self.on_plot = on_plot
         
+        # Debug: Log callback status
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"NodeDetailWindow callbacks: logs={on_logs is not None}, csv={on_csv is not None}, plot={on_plot is not None}")
+        
         # Create top-level window
         # Parent is the dashboard, which has a root attribute or IS the root
         root = getattr(parent, 'root', parent)
@@ -81,28 +86,33 @@ class NodeDetailWindow:
         # Buttons configured directly with callbacks passed from parent
         # Note: No emojis - Linux often lacks emoji font support
         # Shortened text for compact display on small screens
-        self.btn_logs = tk.Button(button_frame, text="Logs",
-                            bg=self.colors['button_bg'],
-                            fg=self.colors['button_fg'],
-                            command=self.on_logs if self.on_logs else None)
+        
+        # Create buttons with commands only if provided (Linux Tkinter is strict about None commands)
+        btn_config = {
+            'bg': self.colors['button_bg'],
+            'fg': self.colors['button_fg']
+        }
+        
+        if self.on_logs:
+            self.btn_logs = tk.Button(button_frame, text="Logs", command=self.on_logs, **btn_config)
+        else:
+            self.btn_logs = tk.Button(button_frame, text="Logs", **btn_config)
         self.btn_logs.pack(side="left", padx=(0, 5))
         
-        self.btn_csv = tk.Button(button_frame, text="CSV",
-                           bg=self.colors['button_bg'],
-                           fg=self.colors['button_fg'],
-                           command=self.on_csv if self.on_csv else None)
+        if self.on_csv:
+            self.btn_csv = tk.Button(button_frame, text="CSV", command=self.on_csv, **btn_config)
+        else:
+            self.btn_csv = tk.Button(button_frame, text="CSV", **btn_config)
         self.btn_csv.pack(side="left", padx=(0, 5))
         
-        self.btn_plot = tk.Button(button_frame, text="Plot",
-                            bg=self.colors['button_bg'],
-                            fg=self.colors['button_fg'],
-                            command=self.on_plot if self.on_plot else None)
+        if self.on_plot:
+            self.btn_plot = tk.Button(button_frame, text="Plot", command=self.on_plot, **btn_config)
+        else:
+            self.btn_plot = tk.Button(button_frame, text="Plot", **btn_config)
         self.btn_plot.pack(side="left", padx=(0, 5))
         
         self.btn_close = tk.Button(button_frame, text="Close",
-                             bg=self.colors['button_bg'],
-                             fg=self.colors['button_fg'],
-                             command=self.window.destroy)
+                             command=self.window.destroy, **btn_config)
         self.btn_close.pack(side="right")
     
     def _create_header(self):
