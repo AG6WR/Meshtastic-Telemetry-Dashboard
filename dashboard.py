@@ -1451,6 +1451,41 @@ class EnhancedDashboard(tk.Tk):
             
         card_info = self.card_widgets[node_id]
         
+        # Apply blue flash if data changed
+        if is_changed:
+            logger.info(f"Applying BLUE flash to existing card for {node_id}")
+            flash_color = self.colors['bg_selected']
+            
+            # Apply flash to all widgets in the card
+            card_frame = card_info['frame']
+            
+            # Store original colors before applying flash
+            original_colors = {}
+            
+            def capture_and_flash(widget):
+                """Recursively capture original colors and apply flash"""
+                try:
+                    original_colors[widget] = widget.cget('bg')
+                    widget.config(bg=flash_color)
+                except:
+                    pass  # Some widgets may not support bg
+                for child in widget.winfo_children():
+                    capture_and_flash(child)
+            
+            def restore_colors():
+                """Restore all original colors"""
+                for widget, original_bg in original_colors.items():
+                    try:
+                        widget.config(bg=original_bg)
+                    except:
+                        pass
+            
+            # Capture original colors and apply flash
+            capture_and_flash(card_frame)
+            
+            # Schedule restore after 2 seconds
+            self.after(2000, restore_colors)
+        
         # Update node name if it changed (e.g., from "Unknown Node" to actual name)
         long_name = node_data.get('Node LongName', 'Unknown')
         display_name = long_name.replace("AG6WR-", "") if long_name.startswith("AG6WR-") else long_name
@@ -1530,35 +1565,21 @@ class EnhancedDashboard(tk.Tk):
             
         snr = node_data.get('SNR')
         if snr is not None and card_info['snr_label']:
-            # SNR label is now a container with multiple labels
-            # Destroy old content and recreate with new colors
+            # SNR label is a container with multiple labels
+            # Update bar colors without destroying (like other telemetry fields)
             snr_container = card_info['snr_label']
-            for widget in snr_container.winfo_children():
-                widget.destroy()
             
-            # Get current background color
-            current_bg = snr_container['bg']
-            
-            # Icon - using text instead of emoji for Linux compatibility
-            icon_label = tk.Label(snr_container, text="SNR:", bg=current_bg,
-                                 fg=self.colors['fg_secondary'], font=self.font_data)
-            icon_label.pack(side="left", padx=0)  # No padding
-            
-            # Get bar colors based on SNR level
-            # Use pipe characters with different colors - all same width and baseline
-            bar_chars = "||||"  # Four identical pipes/bars
+            # Get new bar colors based on SNR level
             bar_colors = self.get_signal_bar_colors(snr)
             
-            # Create smaller bold font for wider bars
-            bar_font = tkfont.Font(family="Consolas" if sys.platform.startswith("win") else "Courier New", 
-                                  size=9, weight="bold")  # Bold for wider pipes
-            
-            # Create each bar with its own color - NO spacing between bars
-            # No anchor specified - use default center alignment to match text baseline
-            for char, color in zip(bar_chars, bar_colors):
-                bar_label = tk.Label(snr_container, text=char, bg=current_bg,
-                                   fg=color, font=bar_font, padx=0, pady=0)
-                bar_label.pack(side="left", padx=0, pady=0)
+            # Update the foreground colors of existing bar widgets
+            # Children are: icon_label (SNR:), then 4 bar labels
+            children = snr_container.winfo_children()
+            if len(children) >= 5:  # icon + 4 bars
+                # Update each bar's foreground color
+                for i, color in enumerate(bar_colors):
+                    bar_widget = children[i + 1]  # Skip first child (icon label)
+                    bar_widget.config(fg=color)
             
         battery = node_data.get('Battery Level')
         if battery is not None and card_info['battery_label']:
