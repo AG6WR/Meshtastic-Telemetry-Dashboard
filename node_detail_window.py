@@ -86,43 +86,32 @@ class NodeDetailWindow:
         
         # No font specified - use default tkinter button font like main dashboard
         
-        # Buttons configured directly with callbacks passed from parent
-        # Note: No emojis - Linux often lacks emoji font support
-        # Shortened text for compact display on small screens
+        # Use EXACT same pattern as working main dashboard buttons:
+        # - command= parameter set directly in Button constructor
+        # - Create and pack in one statement
+        # - Use actual method references, not conditionals
         
-        # Create buttons with commands only if provided (Linux Tkinter is strict about None commands)
         btn_config = {
             'bg': self.colors['button_bg'],
             'fg': self.colors['button_fg']
         }
         
+        # Create buttons with command set directly like working dashboard buttons
         if self.on_logs:
-            self.btn_logs = tk.Button(button_frame, text="Logs", command=self.on_logs, **btn_config)
-        else:
-            self.btn_logs = tk.Button(button_frame, text="Logs", **btn_config)
-        self.btn_logs.pack(side="left", padx=(0, 5))
+            tk.Button(button_frame, text="Logs", command=self.on_logs, **btn_config).pack(side="left", padx=(0, 5))
         
         if self.on_csv:
-            self.btn_csv = tk.Button(button_frame, text="CSV", command=self.on_csv, **btn_config)
-        else:
-            self.btn_csv = tk.Button(button_frame, text="CSV", **btn_config)
-        self.btn_csv.pack(side="left", padx=(0, 5))
+            tk.Button(button_frame, text="CSV", command=self.on_csv, **btn_config).pack(side="left", padx=(0, 5))
         
         if self.on_plot:
-            self.btn_plot = tk.Button(button_frame, text="Plot", command=self.on_plot, **btn_config)
-        else:
-            self.btn_plot = tk.Button(button_frame, text="Plot", **btn_config)
-        self.btn_plot.pack(side="left", padx=(0, 5))
+            tk.Button(button_frame, text="Plot", command=self.on_plot, **btn_config).pack(side="left", padx=(0, 5))
         
-        # TEST BUTTON - always has command, should always work
-        self.btn_test = tk.Button(button_frame, text="TEST", 
-                            command=self.on_test,
-                            bg='#ff6b35', fg='white')
-        self.btn_test.pack(side="left", padx=(10, 5))
+        # TEST BUTTON
+        tk.Button(button_frame, text="TEST", command=self._show_test_message,
+                 bg='#ff6b35', fg='white').pack(side="left", padx=(10, 5))
         
-        self.btn_close = tk.Button(button_frame, text="Close",
-                             command=self.window.destroy, **btn_config)
-        self.btn_close.pack(side="right")
+        # CLOSE BUTTON  
+        tk.Button(button_frame, text="Close", command=self.window.destroy, **btn_config).pack(side="right")
     
     def _show_test_message(self):
         """Show a test message box - for debugging button functionality"""
