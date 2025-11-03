@@ -432,7 +432,7 @@ class EnhancedDashboard(tk.Tk):
         """Setup the GUI"""
         # Window settings
         self.title("Enhanced Meshtastic Monitor")
-        geometry = self.config_manager.get('dashboard.window_geometry', '1600x800')
+        geometry = self.config_manager.get('dashboard.window_geometry', '980x800')
         self.geometry(geometry)
         
         # Dark theme colors
@@ -1061,7 +1061,7 @@ class EnhancedDashboard(tk.Tk):
             # Calculate grid layout - 3 cards across for wide screens, adjust for 80% width
             window_width = self.winfo_width()
             # Use 3 columns if width > 900, 2 if width > 600, else 1
-            # Default 1600x800 window should easily support 3 columns
+            # Default 980x800 window comfortably supports 3 columns
             if window_width > 900:
                 cards_per_row = 3
                 card_width = 280  # Fits 3 across with padding
@@ -1536,13 +1536,25 @@ class EnhancedDashboard(tk.Tk):
         
         node_data = nodes_data[node_id]
         
-        # Create detail window
-        detail_window = NodeDetailWindow(self, node_id, node_data)
+        # Define callbacks that capture node_id properly (avoiding lambda closure issues on Linux)
+        def open_logs():
+            self.open_logs_folder(node_id)
         
-        # Wire up button actions using stored button references
-        detail_window.btn_logs.configure(command=lambda: self.open_logs_folder(node_id))
-        detail_window.btn_csv.configure(command=lambda: self.open_today_csv(node_id))
-        detail_window.btn_plot.configure(command=lambda: self.show_plot_for_node(node_id, detail_window.window))
+        def open_csv():
+            self.open_today_csv(node_id)
+        
+        def show_plot():
+            self.show_plot_for_node(node_id, detail_window.window)
+        
+        # Create detail window with callback functions
+        detail_window = NodeDetailWindow(
+            self, 
+            node_id, 
+            node_data,
+            on_logs=open_logs,
+            on_csv=open_csv,
+            on_plot=show_plot
+        )
     
     def show_plot_for_node(self, node_id: str, parent_window=None):
         """Show telemetry plot for a specific node

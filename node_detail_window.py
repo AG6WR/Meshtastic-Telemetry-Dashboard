@@ -10,7 +10,8 @@ from datetime import datetime
 class NodeDetailWindow:
     """Window displaying detailed information for a single Meshtastic node"""
     
-    def __init__(self, parent, node_id: str, node_data: dict):
+    def __init__(self, parent, node_id: str, node_data: dict, 
+                 on_logs=None, on_csv=None, on_plot=None):
         """
         Create a node detail window
         
@@ -18,10 +19,16 @@ class NodeDetailWindow:
             parent: Parent dashboard instance
             node_id: Node ID (with ! prefix)
             node_data: Dictionary containing node information
+            on_logs: Callback for logs button
+            on_csv: Callback for CSV button
+            on_plot: Callback for plot button
         """
         self.parent = parent
         self.node_id = node_id
         self.node_data = node_data
+        self.on_logs = on_logs
+        self.on_csv = on_csv
+        self.on_plot = on_plot
         
         # Create top-level window
         # Parent is the dashboard, which has a root attribute or IS the root
@@ -71,22 +78,25 @@ class NodeDetailWindow:
         
         # No font specified - use default tkinter button font like main dashboard
         
-        # Buttons will be configured by parent dashboard - store references for easy access
+        # Buttons configured directly with callbacks passed from parent
         # Note: No emojis - Linux often lacks emoji font support
         # Shortened text for compact display on small screens
         self.btn_logs = tk.Button(button_frame, text="Logs",
                             bg=self.colors['button_bg'],
-                            fg=self.colors['button_fg'])
+                            fg=self.colors['button_fg'],
+                            command=self.on_logs if self.on_logs else None)
         self.btn_logs.pack(side="left", padx=(0, 5))
         
         self.btn_csv = tk.Button(button_frame, text="CSV",
                            bg=self.colors['button_bg'],
-                           fg=self.colors['button_fg'])
+                           fg=self.colors['button_fg'],
+                           command=self.on_csv if self.on_csv else None)
         self.btn_csv.pack(side="left", padx=(0, 5))
         
         self.btn_plot = tk.Button(button_frame, text="Plot",
                             bg=self.colors['button_bg'],
-                            fg=self.colors['button_fg'])
+                            fg=self.colors['button_fg'],
+                            command=self.on_plot if self.on_plot else None)
         self.btn_plot.pack(side="left", padx=(0, 5))
         
         self.btn_close = tk.Button(button_frame, text="Close",
