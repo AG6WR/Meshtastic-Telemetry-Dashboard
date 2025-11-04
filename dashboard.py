@@ -1453,38 +1453,50 @@ class EnhancedDashboard(tk.Tk):
         
         # Apply blue flash if data changed
         if is_changed:
+            # Cancel any pending flash restore for this card
+            if node_id in self.flash_timers:
+                try:
+                    self.after_cancel(self.flash_timers[node_id])
+                except:
+                    pass
+            
             logger.info(f"Applying BLUE flash to existing card for {node_id}")
             flash_color = self.colors['bg_selected']
+            normal_bg = self.colors['bg_frame']
             
             # Apply flash to all widgets in the card
             card_frame = card_info['frame']
             
-            # Store original colors before applying flash
-            original_colors = {}
-            
-            def capture_and_flash(widget):
-                """Recursively capture original colors and apply flash"""
+            def apply_flash_recursive(widget):
+                """Recursively apply flash to widget and children"""
                 try:
-                    original_colors[widget] = widget.cget('bg')
                     widget.config(bg=flash_color)
                 except:
                     pass  # Some widgets may not support bg
                 for child in widget.winfo_children():
-                    capture_and_flash(child)
+                    apply_flash_recursive(child)
             
             def restore_colors():
-                """Restore all original colors"""
-                for widget, original_bg in original_colors.items():
+                """Restore all to normal frame color"""
+                def restore_recursive(widget):
                     try:
-                        widget.config(bg=original_bg)
+                        widget.config(bg=normal_bg)
                     except:
                         pass
+                    for child in widget.winfo_children():
+                        restore_recursive(child)
+                
+                restore_recursive(card_frame)
+                # Clear timer reference
+                if node_id in self.flash_timers:
+                    del self.flash_timers[node_id]
             
-            # Capture original colors and apply flash
-            capture_and_flash(card_frame)
+            # Apply flash
+            apply_flash_recursive(card_frame)
             
             # Schedule restore after 2 seconds
-            self.after(2000, restore_colors)
+            timer_id = self.after(2000, restore_colors)
+            self.flash_timers[node_id] = timer_id
         
         # Update node name if it changed (e.g., from "Unknown Node" to actual name)
         long_name = node_data.get('Node LongName', 'Unknown')
