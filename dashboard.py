@@ -1249,10 +1249,10 @@ class EnhancedDashboard(tk.Tk):
                 temp_color = self.colors['fg_good']  # Green for normal temps (0-30°C)
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else temp_color
-            temp_text = f"T: {temp:.1f}°C"
+            temp_text = f"{temp:.1f}°C"
             temp_label = tk.Label(col2_frame, text=temp_text,
                                  bg=bg_color, fg=display_color,
-                                 font=self.font_data_bold, anchor='w')
+                                 font=self.font_data_bold, anchor='center')
             temp_label.pack(fill="both", expand=True)
         
         # Channel Utilization in column 3
@@ -1265,7 +1265,7 @@ class EnhancedDashboard(tk.Tk):
             util_text = f"Ch: {channel_util:.1f}%"
             util_label = tk.Label(col3_frame, text=util_text,
                                  bg=bg_color, fg=display_color,
-                                 font=self.font_data, anchor='w')
+                                 font=self.font_data, anchor='e')
             util_label.pack(fill="both", expand=True)
         
         # Metrics row 2 - Secondary metrics (tighter spacing)
@@ -1564,7 +1564,7 @@ class EnhancedDashboard(tk.Tk):
                 temp_color = self.colors['fg_good']  # Green for normal temps
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else temp_color
-            temp_text = f"T: {temp:.1f}°C"
+            temp_text = f"{temp:.1f}°C"
             card_info['temp_label'].config(text=temp_text, fg=display_color)
             
         channel_util = node_data.get('Channel Utilization')
@@ -1693,9 +1693,9 @@ class EnhancedDashboard(tk.Tk):
                 color = self.colors['fg_warning']  # Orange for low battery or slightly high
             else:
                 color = self.colors['fg_good']  # Green for good battery (12-14V)
-            return f"V: {voltage:.1f}V", color
+            return f"{voltage:.1f}V", color
         else:
-            return "V: No voltage", self.colors['fg_secondary']
+            return "No voltage", self.colors['fg_secondary']
     
     def get_signal_bars(self, snr: float):
         """Convert SNR to visual signal bar representation using increasing height bars
