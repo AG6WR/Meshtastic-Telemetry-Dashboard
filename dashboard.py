@@ -1060,7 +1060,7 @@ class EnhancedDashboard(tk.Tk):
             last_heard = node_data.get('Last Heard')
             # Show node if: it has a last heard time > 0, OR it has any telemetry data
             has_data = any(node_data.get(field) is not None 
-                          for field in ['Voltage', 'Temperature', 'SNR', 'Battery Level'])
+                          for field in ['Voltage', 'Ch3 Voltage', 'Temperature', 'SNR', 'Battery Level'])
             if (last_heard is not None and last_heard > 0) or has_data:
                 filtered_nodes[node_id] = node_data
         
