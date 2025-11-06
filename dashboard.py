@@ -531,8 +531,8 @@ class EnhancedDashboard(tk.Tk):
                  bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Refresh", command=self.force_refresh,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
-        # Button shows current view mode - starts as "Cards" since that's the default
-        self.view_btn = tk.Button(controls_frame, text="Cards", command=self.toggle_view,
+        # Button shows action (where you'll go) - starts as "Table" since default is cards
+        self.view_btn = tk.Button(controls_frame, text="Table", command=self.toggle_view,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'])
         self.view_btn.pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Plot", command=self.show_plot,
@@ -1836,13 +1836,13 @@ class EnhancedDashboard(tk.Tk):
         if self.view_mode == "table":
             # Switch TO cards
             self.view_mode = "cards"
-            self.view_btn.config(text="Cards")  # Button shows current view after switch
+            self.view_btn.config(text="Table")  # Button shows where you can go
             self.table_container.pack_forget()
             self.card_container.pack(fill="both", expand=True, padx=8, pady=8)
         else:
             # Switch TO table
             self.view_mode = "table"
-            self.view_btn.config(text="Table")  # Button shows current view after switch
+            self.view_btn.config(text="Cards")  # Button shows where you can go
             self.card_container.pack_forget()
             self.table_container.pack(fill="both", expand=True, padx=8, pady=8)
         
