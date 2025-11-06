@@ -46,10 +46,18 @@ class NodeDetailWindow:
         self.window.configure(bg=self.colors['bg_main'])
         logger.info(f"NodeDetailWindow window created and configured")
         
-        # Make window modal - same as Plot dialog
-        self.window.transient(self.parent)
-        self.window.grab_set()
-        logger.info(f"NodeDetailWindow made modal")
+        # Make window modal - wrap in try/except for Linux compatibility
+        try:
+            logger.info(f"NodeDetailWindow attempting transient()...")
+            self.window.transient(self.parent)
+            logger.info(f"NodeDetailWindow transient() succeeded")
+            
+            logger.info(f"NodeDetailWindow attempting grab_set()...")
+            self.window.grab_set()
+            logger.info(f"NodeDetailWindow grab_set() succeeded")
+        except Exception as e:
+            logger.warning(f"NodeDetailWindow modal setup failed (non-critical): {e}")
+            # Continue anyway - window will still work, just not modal
         
         # Create UI
         logger.info(f"NodeDetailWindow creating button bar...")
