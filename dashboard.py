@@ -479,7 +479,7 @@ class EnhancedDashboard(tk.Tk):
         self.font_data = tkfont.Font(family=base_family, size=12)  # Card view data font
         self.font_data_bold = tkfont.Font(family=base_family, size=12, weight="bold")  # Card view bold data
         self.font_card_header = tkfont.Font(family=base_family, size=14, weight="bold")  # Card header 14pt
-        self.font_card_line2 = tkfont.Font(family=base_family, size=12)  # Card line 2 (Motion/Last Heard) 12pt
+        self.font_card_line2 = tkfont.Font(family=base_family, size=12)  # Card line 2 (Motion/Last Heard) 12pt - matches line 4
         self.font_card_line3 = tkfont.Font(family=base_family, size=14, weight="bold")  # Card line 3 (V/I/T) 14pt
         self.font_italic = tkfont.Font(family=base_family, size=11, slant="italic")
         self.font_title = tkfont.Font(family=base_family, size=18, weight="bold")
