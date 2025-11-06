@@ -1445,7 +1445,7 @@ class EnhancedDashboard(tk.Tk):
             'row2_col2_frame': row2_col2_frame,
             'row2_col3_frame': row2_col3_frame,
             'name_label': name_label,
-            'nodeid_label': nodeid_label,
+            'shortname_label': shortname_label,
             'status_label': status_label,
             'heard_label': heard_label,
             'motion_label': motion_label,
@@ -1483,7 +1483,7 @@ class EnhancedDashboard(tk.Tk):
                             card_info[key].config(bg=normal_bg)
                     
                     # Update all labels
-                    for key in ['name_label', 'nodeid_label', 'status_label', 'heard_label',
+                    for key in ['name_label', 'shortname_label', 'status_label', 'heard_label',
                                'voltage_label', 'temp_label', 'util_label',
                                'battery_label', 'motion_label']:
                         if key in card_info and card_info[key]:
@@ -1563,7 +1563,7 @@ class EnhancedDashboard(tk.Tk):
         
         # Update short name if it changed
         short_name = node_data.get('Node ShortName', node_id[-4:])
-        card_info['nodeid_label'].config(text=f"({short_name})")
+        card_info['shortname_label'].config(text=f"({short_name})")
         
         # Update status
         last_heard = node_data.get('Last Heard', 0)
