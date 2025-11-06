@@ -478,6 +478,9 @@ class EnhancedDashboard(tk.Tk):
         self.font_bold = tkfont.Font(family=base_family, size=11, weight="bold")
         self.font_data = tkfont.Font(family=base_family, size=12)  # Card view data font
         self.font_data_bold = tkfont.Font(family=base_family, size=12, weight="bold")  # Card view bold data
+        self.font_card_header = tkfont.Font(family=base_family, size=14, weight="bold")  # Card header 14pt
+        self.font_card_line2 = tkfont.Font(family=base_family, size=12)  # Card line 2 (Motion/Last Heard) 12pt
+        self.font_card_line3 = tkfont.Font(family=base_family, size=14, weight="bold")  # Card line 3 (V/I/T) 14pt
         self.font_italic = tkfont.Font(family=base_family, size=11, slant="italic")
         self.font_title = tkfont.Font(family=base_family, size=18, weight="bold")
         
@@ -1191,29 +1194,29 @@ class EnhancedDashboard(tk.Tk):
         left_header = tk.Frame(header_frame, bg=bg_color)
         left_header.pack(side="left")
         
-        # Node name (bold, larger)
+        # Node name (bold, larger - 14pt)
         long_name = node_data.get('Node LongName', 'Unknown')
         display_name = long_name.replace("AG6WR-", "") if long_name.startswith("AG6WR-") else long_name
         name_label = tk.Label(left_header, text=display_name, 
                              bg=bg_color, fg=self.colors['fg_normal'], 
-                             font=self.font_bold)
+                             font=self.font_card_header)
         name_label.pack(side="left")
         
-        # NodeID (smaller, gray)
+        # NodeID (smaller, gray - 14pt to match)
         short_name = node_data.get('Node ShortName', node_id[-4:])
         nodeid_label = tk.Label(left_header, text=f"({short_name})",
                                bg=bg_color, fg=self.colors['fg_secondary'],
-                               font=self.font_base)
+                               font=self.font_card_header)
         nodeid_label.pack(side="left", padx=(4, 0))
         
         # Right side - Status only (no dynamic timer)
         right_header = tk.Frame(header_frame, bg=bg_color)
         right_header.pack(side="right")
         
-        # Status (colored, bold)
+        # Status (colored, bold - 14pt)
         status_label = tk.Label(right_header, text=status,
                                bg=bg_color, fg=status_colors.get(status, self.colors['fg_normal']),
-                               font=self.font_data_bold)
+                               font=self.font_card_header)
         status_label.pack(anchor="e")
         
         # Last Heard / Motion Detected row - fixed height area for all cards (uniform height)
@@ -1231,11 +1234,10 @@ class EnhancedDashboard(tk.Tk):
             # For offline nodes, show static last heard timestamp
             heard_dt = datetime.fromtimestamp(last_heard)
             heard_text = f"Last heard: {heard_dt.strftime('%Y-%m-%d %H:%M:%S')}"
-            # Small font for compact display
-            small_font = tkfont.Font(family="Consolas" if sys.platform.startswith("win") else "Courier New", size=9)
+            # 12pt font for line 2
             heard_label = tk.Label(lastheard_frame, text=heard_text,
                                   bg=bg_color, fg=self.colors['fg_bad'],
-                                  font=small_font)
+                                  font=self.font_card_line2)
             heard_label.pack(anchor="w", side="left")
         elif status == "Online" and last_motion:
             # For online nodes with recent motion, show motion detected
@@ -1247,10 +1249,10 @@ class EnhancedDashboard(tk.Tk):
             if time_since_motion <= motion_display_duration:
                 # Motion indicator - using text instead of emoji for Linux compatibility
                 motion_text = "Motion detected"
-                small_font = tkfont.Font(family="Consolas" if sys.platform.startswith("win") else "Courier New", size=9)
+                # 12pt font for line 2
                 motion_label = tk.Label(lastheard_frame, text=motion_text,
                                        bg=bg_color, fg=self.colors['fg_good'],
-                                       font=small_font)
+                                       font=self.font_card_line2)
                 motion_label.pack(anchor="w", side="left")
         
         # Determine if data is stale (use grey color for stale data)
@@ -1283,7 +1285,7 @@ class EnhancedDashboard(tk.Tk):
             display_color = stale_color if is_stale else voltage_color
             voltage_label = tk.Label(col1_frame, text=voltage_text,
                                     bg=bg_color, fg=display_color,
-                                    font=self.font_data_bold, anchor='w')
+                                    font=self.font_card_line3, anchor='w')
             voltage_label.pack(fill="both", expand=True)
         else:
             logger.debug(f"Card creation for {node_id}: No voltage data (Ch3={node_data.get('Ch3 Voltage')}, Voltage={node_data.get('Voltage')})")
@@ -1304,7 +1306,7 @@ class EnhancedDashboard(tk.Tk):
             current_text = f"{ch3_current:.1f}mA"
             current_label = tk.Label(col2_frame, text=current_text,
                                    bg=bg_color, fg=display_color,
-                                   font=self.font_data_bold, anchor='center')
+                                   font=self.font_card_line3, anchor='center')
             current_label.pack(fill="both", expand=True)
         
         # Temperature in column 3
@@ -1323,7 +1325,7 @@ class EnhancedDashboard(tk.Tk):
             temp_text = f"{temp:.1f}°C"
             temp_label = tk.Label(col3_frame, text=temp_text,
                                  bg=bg_color, fg=display_color,
-                                 font=self.font_data_bold, anchor='e')
+                                 font=self.font_card_line3, anchor='e')
             temp_label.pack(fill="both", expand=True)
         else:
             logger.debug(f"Card creation for {node_id}: No temperature data (Temperature={node_data.get('Temperature')})")
@@ -1332,12 +1334,12 @@ class EnhancedDashboard(tk.Tk):
         metrics2_frame = tk.Frame(card_frame, bg=bg_color)
         metrics2_frame.pack(fill="x", padx=6, pady=(1, 3))
         
-        # Create three columns for row 2 - adjusted widths for better balance
-        row2_col1_frame = tk.Frame(metrics2_frame, bg=bg_color, width=100, height=25)
+        # Create three columns for row 2 - SNR reduced 10% (100→90), giving more room to Ch Util
+        row2_col1_frame = tk.Frame(metrics2_frame, bg=bg_color, width=90, height=25)
         row2_col1_frame.pack(side="left")
         row2_col1_frame.pack_propagate(False)
         
-        row2_col2_frame = tk.Frame(metrics2_frame, bg=bg_color, width=76, height=25)
+        row2_col2_frame = tk.Frame(metrics2_frame, bg=bg_color, width=86, height=25)
         row2_col2_frame.pack(side="left", padx=(6, 0))
         row2_col2_frame.pack_propagate(False)
         
@@ -1387,7 +1389,7 @@ class EnhancedDashboard(tk.Tk):
             util_color = self.colors['fg_bad'] if channel_util > 80 else self.colors['fg_warning'] if channel_util > 50 else self.colors['fg_good']
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else util_color
-            util_text = f"Ch: {channel_util:.1f}%"
+            util_text = f"Ch:{channel_util:.1f}%"  # No space after colon
             util_label = tk.Label(row2_col2_frame, text=util_text,
                                  bg=bg_color, fg=display_color,
                                  font=self.font_data, anchor='center')
@@ -1406,7 +1408,7 @@ class EnhancedDashboard(tk.Tk):
                 humidity_color = self.colors['fg_good']  # Green for normal (20-60%)
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else humidity_color
-            humidity_text = f"Hum: {humidity:.0f}%"
+            humidity_text = f"Hum:{humidity:.0f}%"  # No space after colon
             humidity_label = tk.Label(row2_col3_frame, text=humidity_text,
                                      bg=bg_color, fg=display_color,
                                      font=self.font_data, anchor='e')
