@@ -1213,10 +1213,10 @@ class EnhancedDashboard(tk.Tk):
         status_label.pack(anchor="e")
         
         # Last Heard / Motion Detected row - fixed height area for all cards (uniform height)
-        # Always 16px high to maintain uniform card heights
+        # Increased to 18px to accommodate both left text and right short name
         # Show "Last heard:" for offline nodes OR "Motion detected" for online nodes with recent motion
         # Short name appears on right side of this line
-        lastheard_frame = tk.Frame(card_frame, bg=bg_color, height=16)
+        lastheard_frame = tk.Frame(card_frame, bg=bg_color, height=18)
         lastheard_frame.pack(fill="x", padx=6)
         lastheard_frame.pack_propagate(False)
         
@@ -1226,6 +1226,12 @@ class EnhancedDashboard(tk.Tk):
         heard_label = None
         motion_label = None
         last_motion = node_data.get('Last Motion')
+        
+        # Pack short name first (from right) so it doesn't conflict with left content
+        shortname_label = tk.Label(lastheard_frame, text=f"({short_name})",
+                                   bg=bg_color, fg=self.colors['fg_secondary'],
+                                   font=self.font_card_line2)
+        shortname_label.pack(anchor="e", side="right")
         
         if status == "Offline" and last_heard:
             # For offline nodes, show static last heard timestamp
@@ -1251,12 +1257,6 @@ class EnhancedDashboard(tk.Tk):
                                        bg=bg_color, fg=self.colors['fg_good'],
                                        font=self.font_card_line2)
                 motion_label.pack(anchor="w", side="left")
-        
-        # Short name on right side of line 2 - always shown
-        shortname_label = tk.Label(lastheard_frame, text=f"({short_name})",
-                                   bg=bg_color, fg=self.colors['fg_secondary'],
-                                   font=self.font_card_line2)
-        shortname_label.pack(anchor="e", side="right")
         
         # Determine if data is stale (use grey color for stale data)
         is_stale = status == "Offline"
