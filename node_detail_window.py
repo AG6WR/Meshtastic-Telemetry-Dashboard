@@ -42,7 +42,7 @@ class NodeDetailWindow:
         # Create top-level window - use exact same pattern as working Plot dialog
         self.window = tk.Toplevel(self.parent)
         self.window.title(f"Node Details: {node_id}")
-        self.window.geometry("380x550+50+50")  # 380x550 - reduced width by 25% for compact display
+        self.window.geometry("420x550+50+50")  # 420x550 - width increased to show scrollbar
         self.window.configure(bg=self.colors['bg_main'])
         logger.info(f"NodeDetailWindow window created and configured")
         
