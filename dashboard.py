@@ -441,15 +441,15 @@ class EnhancedDashboard(tk.Tk):
         self.title("Enhanced Meshtastic Monitor")
         
         # Get saved geometry, but reset if it's too wide (from old default)
-        geometry = self.config_manager.get('dashboard.window_geometry', '920x800')
-        # Parse width to check if it's from old 1600px or 980px default
+        geometry = self.config_manager.get('dashboard.window_geometry', '960x800')
+        # Parse width to check if it's from old defaults
         try:
             width = int(geometry.split('x')[0].split('+')[0])
-            if width > 940 or width < 900:  # Old geometry or too narrow
-                geometry = '920x800'
+            if width > 980 or width < 940:  # Old geometry or too narrow
+                geometry = '960x800'
                 self.config_manager.set('dashboard.window_geometry', geometry)
         except (ValueError, IndexError):
-            geometry = '920x800'
+            geometry = '960x800'
         
         self.geometry(geometry)
         
