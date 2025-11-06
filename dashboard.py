@@ -531,6 +531,7 @@ class EnhancedDashboard(tk.Tk):
                  bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Refresh", command=self.force_refresh,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
+        # Button shows current view mode - starts as "Cards" since that's the default
         self.view_btn = tk.Button(controls_frame, text="Cards", command=self.toggle_view,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'])
         self.view_btn.pack(side="left", padx=(0, 5))
@@ -547,9 +548,9 @@ class EnhancedDashboard(tk.Tk):
                                 bg=self.colors['button_bg'], fg=self.colors['button_fg'])
         self.btn_csv.pack(side="left")
         
-        # Table container with horizontal scrollbar
+        # Table container with horizontal scrollbar (initially hidden since default is cards)
         self.table_container = tk.Frame(self, bg=self.colors['bg_frame'])
-        self.table_container.pack(fill="both", expand=True, padx=8, pady=8)
+        # Don't pack yet - cards is default view
         
         # Create canvas for scrolling
         self.table_canvas = tk.Canvas(self.table_container, bg=self.colors['bg_frame'], highlightthickness=0)
@@ -569,8 +570,9 @@ class EnhancedDashboard(tk.Tk):
             self.table_canvas.configure(scrollregion=self.table_canvas.bbox("all"))
         self.table_frame.bind("<Configure>", update_scrollregion)
         
-        # Card container frame (initially hidden)
+        # Card container frame (initially shown since cards is default)
         self.setup_card_container()
+        self.card_container.pack(fill="both", expand=True, padx=8, pady=8)
         
         # Setup table columns
         self.setup_table()
@@ -1832,13 +1834,15 @@ class EnhancedDashboard(tk.Tk):
     def toggle_view(self):
         """Toggle between table and card view"""
         if self.view_mode == "table":
+            # Switch TO cards
             self.view_mode = "cards"
-            self.view_btn.config(text="Table")
+            self.view_btn.config(text="Cards")  # Button shows current view after switch
             self.table_container.pack_forget()
             self.card_container.pack(fill="both", expand=True, padx=8, pady=8)
         else:
+            # Switch TO table
             self.view_mode = "table"
-            self.view_btn.config(text="Cards")
+            self.view_btn.config(text="Table")  # Button shows current view after switch
             self.card_container.pack_forget()
             self.table_container.pack(fill="both", expand=True, padx=8, pady=8)
         
