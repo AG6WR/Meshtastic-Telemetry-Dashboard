@@ -398,7 +398,7 @@ class SettingsDialog:
         self.dialog.destroy()
 
 # Version number - update manually with each release
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 
 def get_version_info():
     """Get version information"""
@@ -545,9 +545,27 @@ class EnhancedDashboard(tk.Tk):
                                 bg=self.colors['button_bg'], fg=self.colors['button_fg'])
         self.btn_csv.pack(side="left")
         
-        # Table frame
-        self.table_frame = tk.Frame(self, bg=self.colors['bg_frame'])
-        self.table_frame.pack(fill="both", expand=True, padx=8, pady=8)
+        # Table container with horizontal scrollbar
+        self.table_container = tk.Frame(self, bg=self.colors['bg_frame'])
+        self.table_container.pack(fill="both", expand=True, padx=8, pady=8)
+        
+        # Create canvas for scrolling
+        self.table_canvas = tk.Canvas(self.table_container, bg=self.colors['bg_frame'], highlightthickness=0)
+        self.table_canvas.pack(side="top", fill="both", expand=True)
+        
+        # Horizontal scrollbar
+        self.h_scrollbar = tk.Scrollbar(self.table_container, orient="horizontal", command=self.table_canvas.xview)
+        self.h_scrollbar.pack(side="bottom", fill="x")
+        self.table_canvas.configure(xscrollcommand=self.h_scrollbar.set)
+        
+        # Table frame inside canvas
+        self.table_frame = tk.Frame(self.table_canvas, bg=self.colors['bg_frame'])
+        self.table_canvas.create_window((0, 0), window=self.table_frame, anchor="nw")
+        
+        # Update scroll region when table frame changes size
+        def update_scrollregion(event):
+            self.table_canvas.configure(scrollregion=self.table_canvas.bbox("all"))
+        self.table_frame.bind("<Configure>", update_scrollregion)
         
         # Card container frame (initially hidden)
         self.setup_card_container()
@@ -1185,15 +1203,19 @@ class EnhancedDashboard(tk.Tk):
                                font=self.font_data_bold)
         status_label.pack(anchor="e")
         
-        # Last Heard row - fixed height area for all cards (uniform height)
-        # Always 16px high to maintain uniform card heights, but only show content for offline nodes
+        # Last Heard / Motion Detected row - fixed height area for all cards (uniform height)
+        # Always 16px high to maintain uniform card heights
+        # Show "Last heard:" for offline nodes OR "Motion detected" for online nodes with recent motion
         lastheard_frame = tk.Frame(card_frame, bg=bg_color, height=16)
         lastheard_frame.pack(fill="x", padx=6)
         lastheard_frame.pack_propagate(False)
         
-        # For offline nodes, show static last heard timestamp
         heard_label = None
+        motion_label = None
+        last_motion = node_data.get('Last Motion')
+        
         if status == "Offline" and last_heard:
+            # For offline nodes, show static last heard timestamp
             heard_dt = datetime.fromtimestamp(last_heard)
             heard_text = f"Last heard: {heard_dt.strftime('%Y-%m-%d %H:%M:%S')}"
             # Small font for compact display
@@ -1202,16 +1224,31 @@ class EnhancedDashboard(tk.Tk):
                                   bg=bg_color, fg=self.colors['fg_bad'],
                                   font=small_font)
             heard_label.pack(anchor="w", side="left")
+        elif status == "Online" and last_motion:
+            # For online nodes with recent motion, show motion detected
+            motion_display_duration = self.config_manager.get('dashboard.motion_display_seconds', 900)  # Default 15 minutes
+            time_since_motion = current_time - last_motion
+            
+            logger.info(f"Node {node_id}: last_motion={last_motion}, time_since={time_since_motion:.1f}s, threshold={motion_display_duration}s")
+            
+            if time_since_motion <= motion_display_duration:
+                # Motion indicator - using text instead of emoji for Linux compatibility
+                motion_text = "Motion detected"
+                small_font = tkfont.Font(family="Consolas" if sys.platform.startswith("win") else "Courier New", size=9)
+                motion_label = tk.Label(lastheard_frame, text=motion_text,
+                                       bg=bg_color, fg=self.colors['fg_good'],
+                                       font=small_font)
+                motion_label.pack(anchor="w", side="left")
         
         # Determine if data is stale (use grey color for stale data)
         is_stale = status == "Offline"
         stale_color = self.colors['fg_secondary']  # Grey for stale data
         
-        # Metrics row 1 - Primary metrics (tighter spacing)
+        # Metrics row 1 - Ch3 Voltage, Ch3 Current, Temperature
         metrics1_frame = tk.Frame(card_frame, bg=bg_color)
         metrics1_frame.pack(fill="x", padx=6, pady=1)
         
-        # Adjust column widths for 80% card width (110 -> 88)
+        # Three columns for row 1
         col1_frame = tk.Frame(metrics1_frame, bg=bg_color, width=88, height=25)
         col1_frame.pack(side="left")
         col1_frame.pack_propagate(False)
@@ -1224,7 +1261,7 @@ class EnhancedDashboard(tk.Tk):
         col3_frame.pack(side="left", padx=(6, 0))
         col3_frame.pack_propagate(False)
         
-        # Voltage in column 1 - prefer Ch3 Voltage (external) over Voltage (battery)
+        # Ch3 Voltage in column 1 - prefer Ch3 Voltage (external) over Voltage (battery)
         voltage = node_data.get('Ch3 Voltage') or node_data.get('Voltage')
         voltage_label = None
         if voltage is not None:
@@ -1238,7 +1275,26 @@ class EnhancedDashboard(tk.Tk):
         else:
             logger.debug(f"Card creation for {node_id}: No voltage data (Ch3={node_data.get('Ch3 Voltage')}, Voltage={node_data.get('Voltage')})")
         
-        # Temperature in column 2
+        # Ch3 Current in column 2
+        ch3_current = node_data.get('Ch3 Current')
+        current_label = None
+        if ch3_current is not None:
+            # Color coding: Green for normal (0-100mA), Yellow for moderate (100-500mA), Red for high (>500mA)
+            if abs(ch3_current) > 500:
+                current_color = self.colors['fg_bad']  # Red for high current
+            elif abs(ch3_current) > 100:
+                current_color = self.colors['fg_warning']  # Orange for moderate current
+            else:
+                current_color = self.colors['fg_good']  # Green for low current
+            # Use grey if stale, otherwise use color-coded value
+            display_color = stale_color if is_stale else current_color
+            current_text = f"{ch3_current:.1f}mA"
+            current_label = tk.Label(col2_frame, text=current_text,
+                                   bg=bg_color, fg=display_color,
+                                   font=self.font_data_bold, anchor='center')
+            current_label.pack(fill="both", expand=True)
+        
+        # Temperature in column 3
         temp = node_data.get('Temperature')
         temp_label = None
         if temp is not None:
@@ -1252,40 +1308,29 @@ class EnhancedDashboard(tk.Tk):
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else temp_color
             temp_text = f"{temp:.1f}°C"
-            temp_label = tk.Label(col2_frame, text=temp_text,
+            temp_label = tk.Label(col3_frame, text=temp_text,
                                  bg=bg_color, fg=display_color,
-                                 font=self.font_data_bold, anchor='center')
+                                 font=self.font_data_bold, anchor='e')
             temp_label.pack(fill="both", expand=True)
         else:
             logger.debug(f"Card creation for {node_id}: No temperature data (Temperature={node_data.get('Temperature')})")
         
-        # Channel Utilization in column 3
-        channel_util = node_data.get('Channel Utilization')
-        util_label = None
-        if channel_util is not None:
-            util_color = self.colors['fg_bad'] if channel_util > 80 else self.colors['fg_warning'] if channel_util > 50 else self.colors['fg_good']
-            # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else util_color
-            util_text = f"Ch: {channel_util:.1f}%"
-            util_label = tk.Label(col3_frame, text=util_text,
-                                 bg=bg_color, fg=display_color,
-                                 font=self.font_data, anchor='e')
-            util_label.pack(fill="both", expand=True)
-        else:
-            logger.debug(f"Card creation for {node_id}: No channel util data (Channel Utilization={node_data.get('Channel Utilization')})")
-        
-        # Metrics row 2 - Secondary metrics (tighter spacing)
+        # Metrics row 2 - SNR, Channel Utilization, Humidity
         metrics2_frame = tk.Frame(card_frame, bg=bg_color)
         metrics2_frame.pack(fill="x", padx=6, pady=(1, 3))
         
-        # Create aligned columns for row 2
-        row2_col1_frame = tk.Frame(metrics2_frame, bg=bg_color, width=100, height=25)  # Increased from 88 to 100
+        # Create three columns for row 2 - adjusted widths for better balance
+        row2_col1_frame = tk.Frame(metrics2_frame, bg=bg_color, width=100, height=25)
         row2_col1_frame.pack(side="left")
         row2_col1_frame.pack_propagate(False)
         
-        row2_col2_frame = tk.Frame(metrics2_frame, bg=bg_color, width=88, height=25)
+        row2_col2_frame = tk.Frame(metrics2_frame, bg=bg_color, width=76, height=25)
         row2_col2_frame.pack(side="left", padx=(6, 0))
         row2_col2_frame.pack_propagate(False)
+        
+        row2_col3_frame = tk.Frame(metrics2_frame, bg=bg_color, width=88, height=25)
+        row2_col3_frame.pack(side="left", padx=(6, 0))
+        row2_col3_frame.pack_propagate(False)
         
         # SNR in first column - Bars only, no dB value
         # Create multi-colored bars using multiple labels
@@ -1322,49 +1367,37 @@ class EnhancedDashboard(tk.Tk):
             
             snr_label = snr_container  # Store container reference
         
-        # Battery in second column
-        battery = node_data.get('Battery Level')
-        battery_label = None
-        if battery is not None:
-            # Red <10%, Orange 10-20%, Yellow 20-40%, Green 40-100%
-            if battery < 10:
-                battery_color = self.colors['fg_bad']  # Red for critical
-            elif battery < 20:
-                battery_color = self.colors['fg_warning']  # Orange for low
-            elif battery < 40:
-                battery_color = self.colors['fg_yellow']  # Yellow for caution
-            else:
-                battery_color = self.colors['fg_good']  # Green for good
+        # Channel Utilization in second column
+        channel_util = node_data.get('Channel Utilization')
+        util_label = None
+        if channel_util is not None:
+            util_color = self.colors['fg_bad'] if channel_util > 80 else self.colors['fg_warning'] if channel_util > 50 else self.colors['fg_good']
             # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else battery_color
-            battery_text = f"Bat: {battery:.0f}%"
-            battery_label = tk.Label(row2_col2_frame, text=battery_text,
-                                   bg=bg_color, fg=display_color,
-                                   font=self.font_data, anchor='w')
-            battery_label.pack(fill="both", expand=True)
+            display_color = stale_color if is_stale else util_color
+            util_text = f"Ch: {channel_util:.1f}%"
+            util_label = tk.Label(row2_col2_frame, text=util_text,
+                                 bg=bg_color, fg=display_color,
+                                 font=self.font_data, anchor='center')
+            util_label.pack(fill="both", expand=True)
+        else:
+            logger.debug(f"Card creation for {node_id}: No channel util data (Channel Utilization={node_data.get('Channel Utilization')})")
         
-        # Metrics row 3 - Motion detection (fixed height for uniform cards)
-        # Always create frame with fixed height, but only show content for online nodes with recent motion
-        metrics3_frame = tk.Frame(card_frame, bg=bg_color, height=20)
-        metrics3_frame.pack(fill="x", padx=6, pady=(1, 3))
-        metrics3_frame.pack_propagate(False)
-        
-        motion_label = None
-        last_motion = node_data.get('Last Motion')
-        # Only show motion for online nodes
-        if status == "Online" and last_motion:
-            motion_display_duration = self.config_manager.get('dashboard.motion_display_seconds', 900)  # Default 15 minutes
-            time_since_motion = current_time - last_motion
-            
-            logger.info(f"Node {node_id}: last_motion={last_motion}, time_since={time_since_motion:.1f}s, threshold={motion_display_duration}s")
-            
-            if time_since_motion <= motion_display_duration:
-                # Motion indicator - using text instead of emoji for Linux compatibility
-                motion_text = "Motion detected"
-                motion_label = tk.Label(metrics3_frame, text=motion_text,
-                                       bg=bg_color, fg=self.colors['fg_good'],
-                                       font=self.font_data, anchor='w')
-                motion_label.pack(fill="both", expand=True)
+        # Humidity in third column
+        humidity = node_data.get('Humidity')
+        humidity_label = None
+        if humidity is not None:
+            # Color coding: Green for normal (20-60%), Yellow for dry/humid (<20% or >60%)
+            if humidity < 20 or humidity > 60:
+                humidity_color = self.colors['fg_warning']  # Yellow for dry or humid
+            else:
+                humidity_color = self.colors['fg_good']  # Green for normal (20-60%)
+            # Use grey if stale, otherwise use color-coded value
+            display_color = stale_color if is_stale else humidity_color
+            humidity_text = f"Hum: {humidity:.0f}%"
+            humidity_label = tk.Label(row2_col3_frame, text=humidity_text,
+                                     bg=bg_color, fg=display_color,
+                                     font=self.font_data, anchor='e')
+            humidity_label.pack(fill="both", expand=True)
         
         # Click handler for showing node detail window
         def on_card_click(event):
@@ -1387,22 +1420,23 @@ class EnhancedDashboard(tk.Tk):
             'lastheard_frame': lastheard_frame,
             'metrics1_frame': metrics1_frame,
             'metrics2_frame': metrics2_frame,
-            'metrics3_frame': metrics3_frame,
             'col1_frame': col1_frame,
             'col2_frame': col2_frame,
             'col3_frame': col3_frame,
             'row2_col1_frame': row2_col1_frame,
             'row2_col2_frame': row2_col2_frame,
+            'row2_col3_frame': row2_col3_frame,
             'name_label': name_label,
             'nodeid_label': nodeid_label,
             'status_label': status_label,
             'heard_label': heard_label,
-            'voltage_label': voltage_label,
-            'temp_label': temp_label,
-            'util_label': util_label,
-            'snr_label': snr_label,
-            'battery_label': battery_label,
             'motion_label': motion_label,
+            'voltage_label': voltage_label,
+            'current_label': current_label,
+            'temp_label': temp_label,
+            'snr_label': snr_label,
+            'util_label': util_label,
+            'humidity_label': humidity_label,
         }
         
         # If this card was created with blue background (is_changed), schedule restoration
@@ -1525,10 +1559,19 @@ class EnhancedDashboard(tk.Tk):
         
         card_info['status_label'].config(text=status, fg=status_colors.get(status, self.colors['fg_normal']))
         
-        # Update static timestamp for offline nodes, hide for online nodes
+        # Update Last Heard / Motion Detected in lastheard_frame
+        # Show "Last heard:" for offline nodes OR "Motion detected" for online nodes with recent motion
+        last_motion = node_data.get('Last Motion')
+        motion_display_duration = self.config_manager.get('dashboard.motion_display_seconds', 900)  # Default 15 minutes
+        
         if status == "Offline" and last_heard:
+            # Offline - show Last Heard timestamp
             heard_dt = datetime.fromtimestamp(last_heard)
             heard_text = f"Last heard: {heard_dt.strftime('%Y-%m-%d %H:%M:%S')}"
+            
+            # Hide motion label if it exists
+            if card_info['motion_label']:
+                card_info['motion_label'].pack_forget()
             
             if card_info['heard_label']:
                 # Update existing label and make it visible
@@ -1543,15 +1586,39 @@ class EnhancedDashboard(tk.Tk):
                                       font=small_font)
                 heard_label.pack(anchor="w", side="left")
                 card_info['heard_label'] = heard_label
-        elif card_info['heard_label']:
-            # Online node - hide the label by unpacking it (but keep frame at fixed height)
-            card_info['heard_label'].pack_forget()
+        elif status == "Online" and last_motion and (current_time - last_motion) <= motion_display_duration:
+            # Online with recent motion - show Motion Detected
+            motion_text = "Motion detected"
+            
+            # Hide heard label if it exists
+            if card_info['heard_label']:
+                card_info['heard_label'].pack_forget()
+            
+            if card_info['motion_label']:
+                # Update existing label and make it visible
+                card_info['motion_label'].config(text=motion_text, fg=self.colors['fg_good'])
+                card_info['motion_label'].pack(anchor="w", side="left")
+            else:
+                # Create motion label in lastheard_frame
+                small_font = tkfont.Font(family="Consolas" if sys.platform.startswith("win") else "Courier New", size=9)
+                motion_label = tk.Label(card_info['lastheard_frame'], text=motion_text,
+                                       bg=card_info['lastheard_frame']['bg'], 
+                                       fg=self.colors['fg_good'],
+                                       font=small_font)
+                motion_label.pack(anchor="w", side="left")
+                card_info['motion_label'] = motion_label
+        else:
+            # Online but no recent motion, or offline with no last heard - hide both labels
+            if card_info['heard_label']:
+                card_info['heard_label'].pack_forget()
+            if card_info['motion_label']:
+                card_info['motion_label'].pack_forget()
         
         # Determine if data is stale (use grey color for stale data)
         is_stale = status == "Offline"
         stale_color = self.colors['fg_secondary']  # Grey for stale data
         
-        # Update telemetry fields - prefer Ch3 Voltage (external) over Voltage (battery)
+        # Update telemetry fields - Row 1: Ch3 Voltage, Ch3 Current, Temperature
         voltage = node_data.get('Ch3 Voltage') or node_data.get('Voltage')
         if voltage is not None and card_info['voltage_label']:
             voltage_text, voltage_color = self.get_voltage_display(voltage)
@@ -1562,6 +1629,20 @@ class EnhancedDashboard(tk.Tk):
             logger.debug(f"Card update for {node_id}: No voltage data (Ch3={node_data.get('Ch3 Voltage')}, Voltage={node_data.get('Voltage')})")
         elif not card_info['voltage_label']:
             logger.warning(f"Card update for {node_id}: voltage_label widget missing!")
+        
+        ch3_current = node_data.get('Ch3 Current')
+        if ch3_current is not None and card_info['current_label']:
+            # Color coding: Green for normal (0-100mA), Yellow for moderate (100-500mA), Red for high (>500mA)
+            if abs(ch3_current) > 500:
+                current_color = self.colors['fg_bad']  # Red for high current
+            elif abs(ch3_current) > 100:
+                current_color = self.colors['fg_warning']  # Orange for moderate current
+            else:
+                current_color = self.colors['fg_good']  # Green for low current
+            # Use grey if stale, otherwise use color-coded value
+            display_color = stale_color if is_stale else current_color
+            current_text = f"{ch3_current:.1f}mA"
+            card_info['current_label'].config(text=current_text, fg=display_color)
             
         temp = node_data.get('Temperature')
         if temp is not None and card_info['temp_label']:
@@ -1577,14 +1658,7 @@ class EnhancedDashboard(tk.Tk):
             temp_text = f"{temp:.1f}°C"
             card_info['temp_label'].config(text=temp_text, fg=display_color)
             
-        channel_util = node_data.get('Channel Utilization')
-        if channel_util is not None and card_info['util_label']:
-            util_color = self.colors['fg_bad'] if channel_util > 80 else self.colors['fg_warning'] if channel_util > 50 else self.colors['fg_good']
-            # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else util_color
-            util_text = f"Ch: {channel_util:.1f}%"
-            card_info['util_label'].config(text=util_text, fg=display_color)
-            
+        # Row 2: SNR, Channel Utilization, Humidity
         snr = node_data.get('SNR')
         if snr is not None and card_info['snr_label']:
             # SNR label is a container with multiple labels
@@ -1602,45 +1676,26 @@ class EnhancedDashboard(tk.Tk):
                 for i, color in enumerate(bar_colors):
                     bar_widget = children[i + 1]  # Skip first child (icon label)
                     bar_widget.config(fg=color)
-            
-        battery = node_data.get('Battery Level')
-        if battery is not None and card_info['battery_label']:
-            # Red <10%, Orange 10-20%, Yellow 20-40%, Green 40-100%
-            if battery < 10:
-                battery_color = self.colors['fg_bad']  # Red for critical
-            elif battery < 20:
-                battery_color = self.colors['fg_warning']  # Orange for low
-            elif battery < 40:
-                battery_color = self.colors['fg_yellow']  # Yellow for caution
-            else:
-                battery_color = self.colors['fg_good']  # Green for good
+        
+        channel_util = node_data.get('Channel Utilization')
+        if channel_util is not None and card_info['util_label']:
+            util_color = self.colors['fg_bad'] if channel_util > 80 else self.colors['fg_warning'] if channel_util > 50 else self.colors['fg_good']
             # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else battery_color
-            battery_text = f"Bat: {battery:.0f}%"
-            card_info['battery_label'].config(text=battery_text, fg=display_color)
+            display_color = stale_color if is_stale else util_color
+            util_text = f"Ch: {channel_util:.1f}%"
+            card_info['util_label'].config(text=util_text, fg=display_color)
         
-        # Motion detection - show/hide based on recency AND online status
-        last_motion = node_data.get('Last Motion')
-        motion_display_duration = self.config_manager.get('dashboard.motion_display_seconds', 900)  # Default 15 minutes
-        
-        # Only show motion for ONLINE nodes with recent motion
-        if status == "Online" and last_motion and (current_time - last_motion) <= motion_display_duration:
-            # Motion is recent and node is online - show indicator (using text instead of emoji for Linux)
-            if card_info['motion_label']:
-                # Update existing label
-                card_info['motion_label'].config(text="Motion detected", fg=self.colors['fg_good'])
-                card_info['motion_label'].pack(fill="both", expand=True)
+        humidity = node_data.get('Humidity')
+        if humidity is not None and card_info['humidity_label']:
+            # Color coding: Green for normal (20-60%), Yellow for dry/humid (<20% or >60%)
+            if humidity < 20 or humidity > 60:
+                humidity_color = self.colors['fg_warning']  # Yellow for dry or humid
             else:
-                # Create new motion label in existing metrics3_frame
-                motion_label = tk.Label(card_info['metrics3_frame'], text="👀 Motion detected",
-                                       bg=card_info['metrics3_frame']['bg'], 
-                                       fg=self.colors['fg_good'],
-                                       font=self.font_data, anchor='w')
-                motion_label.pack(fill="both", expand=True)
-                card_info['motion_label'] = motion_label
-        elif card_info['motion_label']:
-            # Motion is stale or node is offline - hide indicator
-            card_info['motion_label'].pack_forget()
+                humidity_color = self.colors['fg_good']  # Green for normal (20-60%)
+            # Use grey if stale, otherwise use color-coded value
+            display_color = stale_color if is_stale else humidity_color
+            humidity_text = f"Hum: {humidity:.0f}%"
+            card_info['humidity_label'].config(text=humidity_text, fg=display_color)
     
     def show_node_detail(self, node_id: str):
         """Show detailed information window for a node"""
@@ -1768,13 +1823,13 @@ class EnhancedDashboard(tk.Tk):
         if self.view_mode == "table":
             self.view_mode = "cards"
             self.view_btn.config(text="Table")
-            self.table_frame.pack_forget()
+            self.table_container.pack_forget()
             self.card_container.pack(fill="both", expand=True, padx=8, pady=8)
         else:
             self.view_mode = "table"
             self.view_btn.config(text="Cards")
             self.card_container.pack_forget()
-            self.table_frame.pack(fill="both", expand=True, padx=8, pady=8)
+            self.table_container.pack(fill="both", expand=True, padx=8, pady=8)
         
         # Force a refresh to update the display
         self.force_refresh()
