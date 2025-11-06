@@ -398,7 +398,7 @@ class SettingsDialog:
         self.dialog.destroy()
 
 # Version number - update manually with each release
-VERSION = "1.0.3"
+VERSION = "1.0.4a"
 
 def get_version_info():
     """Get version information"""
@@ -538,6 +538,8 @@ class EnhancedDashboard(tk.Tk):
                  bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Node Alerts", command=self.open_node_alerts,
                  bg='#ff6b35', fg='white').pack(side="left", padx=(0, 5))
+        tk.Button(controls_frame, text="Debug Log", command=self.open_debug_log,
+                 bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
         self.btn_logs = tk.Button(controls_frame, text="Open Logs", command=self.open_logs_folder, state="disabled",
                                  bg=self.colors['button_bg'], fg=self.colors['button_fg'])
         self.btn_logs.pack(side="left", padx=(0, 5))
@@ -1009,6 +1011,15 @@ class EnhancedDashboard(tk.Tk):
             self.open_path(csv_path)
         else:
             messagebox.showinfo("No CSV", f"No CSV file found for today for {target_node_id}")
+    
+    def open_debug_log(self):
+        """Open the main debug log file"""
+        log_path = os.path.join('logs', 'meshtastic_monitor.log')
+        
+        if os.path.exists(log_path):
+            self.open_path(log_path)
+        else:
+            messagebox.showinfo("No Log", "Debug log file not found. It will be created when the application runs.")
     
     def open_path(self, path: str):
         """Open file or folder in system default application"""
