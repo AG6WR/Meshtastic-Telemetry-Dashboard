@@ -37,21 +37,27 @@ class NodeDetailWindow:
         
         # Get parent's color scheme BEFORE creating window
         self.colors = parent.colors
+        logger.info(f"NodeDetailWindow colors loaded: {len(self.colors)} colors available")
         
         # Create top-level window - use exact same pattern as working Plot dialog
         self.window = tk.Toplevel(self.parent)
         self.window.title(f"Node Details: {node_id}")
         self.window.geometry("380x550+50+50")  # 380x550 - reduced width by 25% for compact display
         self.window.configure(bg=self.colors['bg_main'])
+        logger.info(f"NodeDetailWindow window created and configured")
         
         # Make window modal - same as Plot dialog
         self.window.transient(self.parent)
         self.window.grab_set()
+        logger.info(f"NodeDetailWindow made modal")
         
         # Create UI
+        logger.info(f"NodeDetailWindow creating button bar...")
         self._create_button_bar()  # Buttons at top
+        logger.info(f"NodeDetailWindow button bar created")
         
         # Create scrollable canvas for content
+        logger.info(f"NodeDetailWindow creating canvas and scrollbar...")
         canvas = tk.Canvas(self.window, bg=self.colors['bg_main'], highlightthickness=0)
         scrollbar = tk.Scrollbar(self.window, orient="vertical", command=canvas.yview)
         self.scrollable_frame = tk.Frame(canvas, bg=self.colors['bg_main'])
@@ -66,16 +72,25 @@ class NodeDetailWindow:
         
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
+        logger.info(f"NodeDetailWindow canvas packed")
         
         # Add content to scrollable frame
+        logger.info(f"NodeDetailWindow creating content sections...")
         self._create_header()
+        logger.info(f"NodeDetailWindow header created")
         self._create_general_info()
+        logger.info(f"NodeDetailWindow general info created")
         self._create_environmental_section()
+        logger.info(f"NodeDetailWindow environmental section created")
         self._create_device_telemetry()
+        logger.info(f"NodeDetailWindow device telemetry created")
         self._create_motion_section()
+        logger.info(f"NodeDetailWindow motion section created")
         
-        # Bind mousewheel to scroll
-        self._bind_mousewheel(canvas)
+        # Force update to ensure widgets are rendered
+        logger.info(f"NodeDetailWindow forcing widget update...")
+        self.window.update_idletasks()
+        logger.info(f"NodeDetailWindow initialization complete")
     
     def _create_button_bar(self):
         """Create button bar at top"""
