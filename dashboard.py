@@ -1186,11 +1186,11 @@ class EnhancedDashboard(tk.Tk):
         card_frame.pack(side="left", padx=4, pady=3)
         card_frame.pack_propagate(True)
         
-        # Header row - Name, NodeID, Status
+        # Header row - Name and Status only (short name moved to line 2)
         header_frame = tk.Frame(card_frame, bg=bg_color)
         header_frame.pack(fill="x", padx=6, pady=(3, 1))
         
-        # Left side - Node name and ID
+        # Left side - Node name only
         left_header = tk.Frame(header_frame, bg=bg_color)
         left_header.pack(side="left")
         
@@ -1201,13 +1201,6 @@ class EnhancedDashboard(tk.Tk):
                              bg=bg_color, fg=self.colors['fg_normal'], 
                              font=self.font_card_header)
         name_label.pack(side="left")
-        
-        # NodeID (smaller, gray - 14pt to match)
-        short_name = node_data.get('Node ShortName', node_id[-4:])
-        nodeid_label = tk.Label(left_header, text=f"({short_name})",
-                               bg=bg_color, fg=self.colors['fg_secondary'],
-                               font=self.font_card_header)
-        nodeid_label.pack(side="left", padx=(4, 0))
         
         # Right side - Status only (no dynamic timer)
         right_header = tk.Frame(header_frame, bg=bg_color)
@@ -1222,9 +1215,13 @@ class EnhancedDashboard(tk.Tk):
         # Last Heard / Motion Detected row - fixed height area for all cards (uniform height)
         # Always 16px high to maintain uniform card heights
         # Show "Last heard:" for offline nodes OR "Motion detected" for online nodes with recent motion
+        # Short name appears on right side of this line
         lastheard_frame = tk.Frame(card_frame, bg=bg_color, height=16)
         lastheard_frame.pack(fill="x", padx=6)
         lastheard_frame.pack_propagate(False)
+        
+        # Get short name for line 2
+        short_name = node_data.get('Node ShortName', node_id[-4:])
         
         heard_label = None
         motion_label = None
@@ -1254,6 +1251,12 @@ class EnhancedDashboard(tk.Tk):
                                        bg=bg_color, fg=self.colors['fg_good'],
                                        font=self.font_card_line2)
                 motion_label.pack(anchor="w", side="left")
+        
+        # Short name on right side of line 2 - always shown
+        shortname_label = tk.Label(lastheard_frame, text=f"({short_name})",
+                                   bg=bg_color, fg=self.colors['fg_secondary'],
+                                   font=self.font_card_line2)
+        shortname_label.pack(anchor="e", side="right")
         
         # Determine if data is stale (use grey color for stale data)
         is_stale = status == "Offline"
