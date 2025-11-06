@@ -476,8 +476,8 @@ class EnhancedDashboard(tk.Tk):
         base_family = "Consolas" if sys.platform.startswith("win") else "Courier New"
         self.font_base = tkfont.Font(family=base_family, size=11)
         self.font_bold = tkfont.Font(family=base_family, size=11, weight="bold")
-        self.font_data = tkfont.Font(family=base_family, size=11)  # Consistent data font - changed from 12 to 11
-        self.font_data_bold = tkfont.Font(family=base_family, size=11, weight="bold")  # Bold data - changed from 12 to 11
+        self.font_data = tkfont.Font(family=base_family, size=12)  # Card view data font
+        self.font_data_bold = tkfont.Font(family=base_family, size=12, weight="bold")  # Card view bold data
         self.font_italic = tkfont.Font(family=base_family, size=11, slant="italic")
         self.font_title = tkfont.Font(family=base_family, size=18, weight="bold")
         
@@ -1235,6 +1235,8 @@ class EnhancedDashboard(tk.Tk):
                                     bg=bg_color, fg=display_color,
                                     font=self.font_data_bold, anchor='w')
             voltage_label.pack(fill="both", expand=True)
+        else:
+            logger.debug(f"Card creation for {node_id}: No voltage data (Ch3={node_data.get('Ch3 Voltage')}, Voltage={node_data.get('Voltage')})")
         
         # Temperature in column 2
         temp = node_data.get('Temperature')
@@ -1254,6 +1256,8 @@ class EnhancedDashboard(tk.Tk):
                                  bg=bg_color, fg=display_color,
                                  font=self.font_data_bold, anchor='center')
             temp_label.pack(fill="both", expand=True)
+        else:
+            logger.debug(f"Card creation for {node_id}: No temperature data (Temperature={node_data.get('Temperature')})")
         
         # Channel Utilization in column 3
         channel_util = node_data.get('Channel Utilization')
@@ -1267,6 +1271,8 @@ class EnhancedDashboard(tk.Tk):
                                  bg=bg_color, fg=display_color,
                                  font=self.font_data, anchor='e')
             util_label.pack(fill="both", expand=True)
+        else:
+            logger.debug(f"Card creation for {node_id}: No channel util data (Channel Utilization={node_data.get('Channel Utilization')})")
         
         # Metrics row 2 - Secondary metrics (tighter spacing)
         metrics2_frame = tk.Frame(card_frame, bg=bg_color)
@@ -1552,6 +1558,10 @@ class EnhancedDashboard(tk.Tk):
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else voltage_color
             card_info['voltage_label'].config(text=voltage_text, fg=display_color)
+        elif voltage is None:
+            logger.debug(f"Card update for {node_id}: No voltage data (Ch3={node_data.get('Ch3 Voltage')}, Voltage={node_data.get('Voltage')})")
+        elif not card_info['voltage_label']:
+            logger.warning(f"Card update for {node_id}: voltage_label widget missing!")
             
         temp = node_data.get('Temperature')
         if temp is not None and card_info['temp_label']:
