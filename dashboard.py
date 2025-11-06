@@ -423,7 +423,7 @@ class EnhancedDashboard(tk.Tk):
         self.flash_timers = {}  # Track active flash timers for cards
         self.selected_node_id = None
         self.last_refresh = 0
-        self.view_mode = "table"  # "table" or "cards"
+        self.view_mode = "cards"  # "table" or "cards" - default to cards view
         
         # Setup logging
         logging.basicConfig(level=logging.INFO)
@@ -441,15 +441,15 @@ class EnhancedDashboard(tk.Tk):
         self.title("Enhanced Meshtastic Monitor")
         
         # Get saved geometry, but reset if it's too wide (from old default)
-        geometry = self.config_manager.get('dashboard.window_geometry', '980x800')
-        # Parse width to check if it's from old 1600px default
+        geometry = self.config_manager.get('dashboard.window_geometry', '920x800')
+        # Parse width to check if it's from old 1600px or 980px default
         try:
             width = int(geometry.split('x')[0].split('+')[0])
-            if width > 1400:  # Old oversized geometry
-                geometry = '980x800'
+            if width > 940 or width < 900:  # Old geometry or too narrow
+                geometry = '920x800'
                 self.config_manager.set('dashboard.window_geometry', geometry)
         except (ValueError, IndexError):
-            geometry = '980x800'
+            geometry = '920x800'
         
         self.geometry(geometry)
         
