@@ -541,7 +541,7 @@ class EnhancedDashboard(tk.Tk):
         tk.Button(controls_frame, text="Plot", command=self.show_plot,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Node Alerts", command=self.open_node_alerts,
-                 bg='#ff6b35', fg='white').pack(side="left", padx=(0, 5))
+                 bg=self.colors['fg_warning'], fg='white').pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Debug Log", command=self.open_debug_log,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
         self.btn_logs = tk.Button(controls_frame, text="Open Logs", command=self.open_logs_folder, state="disabled",
@@ -1335,7 +1335,7 @@ class EnhancedDashboard(tk.Tk):
         
         # Metrics row 2 - SNR, Channel Utilization, Humidity
         metrics2_frame = tk.Frame(card_frame, bg=bg_color)
-        metrics2_frame.pack(fill="x", padx=6, pady=(1, 3))
+        metrics2_frame.pack(fill="x", padx=6, pady=1)
         
         # Create three columns for row 2 - SNR reduced 10% (100→90), giving more room to Ch Util
         row2_col1_frame = tk.Frame(metrics2_frame, bg=bg_color, width=90, height=25)
@@ -1587,7 +1587,9 @@ class EnhancedDashboard(tk.Tk):
             heard_dt = datetime.fromtimestamp(last_heard)
             heard_text = f"Last heard: {heard_dt.strftime('%Y-%m-%d %H:%M:%S')}"
             
-            # Hide motion label if it exists
+            # Hide motion label if it exists - log transition from motion to last heard
+            if card_info['motion_label'] and card_info['motion_label'].winfo_ismapped():
+                logger.info(f"Node {node_id}: Transition from 'Motion detected' to 'Last heard' (node went offline)")
             if card_info['motion_label']:
                 card_info['motion_label'].pack_forget()
             
@@ -1608,7 +1610,9 @@ class EnhancedDashboard(tk.Tk):
             # Online with recent motion - show Motion Detected
             motion_text = "Motion detected"
             
-            # Hide heard label if it exists
+            # Hide heard label if it exists - log transition from last heard to motion
+            if card_info['heard_label'] and card_info['heard_label'].winfo_ismapped():
+                logger.info(f"Node {node_id}: Transition from 'Last heard' to 'Motion detected'")
             if card_info['heard_label']:
                 card_info['heard_label'].pack_forget()
             
@@ -1627,6 +1631,11 @@ class EnhancedDashboard(tk.Tk):
                 card_info['motion_label'] = motion_label
         else:
             # Online but no recent motion, or offline with no last heard - hide both labels
+            # Log when motion indicator clears
+            if card_info['motion_label'] and card_info['motion_label'].winfo_ismapped():
+                time_since_motion = current_time - last_motion if last_motion else None
+                logger.info(f"Node {node_id}: Motion indicator clearing - time since motion: {time_since_motion:.1f}s, threshold: {motion_display_duration}s")
+            
             if card_info['heard_label']:
                 card_info['heard_label'].pack_forget()
             if card_info['motion_label']:
