@@ -398,7 +398,7 @@ class SettingsDialog:
         self.dialog.destroy()
 
 # Version number - update manually with each release
-VERSION = "1.0.4b"
+VERSION = "1.0.5a"
 
 def get_version_info():
     """Get version information"""
@@ -1788,29 +1788,6 @@ class EnhancedDashboard(tk.Tk):
             return f"{voltage:.1f}V", color
         else:
             return "No voltage", self.colors['fg_secondary']
-    
-    def get_signal_bars(self, snr: float):
-        """Convert SNR to visual signal bar representation using increasing height bars
-        Builds string with 'on' bars (bright) and 'off' bars (dim unicode chars)"""
-        
-        # Use progressively taller bars for "on" and light/outline versions for "off"
-        # ▁▃▅█ for on, ▔ (small top line) for off, or just spaces
-        if snr >= 10:
-            # All 4 bars on
-            return "▁▃▅█", self.colors['fg_good']
-        elif snr >= 5:
-            # 3 bars on, 1 off - but since we can't mix colors in one label,
-            # use dimmer color for entire thing to show 3/4 strength
-            return "▁▃▅▔", '#90EE90'  
-        elif snr >= 0:
-            # 2 bars on, 2 off
-            return "▁▃▔▔", '#ffaa00'
-        elif snr >= -5:
-            # 1 bar on, 3 off
-            return "▁▔▔▔", '#ff6b35'
-        else:
-            # All bars off
-            return "▔▔▔▔", '#666666'
     
     def get_signal_bar_colors(self, snr: float):
         """Return list of colors for each of the 4 signal bars based on SNR
