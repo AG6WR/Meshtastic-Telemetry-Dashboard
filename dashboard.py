@@ -1604,12 +1604,11 @@ class EnhancedDashboard(tk.Tk):
                 card_info['heard_label'].config(text=heard_text, fg=self.colors['fg_bad'])
                 card_info['heard_label'].pack(anchor="w", side="left")
             else:
-                # Create label if it doesn't exist
-                small_font = tkfont.Font(family="Consolas" if sys.platform.startswith("win") else "Courier New", size=9)
+                # Create label if it doesn't exist - use same font as motion detected (12pt)
                 heard_label = tk.Label(card_info['lastheard_frame'], text=heard_text,
                                       bg=card_info['lastheard_frame']['bg'], 
                                       fg=self.colors['fg_bad'],
-                                      font=small_font)
+                                      font=self.font_card_line2)
                 heard_label.pack(anchor="w", side="left")
                 card_info['heard_label'] = heard_label
         elif status == "Online" and last_motion and (current_time - last_motion) <= motion_display_duration:
@@ -1629,12 +1628,11 @@ class EnhancedDashboard(tk.Tk):
                 card_info['motion_label'].config(text=motion_text, fg=self.colors['fg_good'])
                 card_info['motion_label'].pack(anchor="w", side="left")
             else:
-                # Create motion label in lastheard_frame
-                small_font = tkfont.Font(family="Consolas" if sys.platform.startswith("win") else "Courier New", size=9)
+                # Create motion label in lastheard_frame - use same font as heard label (12pt)
                 motion_label = tk.Label(card_info['lastheard_frame'], text=motion_text,
                                        bg=card_info['lastheard_frame']['bg'], 
                                        fg=self.colors['fg_good'],
-                                       font=small_font)
+                                       font=self.font_card_line2)
                 motion_label.pack(anchor="w", side="left")
                 card_info['motion_label'] = motion_label
         else:
