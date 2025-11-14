@@ -320,7 +320,8 @@ class DataCollector:
         """Process motion detection packet"""
         self.last_motion_by_node[node_id] = rx_time
         timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
-        logger.info(f"[{timestamp}] Motion detected from {node_id}")
+        motion_time = datetime.fromtimestamp(rx_time).strftime('%H:%M:%S')
+        logger.info(f"[{timestamp}] Motion detected from {node_id} at {motion_time} (rx_time={rx_time})")
     
     def _update_node_basic_info(self, node_id, rx_time, rx_snr, hop_limit, portnum):
         """Update basic node information for any packet type"""
@@ -482,9 +483,16 @@ class DataCollector:
                         'iso_time', 'epoch', 'node_id', 'long_name', 'short_name', 'snr', 'hop',
                         'temperature', 'humidity', 'pressure', 'voltage', 'current',
                         'battery_level', 'channel_utilization', 'air_util_tx', 'uptime',
-                        'ch3_voltage', 'ch3_current'
+                        'ch3_voltage', 'ch3_current', 'motion_detected'
                     ]
                     writer.writerow(header)
+                
+                # Check if motion was detected recently (within 60 seconds of this telemetry)
+                motion_detected = 0
+                if node_id in self.last_motion_by_node:
+                    time_since_motion = rx_time - self.last_motion_by_node[node_id]
+                    if abs(time_since_motion) <= 60:  # Within 60 seconds
+                        motion_detected = 1
                 
                 # Write data row
                 row = [
@@ -505,7 +513,8 @@ class DataCollector:
                     metrics.get('Air Utilization (TX)', ''),
                     metrics.get('Uptime', ''),
                     metrics.get('Ch3 Voltage', ''),
-                    metrics.get('Ch3 Current', '')
+                    metrics.get('Ch3 Current', ''),
+                    motion_detected
                 ]
                 writer.writerow(row)
                 

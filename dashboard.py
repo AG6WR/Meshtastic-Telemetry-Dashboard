@@ -428,6 +428,10 @@ class EnhancedDashboard(tk.Tk):
         # Setup logging
         logging.basicConfig(level=logging.INFO)
         
+        # Log motion display configuration
+        motion_duration = self.config_manager.get('dashboard.motion_display_seconds', 900)
+        logger.info(f"Motion display configuration: motion_display_seconds={motion_duration} ({motion_duration/60:.1f} minutes)")
+        
         # Initialize GUI
         self.setup_gui()
         self.start_data_collection()
@@ -1247,16 +1251,18 @@ class EnhancedDashboard(tk.Tk):
             motion_display_duration = self.config_manager.get('dashboard.motion_display_seconds', 900)  # Default 15 minutes
             time_since_motion = current_time - last_motion
             
-            logger.info(f"Node {node_id}: last_motion={last_motion}, time_since={time_since_motion:.1f}s, threshold={motion_display_duration}s")
-            
             if time_since_motion <= motion_display_duration:
                 # Motion indicator - using text instead of emoji for Linux compatibility
+                logger.info(f"Node {node_id}: SHOWING 'Motion detected' - time_since={time_since_motion:.1f}s <= threshold={motion_display_duration}s")
                 motion_text = "Motion detected"
                 # 12pt font for line 2
                 motion_label = tk.Label(lastheard_frame, text=motion_text,
                                        bg=bg_color, fg=self.colors['fg_good'],
                                        font=self.font_card_line2)
                 motion_label.pack(anchor="w", side="left")
+            else:
+                # Motion too old - don't show indicator
+                logger.info(f"Node {node_id}: HIDING motion (too old) - time_since={time_since_motion:.1f}s > threshold={motion_display_duration}s")
         
         # Determine if data is stale (use grey color for stale data)
         is_stale = status == "Offline"
@@ -1608,6 +1614,8 @@ class EnhancedDashboard(tk.Tk):
                 card_info['heard_label'] = heard_label
         elif status == "Online" and last_motion and (current_time - last_motion) <= motion_display_duration:
             # Online with recent motion - show Motion Detected
+            time_since_motion = current_time - last_motion
+            logger.info(f"Node {node_id}: UPDATE - SHOWING 'Motion detected' - time_since={time_since_motion:.1f}s <= threshold={motion_display_duration}s")
             motion_text = "Motion detected"
             
             # Hide heard label if it exists - log transition from last heard to motion
@@ -1634,7 +1642,10 @@ class EnhancedDashboard(tk.Tk):
             # Log when motion indicator clears
             if card_info['motion_label'] and card_info['motion_label'].winfo_ismapped():
                 time_since_motion = current_time - last_motion if last_motion else None
-                logger.info(f"Node {node_id}: Motion indicator clearing - time since motion: {time_since_motion:.1f}s, threshold: {motion_display_duration}s")
+                if time_since_motion:
+                    logger.info(f"Node {node_id}: UPDATE - HIDING motion (expired) - time_since={time_since_motion:.1f}s > threshold={motion_display_duration}s")
+                else:
+                    logger.info(f"Node {node_id}: UPDATE - HIDING motion (no motion data)")
             
             if card_info['heard_label']:
                 card_info['heard_label'].pack_forget()
