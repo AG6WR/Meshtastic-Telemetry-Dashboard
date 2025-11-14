@@ -308,8 +308,17 @@ class DataCollector:
                 
                 self.nodes_data[node_id] = updated_node
             
-            # Log to CSV
-            self._log_to_csv(node_id, long_name, short_name, rx_time, rx_snr, hop_limit, metrics)
+            # Log to CSV with message type based on metrics content
+            if 'Temperature' in metrics or 'Humidity' in metrics or 'Pressure' in metrics:
+                msg_type = 'Environment'
+            elif 'Voltage' in metrics or 'Current' in metrics or 'Battery Level' in metrics:
+                msg_type = 'Power'
+            elif 'Channel Utilization' in metrics or 'Air Utilization (TX)' in metrics:
+                msg_type = 'Device'
+            else:
+                msg_type = 'Telemetry'
+            
+            self._log_to_csv(node_id, long_name, short_name, rx_time, rx_snr, hop_limit, metrics, msg_type, motion_detected=False)
             
             logger.debug(f"Updated telemetry for {node_id} ({long_name})")
             
@@ -322,6 +331,10 @@ class DataCollector:
         timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
         motion_time = datetime.fromtimestamp(rx_time).strftime('%H:%M:%S')
         logger.info(f"[{timestamp}] Motion detected from {node_id} at {motion_time} (rx_time={rx_time})")
+        
+        # Get node names and log motion event to CSV
+        long_name, short_name = self.node_info_cache.get(node_id, ('Unknown Node', 'Unknown'))
+        self._log_to_csv(node_id, long_name, short_name, rx_time, None, None, {}, 'Motion', motion_detected=True)
     
     def _update_node_basic_info(self, node_id, rx_time, rx_snr, hop_limit, portnum):
         """Update basic node information for any packet type"""
@@ -460,7 +473,7 @@ class DataCollector:
         
         return s
     
-    def _log_to_csv(self, node_id: str, long_name: str, short_name: str, rx_time: int, snr, hop, metrics: Dict[str, Any]):
+    def _log_to_csv(self, node_id: str, long_name: str, short_name: str, rx_time: int, snr, hop, metrics: Dict[str, Any], message_type: str = 'Telemetry', motion_detected: bool = False):
         """Log telemetry data to CSV file"""
         try:
             # Calculate file path
@@ -480,19 +493,12 @@ class DataCollector:
                 # Write header for new files
                 if is_new_file:
                     header = [
-                        'iso_time', 'epoch', 'node_id', 'long_name', 'short_name', 'snr', 'hop',
+                        'iso_time', 'epoch', 'node_id', 'long_name', 'short_name', 'message_type', 'snr', 'hop',
                         'temperature', 'humidity', 'pressure', 'voltage', 'current',
                         'battery_level', 'channel_utilization', 'air_util_tx', 'uptime',
                         'ch3_voltage', 'ch3_current', 'motion_detected'
                     ]
                     writer.writerow(header)
-                
-                # Check if motion was detected recently (within 60 seconds of this telemetry)
-                motion_detected = 0
-                if node_id in self.last_motion_by_node:
-                    time_since_motion = rx_time - self.last_motion_by_node[node_id]
-                    if abs(time_since_motion) <= 60:  # Within 60 seconds
-                        motion_detected = 1
                 
                 # Write data row
                 row = [
@@ -501,6 +507,7 @@ class DataCollector:
                     node_id,
                     long_name or '',
                     short_name or '',
+                    message_type,
                     snr if snr is not None else '',
                     hop if hop is not None else '',
                     metrics.get('Temperature', ''),
@@ -514,7 +521,7 @@ class DataCollector:
                     metrics.get('Uptime', ''),
                     metrics.get('Ch3 Voltage', ''),
                     metrics.get('Ch3 Current', ''),
-                    motion_detected
+                    1 if motion_detected else 0
                 ]
                 writer.writerow(row)
                 
