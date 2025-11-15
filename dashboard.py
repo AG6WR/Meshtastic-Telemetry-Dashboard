@@ -664,14 +664,11 @@ class EnhancedDashboard(tk.Tk):
         if event.widget != self:
             return
         
-        # Calculate what cards_per_row should be for current width
+        # Calculate columns dynamically based on window width
+        # Card width is ~290px (280 + padding), minimum 1 column
         window_width = self.winfo_width()
-        if window_width > 900:
-            new_cards_per_row = 3
-        elif window_width > 600:
-            new_cards_per_row = 2
-        else:
-            new_cards_per_row = 1
+        card_width_with_padding = 290
+        new_cards_per_row = max(1, window_width // card_width_with_padding)
         
         # Only rebuild if column count actually changed
         if new_cards_per_row != self.current_cards_per_row and self.view_mode == "cards":
@@ -1168,17 +1165,11 @@ class EnhancedDashboard(tk.Tk):
                 widget.destroy()
             self.card_widgets.clear()
             
-            # Calculate grid layout - responsive columns based on window width
+            # Calculate grid layout - unlimited columns based on window width
             window_width = self.winfo_width()
-            if window_width > 900:
-                cards_per_row = 3
-                card_width = 280
-            elif window_width > 600:
-                cards_per_row = 2
-                card_width = 320
-            else:
-                cards_per_row = 1
-                card_width = 380
+            card_width = 280
+            card_width_with_padding = 290  # Card + padding
+            cards_per_row = max(1, window_width // card_width_with_padding)
             
             # Store current column count for resize detection
             self.current_cards_per_row = cards_per_row
