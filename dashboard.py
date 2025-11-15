@@ -483,7 +483,7 @@ class EnhancedDashboard(tk.Tk):
         self.font_data = tkfont.Font(family=base_family, size=12)  # Card view data font
         self.font_data_bold = tkfont.Font(family=base_family, size=12, weight="bold")  # Card view bold data
         self.font_card_header = tkfont.Font(family=base_family, size=14, weight="bold")  # Card header 14pt
-        self.font_card_line2 = tkfont.Font(family=base_family, size=10)  # Card line 2 (Motion/Last Heard) 10pt
+        self.font_card_line2 = tkfont.Font(family=base_family, size=12)  # Card line 2 (Motion/Last Heard) 12pt - matches line 4
         self.font_card_line3 = tkfont.Font(family=base_family, size=14, weight="bold")  # Card line 3 (V/I/T) 14pt
         self.font_italic = tkfont.Font(family=base_family, size=11, slant="italic")
         self.font_title = tkfont.Font(family=base_family, size=18, weight="bold")
@@ -1240,10 +1240,10 @@ class EnhancedDashboard(tk.Tk):
         if status == "Offline" and last_heard:
             # For offline nodes, show static last heard timestamp
             heard_dt = datetime.fromtimestamp(last_heard)
-            heard_text = f"Last heard: {heard_dt.strftime('%Y-%m-%d %H:%M:%S')}"
-            # 10pt font for line 2
+            heard_text = f"Last heard: {heard_dt.strftime('%m-%d %H:%M')}"
+            # 12pt font for line 2
             heard_label = tk.Label(lastheard_frame, text=heard_text,
-                                  bg=bg_color, fg=self.colors['fg_secondary'],
+                                  bg=bg_color, fg=self.colors['fg_bad'],
                                   font=self.font_card_line2)
             heard_label.pack(anchor="w", side="left")
         elif status == "Online" and last_motion:
@@ -1255,9 +1255,9 @@ class EnhancedDashboard(tk.Tk):
                 # Motion indicator - using text instead of emoji for Linux compatibility
                 logger.info(f"Node {node_id}: SHOWING 'Motion detected' - time_since={time_since_motion:.1f}s <= threshold={motion_display_duration}s")
                 motion_text = "Motion detected"
-                # 10pt font for line 2
+                # 12pt font for line 2
                 motion_label = tk.Label(lastheard_frame, text=motion_text,
-                                       bg=bg_color, fg=self.colors['fg_secondary'],
+                                       bg=bg_color, fg=self.colors['fg_good'],
                                        font=self.font_card_line2)
                 motion_label.pack(anchor="w", side="left")
             else:
@@ -1591,7 +1591,7 @@ class EnhancedDashboard(tk.Tk):
         if status == "Offline" and last_heard:
             # Offline - show Last Heard timestamp
             heard_dt = datetime.fromtimestamp(last_heard)
-            heard_text = f"Last heard: {heard_dt.strftime('%Y-%m-%d %H:%M:%S')}"
+            heard_text = f"Last heard: {heard_dt.strftime('%m-%d %H:%M')}"
             
             # Hide motion label if it exists - log transition from motion to last heard
             if card_info['motion_label'] and card_info['motion_label'].winfo_ismapped():
@@ -1601,13 +1601,13 @@ class EnhancedDashboard(tk.Tk):
             
             if card_info['heard_label']:
                 # Update existing label and make it visible
-                card_info['heard_label'].config(text=heard_text, fg=self.colors['fg_secondary'])
+                card_info['heard_label'].config(text=heard_text, fg=self.colors['fg_bad'])
                 card_info['heard_label'].pack(anchor="w", side="left")
             else:
-                # Create label if it doesn't exist - use same font as motion detected (10pt)
+                # Create label if it doesn't exist - use same font as motion detected (12pt)
                 heard_label = tk.Label(card_info['lastheard_frame'], text=heard_text,
                                       bg=card_info['lastheard_frame']['bg'], 
-                                      fg=self.colors['fg_secondary'],
+                                      fg=self.colors['fg_bad'],
                                       font=self.font_card_line2)
                 heard_label.pack(anchor="w", side="left")
                 card_info['heard_label'] = heard_label
@@ -1625,13 +1625,13 @@ class EnhancedDashboard(tk.Tk):
             
             if card_info['motion_label']:
                 # Update existing label and make it visible
-                card_info['motion_label'].config(text=motion_text, fg=self.colors['fg_secondary'])
+                card_info['motion_label'].config(text=motion_text, fg=self.colors['fg_good'])
                 card_info['motion_label'].pack(anchor="w", side="left")
             else:
-                # Create motion label in lastheard_frame - use same font as heard label (10pt)
+                # Create motion label in lastheard_frame - use same font as heard label (12pt)
                 motion_label = tk.Label(card_info['lastheard_frame'], text=motion_text,
                                        bg=card_info['lastheard_frame']['bg'], 
-                                       fg=self.colors['fg_secondary'],
+                                       fg=self.colors['fg_good'],
                                        font=self.font_card_line2)
                 motion_label.pack(anchor="w", side="left")
                 card_info['motion_label'] = motion_label
