@@ -1260,7 +1260,7 @@ class EnhancedDashboard(tk.Tk):
         if status == "Offline" and last_heard:
             # For offline nodes, show static last heard timestamp
             heard_dt = datetime.fromtimestamp(last_heard)
-            heard_text = f"Last heard: {heard_dt.strftime('%m-%d %H:%M')}"
+            heard_text = f"Last: {heard_dt.strftime('%m-%d %H:%M')}"
             # 12pt font for line 2
             heard_label = tk.Label(lastheard_frame, text=heard_text,
                                   bg=bg_color, fg=self.colors['fg_bad'],
@@ -1611,7 +1611,7 @@ class EnhancedDashboard(tk.Tk):
         if status == "Offline" and last_heard:
             # Offline - show Last Heard timestamp
             heard_dt = datetime.fromtimestamp(last_heard)
-            heard_text = f"Last heard: {heard_dt.strftime('%m-%d %H:%M')}"
+            heard_text = f"Last: {heard_dt.strftime('%m-%d %H:%M')}"
             
             # Hide motion label if it exists - log transition from motion to last heard
             if card_info['motion_label'] and card_info['motion_label'].winfo_ismapped():
