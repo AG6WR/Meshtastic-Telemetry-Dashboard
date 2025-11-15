@@ -424,6 +424,7 @@ class EnhancedDashboard(tk.Tk):
         self.selected_node_id = None
         self.last_refresh = 0
         self.view_mode = "cards"  # "table" or "cards" - default to cards view
+        self.current_cards_per_row = 0  # Track current column count for resize detection
         
         # Setup logging
         logging.basicConfig(level=logging.INFO)
@@ -653,6 +654,31 @@ class EnhancedDashboard(tk.Tk):
         def on_mousewheel(event):
             self.card_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         self.card_canvas.bind("<MouseWheel>", on_mousewheel)
+        
+        # Bind window resize to detect when card layout should change
+        self.bind("<Configure>", self.on_window_resize)
+    
+    def on_window_resize(self, event):
+        """Handle window resize - reflow cards if column count changes"""
+        # Only handle main window resizes, not child widgets
+        if event.widget != self:
+            return
+        
+        # Calculate what cards_per_row should be for current width
+        window_width = self.winfo_width()
+        if window_width > 900:
+            new_cards_per_row = 3
+        elif window_width > 600:
+            new_cards_per_row = 2
+        else:
+            new_cards_per_row = 1
+        
+        # Only rebuild if column count actually changed
+        if new_cards_per_row != self.current_cards_per_row and self.view_mode == "cards":
+            self.current_cards_per_row = new_cards_per_row
+            # Force a full card rebuild by clearing the card_widgets cache
+            self.card_widgets.clear()
+            self.refresh_display()
     
     def start_data_collection(self):
         """Start the data collection system"""
@@ -1142,13 +1168,11 @@ class EnhancedDashboard(tk.Tk):
                 widget.destroy()
             self.card_widgets.clear()
             
-            # Calculate grid layout - 3 cards across for wide screens, adjust for 80% width
+            # Calculate grid layout - responsive columns based on window width
             window_width = self.winfo_width()
-            # Use 3 columns if width > 900, 2 if width > 600, else 1
-            # Default 980x800 window comfortably supports 3 columns
             if window_width > 900:
                 cards_per_row = 3
-                card_width = 280  # Fits 3 across with padding
+                card_width = 280
             elif window_width > 600:
                 cards_per_row = 2
                 card_width = 320
@@ -1156,30 +1180,24 @@ class EnhancedDashboard(tk.Tk):
                 cards_per_row = 1
                 card_width = 380
             
-            # Create cards in grid layout
-            current_row_frame = None
-            current_col = 0
+            # Store current column count for resize detection
+            self.current_cards_per_row = cards_per_row
             
-            for node_id, node_data in sorted_nodes:
-                # Create new row frame if needed
-                if current_col == 0:
-                    current_row_frame = tk.Frame(self.card_scrollable_frame, bg=self.colors['bg_main'])
-                    current_row_frame.pack(fill="x", padx=5, pady=2)
+            # Create cards using grid layout for automatic reflow
+            for idx, (node_id, node_data) in enumerate(sorted_nodes):
+                row = idx // cards_per_row
+                col = idx % cards_per_row
                 
                 # Create card - mark as changed if in changed_nodes
                 is_changed = node_id in changed_nodes
-                self.create_node_card(current_row_frame, node_id, node_data, current_col, card_width, is_changed)
-                
-                current_col += 1
-                if current_col >= cards_per_row:
-                    current_col = 0
+                self.create_node_card(self.card_scrollable_frame, node_id, node_data, row, col, card_width, is_changed)
         else:
             # Update only changed cards
             for node_id in changed_nodes:
                 if node_id in self.card_widgets and node_id in filtered_nodes:
                     self.update_node_card(node_id, filtered_nodes[node_id], current_time, is_changed=True)
     
-    def create_node_card(self, parent, node_id: str, node_data: Dict[str, Any], col: int, card_width: int, is_changed: bool = False):
+    def create_node_card(self, parent, node_id: str, node_data: Dict[str, Any], row: int, col: int, card_width: int, is_changed: bool = False):
         """Create a compact card for a single node"""
         # Status colors
         status_colors = {
@@ -1198,8 +1216,8 @@ class EnhancedDashboard(tk.Tk):
         if is_changed:
             logger.info(f"Creating card for {node_id} with BLUE flash background")
         card_frame = tk.Frame(parent, bg=bg_color, relief='raised', bd=2, width=card_width)
-        card_frame.pack(side="left", padx=4, pady=3)
-        card_frame.pack_propagate(True)
+        card_frame.grid(row=row, column=col, padx=4, pady=3, sticky="nsew")
+        card_frame.grid_propagate(True)
         
         # Header row - Name and Status only (short name moved to line 2)
         header_frame = tk.Frame(card_frame, bg=bg_color)
