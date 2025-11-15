@@ -206,16 +206,14 @@ class DataCollector:
             
             # Handle different packet types
             if portnum == 'NODEINFO_APP':
-                self._process_nodeinfo_packet(packet, node_id)
-                # Don't update Last Heard for NODEINFO packets (matches original script behavior)
-                # This prevents dead nodes from appearing active due to mesh retransmissions
-                return
+                self._process_nodeinfo_packet(packet, node_id, rx_time, rx_snr, hop_limit)
             elif portnum == 'TELEMETRY_APP':
                 self._process_telemetry_packet(packet, node_id, rx_time, rx_snr, hop_limit)
             elif portnum == 'DETECTION_SENSOR_APP':
                 self._process_motion_packet(node_id, rx_time)
             
-            # Update basic node info for non-NODEINFO packets only
+            # Update basic node info for ALL packet types (including NODEINFO)
+            # This allows nodes to show online even if only receiving NODEINFO packets
             self._update_node_basic_info(node_id, rx_time, rx_snr, hop_limit, portnum)
             
             logger.debug(f"Processed {portnum} packet from {node_id}")
@@ -223,7 +221,7 @@ class DataCollector:
         except Exception as e:
             logger.error(f"Error processing packet: {e}")
     
-    def _process_nodeinfo_packet(self, packet, node_id):
+    def _process_nodeinfo_packet(self, packet, node_id, rx_time, rx_snr, hop_limit):
         """Process node information packet"""
         try:
             decoded = packet.get('decoded', {})
@@ -255,13 +253,12 @@ class DataCollector:
             elif old_info != (long_name, short_name):
                 logger.info(f"Updated node info for {node_id}: {long_name} ({short_name})")
             
-            # Ensure we have data record for this node (but only for preloaded)
-            # Real NODEINFO packets shouldn't create records since we return early
+            # Ensure we have data record for this node
             with self.data_lock:
-                if packet.get('_preloaded') and node_id not in self.nodes_data:
-                    # Create record for preloaded nodes (no timestamps)
+                if node_id not in self.nodes_data:
+                    # Create record for new nodes
                     self.nodes_data[node_id] = self._default_node_record(long_name, short_name)
-                elif node_id in self.nodes_data:
+                else:
                     # Update existing record with new names
                     self.nodes_data[node_id]['Node LongName'] = long_name
                     self.nodes_data[node_id]['Node ShortName'] = short_name
@@ -301,6 +298,9 @@ class DataCollector:
                 
                 if hop_limit is not None:
                     updated_node['Hop Limit'] = hop_limit
+                
+                # Track when we last received telemetry data
+                updated_node['Last Telemetry Time'] = rx_time
                 
                 # Add motion data if available
                 if node_id in self.last_motion_by_node:
@@ -435,6 +435,7 @@ class DataCollector:
             'Node LongName': long_name,
             'Node ShortName': short_name,
             'Last Heard': None,
+            'Last Telemetry Time': None,
             'Last Packet Type': None,
             'SNR': None,
             'Hop Limit': None,

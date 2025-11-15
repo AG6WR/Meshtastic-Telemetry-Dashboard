@@ -1196,11 +1196,16 @@ class EnhancedDashboard(tk.Tk):
             'Offline': self.colors['fg_bad']
         }
         
-        # Determine node status
+        # Determine node status based on any packet received
         current_time = time.time()
         last_heard = node_data.get('Last Heard', 0)
         time_diff = current_time - last_heard if last_heard else float('inf')
-        status = "Online" if time_diff <= 300 else "Offline"  # 5 minutes threshold
+        status = "Online" if time_diff <= 300 else "Offline"  # 5 minutes threshold for any packet
+        
+        # Determine if telemetry data is stale (no telemetry in 16 minutes)
+        last_telemetry = node_data.get('Last Telemetry Time', 0)
+        telemetry_diff = current_time - last_telemetry if last_telemetry else float('inf')
+        telemetry_stale = telemetry_diff > 960  # 16 minutes = 960 seconds
         
         # Main card frame - start with flash color if changed
         bg_color = self.colors['bg_selected'] if is_changed else self.colors['bg_frame']  # Use same dark blue as selected table row
@@ -1284,8 +1289,9 @@ class EnhancedDashboard(tk.Tk):
                 # Motion too old - don't show indicator
                 logger.info(f"Node {node_id}: HIDING motion (too old) - time_since={time_since_motion:.1f}s > threshold={motion_display_duration}s")
         
-        # Determine if data is stale (use grey color for stale data)
-        is_stale = status == "Offline"
+        # Determine if data is stale (use grey color for stale telemetry)
+        # Data is stale if we haven't received telemetry recently, even if node is online
+        is_stale = telemetry_stale
         stale_color = self.colors['fg_secondary']  # Grey for stale data
         
         # Metrics row 1 - Ch3 Voltage, Ch3 Current, Temperature
@@ -1591,10 +1597,15 @@ class EnhancedDashboard(tk.Tk):
         short_name = node_data.get('Node ShortName', node_id[-4:])
         card_info['shortname_label'].config(text=f"({short_name})")
         
-        # Update status
+        # Update status based on any packet received
         last_heard = node_data.get('Last Heard', 0)
         time_diff = current_time - last_heard if last_heard else float('inf')
         status = "Online" if time_diff <= 300 else "Offline"
+        
+        # Determine if telemetry data is stale (no telemetry in 16 minutes)
+        last_telemetry = node_data.get('Last Telemetry Time', 0)
+        telemetry_diff = current_time - last_telemetry if last_telemetry else float('inf')
+        telemetry_stale = telemetry_diff > 960  # 16 minutes = 960 seconds
         
         status_colors = {
             'Online': self.colors['fg_good'],
@@ -1670,8 +1681,9 @@ class EnhancedDashboard(tk.Tk):
             if card_info['motion_label']:
                 card_info['motion_label'].pack_forget()
         
-        # Determine if data is stale (use grey color for stale data)
-        is_stale = status == "Offline"
+        # Determine if data is stale (use grey for stale telemetry)
+        # Data is stale if we haven't received telemetry recently, even if node is online
+        is_stale = telemetry_stale
         stale_color = self.colors['fg_secondary']  # Grey for stale data
         
         # Update telemetry fields - Row 1: Ch3 Voltage, Ch3 Current, Temperature
