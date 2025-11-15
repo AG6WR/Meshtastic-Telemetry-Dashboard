@@ -438,6 +438,10 @@ class EnhancedDashboard(tk.Tk):
         
         # Initial display update
         self.after(1000, self.refresh_display)
+        
+        # Start periodic refresh timer (every 15 minutes) to catch status changes
+        # This ensures nodes transition to offline even when no new telemetry arrives
+        self.start_periodic_refresh()
     
     def setup_gui(self):
         """Setup the GUI"""
@@ -670,6 +674,13 @@ class EnhancedDashboard(tk.Tk):
         """Callback when data changes - schedule GUI update"""
         # Schedule update on GUI thread (thread-safe)
         self.after(0, self.refresh_display)
+    
+    def start_periodic_refresh(self):
+        """Start periodic refresh timer to catch status changes (online->offline transitions)"""
+        # Refresh every 15 minutes (900000 ms) to update node status
+        # This catches nodes going offline even when no new telemetry arrives
+        self.refresh_display()
+        self.after(900000, self.start_periodic_refresh)  # 15 minutes
     
     def refresh_display(self):
         """Refresh the dashboard display (event-driven, called when data changes)"""
