@@ -1511,7 +1511,7 @@ class EnhancedDashboard(tk.Tk):
                     # Update all labels
                     for key in ['name_label', 'shortname_label', 'status_label', 'heard_label',
                                'voltage_label', 'temp_label', 'util_label',
-                               'battery_label', 'motion_label']:
+                               'battery_label', 'motion_label', 'current_label', 'humidity_label']:
                         if key in card_info and card_info[key]:
                             card_info[key].config(bg=normal_bg)
                     
