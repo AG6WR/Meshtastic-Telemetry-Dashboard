@@ -201,7 +201,7 @@ class NodeAlertConfigDialog:
         
         # Remove the bulk disable button - let user decide manually
         info_label = tk.Label(bulk_frame,
-                             text="Configure each node individually based on your hardware knowledge",
+                             text="Configure nodes based on hardware",
                              font=("Arial", 9, "italic"),
                              bg='#2d2d2d', fg='#888888')
         info_label.pack(side='left', padx=(0, 10))
