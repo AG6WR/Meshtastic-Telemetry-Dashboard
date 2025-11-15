@@ -474,7 +474,7 @@ class EnhancedDashboard(tk.Tk):
             'fg_good': '#228B22',        # Forest green - for positive status/values
             'fg_warning': '#FFA500',     # Orange - for warning status/values
             'fg_yellow': '#FFFF00',      # Yellow - for caution status/values
-            'fg_bad': '#DC143C'          # Crimson - for negative status/values
+            'fg_bad': '#FF6B9D'          # Coral pink - for negative status/values (better contrast than crimson)
         }
         
         # Configure main window
