@@ -488,7 +488,7 @@ class EnhancedDashboard(tk.Tk):
         self.font_data = tkfont.Font(family=base_family, size=12)  # Card view data font
         self.font_data_bold = tkfont.Font(family=base_family, size=12, weight="bold")  # Card view bold data
         self.font_card_header = tkfont.Font(family=base_family, size=14, weight="bold")  # Card header 14pt
-        self.font_card_line2 = tkfont.Font(family=base_family, size=12)  # Card line 2 (Motion/Last Heard) 12pt - matches line 4
+        self.font_card_line2 = tkfont.Font(family=base_family, size=10)  # Card line 2 (Motion/Last Heard) 10pt - matches line 4
         self.font_card_line3 = tkfont.Font(family=base_family, size=14, weight="bold")  # Card line 3 (V/I/T) 14pt
         self.font_card_label = tkfont.Font(family=base_family, size=10)  # Card labels 10pt regular
         self.font_italic = tkfont.Font(family=base_family, size=11, slant="italic")
@@ -1431,11 +1431,11 @@ class EnhancedDashboard(tk.Tk):
         if snr is not None:
             # Create container for SNR display with multiple colored elements
             snr_container = tk.Frame(row2_col1_frame, bg=bg_color)
-            snr_container.pack(fill="both", expand=True, anchor='w')
+            snr_container.pack(side="bottom", anchor='w')
             
             # Icon - using text instead of emoji for Linux compatibility
             icon_label = tk.Label(snr_container, text="SNR:", bg=bg_color, 
-                                 fg=self.colors['fg_secondary'], font=self.font_card_label, anchor="s")
+                                 fg=self.colors['fg_secondary'], font=self.font_card_label)
             icon_label.pack(side="left", padx=0)  # No padding
             
             # Get bar colors based on SNR level
@@ -1451,10 +1451,10 @@ class EnhancedDashboard(tk.Tk):
                                   size=10)  # Match other row 2 text
             
             # Create each bar with its own color - NO spacing between bars
-            # Use anchor="s" for baseline alignment
+            # Labels packed side-by-side naturally share baseline
             for i, (char, color) in enumerate(zip(bar_chars, bar_colors)):
                 bar_label = tk.Label(snr_container, text=char, bg=bg_color,
-                                   fg=color, font=bar_font, padx=0, pady=0, anchor="s")
+                                   fg=color, font=bar_font, padx=0, pady=0)
                 bar_label.pack(side="left", padx=0, pady=0)
             
             snr_label = snr_container  # Store container reference
@@ -1469,24 +1469,24 @@ class EnhancedDashboard(tk.Tk):
             
             # Create container for mixed font display
             util_container = tk.Frame(row2_col2_frame, bg=bg_color)
-            util_container.pack(anchor="center")
+            util_container.pack(side="bottom", anchor="center")
             
             # "Ch:" label in 10pt regular (light grey)
             ch_label = tk.Label(util_container, text="Ch:",
                                bg=bg_color, fg=self.colors['fg_secondary'],
-                               font=self.font_card_label, padx=0, pady=0, anchor="s")
+                               font=self.font_card_label, padx=0, pady=0)
             ch_label.pack(side="left", padx=0)
             
             # Value in 10pt regular
             ch_value = tk.Label(util_container, text=f"{channel_util:.1f}",
                                bg=bg_color, fg=display_color,
-                               font=self.font_card_label, padx=0, pady=0, anchor="s")
+                               font=self.font_card_label, padx=0, pady=0)
             ch_value.pack(side="left", padx=0)
             
             # "%" unit in 10pt regular (light grey)
             ch_unit = tk.Label(util_container, text="%",
                               bg=bg_color, fg=self.colors['fg_secondary'],
-                              font=self.font_card_label, padx=0, pady=0, anchor="s")
+                              font=self.font_card_label, padx=0, pady=0)
             ch_unit.pack(side="left", padx=0)
             
             util_label = util_container
@@ -1507,24 +1507,24 @@ class EnhancedDashboard(tk.Tk):
             
             # Create container for mixed font display (right-aligned)
             humidity_container = tk.Frame(row2_col3_frame, bg=bg_color)
-            humidity_container.pack(anchor="e")
+            humidity_container.pack(side="bottom", anchor="e")
             
             # "Hum:" label in 10pt regular (light grey)
             hum_label = tk.Label(humidity_container, text="Hum:",
                                 bg=bg_color, fg=self.colors['fg_secondary'],
-                                font=self.font_card_label, padx=0, pady=0, anchor="s")
+                                font=self.font_card_label, padx=0, pady=0)
             hum_label.pack(side="left", padx=0)
             
             # Value in 10pt regular
             hum_value = tk.Label(humidity_container, text=f"{humidity:.0f}",
                                 bg=bg_color, fg=display_color,
-                                font=self.font_card_label, padx=0, pady=0, anchor="s")
+                                font=self.font_card_label, padx=0, pady=0)
             hum_value.pack(side="left", padx=0)
             
             # "%" unit in 10pt regular (light grey)
             hum_unit = tk.Label(humidity_container, text="%",
                                bg=bg_color, fg=self.colors['fg_secondary'],
-                               font=self.font_card_label, padx=0, pady=0, anchor="s")
+                               font=self.font_card_label, padx=0, pady=0)
             hum_unit.pack(side="left", padx=0)
             
             humidity_label = humidity_container
