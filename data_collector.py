@@ -228,6 +228,9 @@ class DataCollector:
             rx_snr = packet.get('rxSnr')
             hop_limit = packet.get('hopLimit')
             
+            # Skip preloaded packets - they shouldn't update Last Heard
+            is_preloaded = packet.get('_preloaded', False)
+            
             # Handle different packet types
             if portnum == 'NODEINFO_APP':
                 self._process_nodeinfo_packet(packet, node_id, rx_time, rx_snr, hop_limit)
@@ -238,7 +241,9 @@ class DataCollector:
             
             # Update basic node info for ALL packet types (including NODEINFO)
             # This allows nodes to show online even if only receiving NODEINFO packets
-            self._update_node_basic_info(node_id, rx_time, rx_snr, hop_limit, portnum)
+            # BUT: Skip preloaded synthetic packets - they shouldn't affect online/offline status
+            if not is_preloaded:
+                self._update_node_basic_info(node_id, rx_time, rx_snr, hop_limit, portnum)
             
             logger.debug(f"Processed {portnum} packet from {node_id}")
             
