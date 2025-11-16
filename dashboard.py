@@ -119,8 +119,17 @@ class SettingsDialog:
         self.serial_group.pack(fill="x", padx=5, pady=5)
         
         tk.Label(self.serial_group, text="Serial Port:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
-        self.serial_port = tk.Entry(self.serial_group, width=20)
-        self.serial_port.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
+        
+        # Create frame for port selector and refresh button
+        port_frame = tk.Frame(self.serial_group)
+        port_frame.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
+        
+        self.serial_port = ttk.Combobox(port_frame, width=18)
+        self.serial_port.pack(side="left", fill="x", expand=True)
+        
+        refresh_btn = tk.Button(port_frame, text="↻", width=3, command=self._refresh_serial_ports)
+        refresh_btn.pack(side="left", padx=(5, 0))
+        
         tk.Label(self.serial_group, text="(e.g., COM3 on Windows, /dev/ttyUSB0 on Linux)").grid(row=0, column=2, sticky="w", padx=5, pady=5)
         
         tk.Label(self.serial_group, text="Baud Rate:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
@@ -285,6 +294,37 @@ class SettingsDialog:
         self.use_tls = tk.BooleanVar(value=True)
         tk.Checkbutton(smtp_group, text="Use TLS encryption", variable=self.use_tls).grid(row=6, column=1, sticky="w", padx=5, pady=5)
     
+    def _refresh_serial_ports(self):
+        """Refresh the list of available serial ports"""
+        try:
+            import serial.tools.list_ports
+            ports = serial.tools.list_ports.comports()
+            port_list = [port.device for port in sorted(ports)]
+            
+            if not port_list:
+                # No ports found, provide common defaults
+                import sys
+                if sys.platform.startswith('win'):
+                    port_list = ['COM3', 'COM4', 'COM5']
+                else:
+                    port_list = ['/dev/ttyUSB0', '/dev/ttyUSB1', '/dev/ttyACM0']
+            
+            # Update combobox values
+            self.serial_port['values'] = port_list
+            
+            # If no current value and ports available, select first one
+            if not self.serial_port.get() and port_list:
+                self.serial_port.set(port_list[0])
+                
+        except Exception as e:
+            logger.warning(f"Failed to enumerate serial ports: {e}")
+            # Provide defaults on error
+            import sys
+            if sys.platform.startswith('win'):
+                self.serial_port['values'] = ['COM3', 'COM4', 'COM5']
+            else:
+                self.serial_port['values'] = ['/dev/ttyUSB0', '/dev/ttyUSB1', '/dev/ttyACM0']
+    
     def _toggle_connection_fields(self):
         """Show/hide connection fields based on selected type"""
         conn_type = self.conn_type.get()
@@ -304,7 +344,11 @@ class SettingsDialog:
         self.tcp_host.insert(0, self.config_manager.get('meshtastic.interface.host', '192.168.1.91'))
         self.tcp_port.insert(0, str(self.config_manager.get('meshtastic.interface.port', 4403)))
         
-        self.serial_port.insert(0, self.config_manager.get('meshtastic.interface.port', 'COM3'))
+        # Load serial port and refresh available ports
+        self._refresh_serial_ports()
+        saved_serial_port = self.config_manager.get('meshtastic.interface.serial_port', '')
+        if saved_serial_port:
+            self.serial_port.set(saved_serial_port)
         self.serial_baud.set(str(self.config_manager.get('meshtastic.interface.baud', 115200)))
         
         self.conn_timeout.insert(0, str(self.config_manager.get('meshtastic.connection_timeout', 30)))
@@ -375,7 +419,7 @@ class SettingsDialog:
                 self.config_manager.set('meshtastic.interface.host', self.tcp_host.get())
                 self.config_manager.set('meshtastic.interface.port', int(self.tcp_port.get()))
             else:  # serial
-                self.config_manager.set('meshtastic.interface.port', self.serial_port.get())
+                self.config_manager.set('meshtastic.interface.serial_port', self.serial_port.get())
                 self.config_manager.set('meshtastic.interface.baud', int(self.serial_baud.get()))
             
             self.config_manager.set('meshtastic.connection_timeout', int(self.conn_timeout.get()))

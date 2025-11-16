@@ -150,7 +150,7 @@ class ConnectionManager:
     
     def _connect_serial(self, config: Dict[str, Any]):
         """Connect via Serial"""
-        port = config.get('port', 'COM3')
+        port = config.get('serial_port', config.get('port', 'COM3'))  # Try serial_port first, fallback to port for compatibility
         baud = config.get('baud', 115200)
         
         logger.info(f"Connecting to Serial {port} at {baud} baud")
