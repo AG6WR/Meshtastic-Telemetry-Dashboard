@@ -1811,6 +1811,10 @@ class EnhancedDashboard(tk.Tk):
                        'motion_label', 'current_label', 'humidity_label']:
                 if key in card_info and card_info[key]:
                     card_info[key].config(bg=flash_color)
+                    # Flash children of container labels (battery, current, temp, snr, util, humidity)
+                    for child in card_info[key].winfo_children():
+                        if isinstance(child, tk.Label):
+                            child.config(bg=flash_color)
             
             def restore_colors():
                 """Restore all to normal background"""
