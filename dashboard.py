@@ -1576,7 +1576,7 @@ class EnhancedDashboard(tk.Tk):
         if snr is not None:
             # Create container for SNR display with multiple colored elements
             snr_container = tk.Frame(row2_col1_frame, bg=bg_color)
-            snr_container.pack(side="bottom", anchor='w')
+            snr_container.pack(fill="both", expand=True, anchor='w')
             
             # Icon - using text instead of emoji for Linux compatibility
             icon_label = tk.Label(snr_container, text="SNR:", bg=bg_color, 
@@ -1614,7 +1614,7 @@ class EnhancedDashboard(tk.Tk):
             
             # Create container for mixed font display
             util_container = tk.Frame(row2_col2_frame, bg=bg_color)
-            util_container.pack(side="bottom", anchor="center")
+            util_container.pack(fill="both", expand=True, anchor="center")
             
             # "Ch:" label in 10pt regular (light grey)
             ch_label = tk.Label(util_container, text="Ch:",
@@ -1652,7 +1652,7 @@ class EnhancedDashboard(tk.Tk):
             
             # Create container for mixed font display (right-aligned)
             humidity_container = tk.Frame(row2_col3_frame, bg=bg_color)
-            humidity_container.pack(side="bottom", anchor="e")
+            humidity_container.pack(fill="both", expand=True, anchor="e")
             
             # "Hum:" label in 10pt regular (light grey)
             hum_label = tk.Label(humidity_container, text="Hum:",
