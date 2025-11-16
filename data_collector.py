@@ -144,7 +144,19 @@ class DataCollector:
                     self.nodes_data = json.load(f)
                     if not isinstance(self.nodes_data, dict):
                         self.nodes_data = {}
-                logger.info(f"Loaded data for {len(self.nodes_data)} nodes")
+                
+                # v1.0.8 (2025-11-16): Populate node_info_cache from loaded data
+                # This ensures node names are available immediately at startup,
+                # before preloaded NODEINFO packets arrive from interface database
+                cache_count = 0
+                for node_id, node_data in self.nodes_data.items():
+                    long_name = node_data.get('Node LongName')
+                    short_name = node_data.get('Node ShortName')
+                    if long_name and short_name:
+                        self.node_info_cache[node_id] = (long_name, short_name)
+                        cache_count += 1
+                
+                logger.info(f"Loaded data for {len(self.nodes_data)} nodes ({cache_count} names cached)")
             except Exception as e:
                 logger.error(f"Failed to load existing data: {e}")
                 self.nodes_data = {}
