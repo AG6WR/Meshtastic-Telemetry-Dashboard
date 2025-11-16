@@ -791,10 +791,12 @@ class EnhancedDashboard(tk.Tk):
     
     def start_periodic_refresh(self):
         """Start periodic refresh timer to catch status changes (online->offline transitions)"""
-        # Refresh every 15 minutes (900000 ms) to update node status
+        # Refresh every 5 minutes (300000 ms) to update node status
         # This catches nodes going offline even when no new telemetry arrives
+        # Clear last_node_data cache to force status recalculation for all cards
+        self.last_node_data.clear()
         self.refresh_display()
-        self.after(900000, self.start_periodic_refresh)  # 15 minutes
+        self.after(300000, self.start_periodic_refresh)  # 5 minutes
     
     def refresh_display(self):
         """Refresh the dashboard display (event-driven, called when data changes)"""
@@ -1348,6 +1350,10 @@ class EnhancedDashboard(tk.Tk):
         time_diff = current_time - last_heard if last_heard else float('inf')
         status = "Online" if time_diff <= 300 else "Offline"  # 5 minutes threshold for any packet
         
+        # Debug logging for node 30c0
+        if '30c0' in node_id.lower():
+            logger.info(f"Node {node_id} STATUS DEBUG (CREATE): last_heard={last_heard}, current_time={current_time}, time_diff={time_diff:.1f}s, status={status}")
+        
         # Determine if telemetry data is stale (no telemetry in 16 minutes)
         last_telemetry = node_data.get('Last Telemetry Time', 0)
         telemetry_diff = current_time - last_telemetry if last_telemetry else float('inf')
@@ -1380,9 +1386,12 @@ class EnhancedDashboard(tk.Tk):
             if cached_info:
                 cached_long, cached_short = cached_info
                 if cached_long and cached_long not in ('Unknown', 'Unknown Node'):
+                    logger.info(f"CREATE {node_id}: Found '{cached_long}' in cache")
                     long_name = cached_long
                 if cached_short and cached_short != 'Unknown':
                     short_name = cached_short
+            else:
+                logger.warning(f"CREATE {node_id}: Unknown but no cache entry")
         
         display_name = long_name.replace("AG6WR-", "") if long_name.startswith("AG6WR-") else long_name
         name_label = tk.Label(left_header, text=display_name, 
@@ -1856,9 +1865,12 @@ class EnhancedDashboard(tk.Tk):
             if cached_info:
                 cached_long, cached_short = cached_info
                 if cached_long and cached_long not in ('Unknown', 'Unknown Node'):
+                    logger.info(f"UPDATE {node_id}: Found '{cached_long}' in cache")
                     long_name = cached_long
                 if cached_short and cached_short != 'Unknown':
                     short_name = cached_short
+            else:
+                logger.warning(f"UPDATE {node_id}: Unknown but no cache entry")
         
         display_name = long_name.replace("AG6WR-", "") if long_name.startswith("AG6WR-") else long_name
         card_info['name_label'].config(text=display_name)
@@ -1868,6 +1880,10 @@ class EnhancedDashboard(tk.Tk):
         last_heard = node_data.get('Last Heard', 0)
         time_diff = current_time - last_heard if last_heard else float('inf')
         status = "Online" if time_diff <= 300 else "Offline"
+        
+        # Debug logging for node 30c0
+        if '30c0' in node_id.lower():
+            logger.info(f"Node {node_id} STATUS DEBUG: last_heard={last_heard}, current_time={current_time}, time_diff={time_diff:.1f}s, status={status}")
         
         # Determine if telemetry data is stale (no telemetry in 16 minutes)
         last_telemetry = node_data.get('Last Telemetry Time', 0)
