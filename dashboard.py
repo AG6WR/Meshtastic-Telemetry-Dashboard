@@ -1325,16 +1325,16 @@ class EnhancedDashboard(tk.Tk):
             battery_container = tk.Frame(col1_frame, bg=bg_color)
             battery_container.pack(fill="both", expand=True, anchor="w")
             
-            # "Batt:" label in 10pt regular
+            # "Batt:" label in 10pt regular (light grey)
             batt_label_text = tk.Label(battery_container, text="Batt:",
-                                      bg=bg_color, fg=display_color,
-                                      font=self.font_card_label, padx=0, pady=0)
+                                      bg=bg_color, fg=self.colors['fg_secondary'],
+                                      font=self.font_card_label, padx=0, pady=0, anchor="s")
             batt_label_text.pack(side="left", padx=0)
             
             # Percentage value in 14pt bold
             batt_value_text = tk.Label(battery_container, text=pct_value,
                                       bg=bg_color, fg=display_color,
-                                      font=self.font_card_line3, padx=0, pady=0)
+                                      font=self.font_card_line3, padx=0, pady=0, anchor="s")
             batt_value_text.pack(side="left", padx=0)
             
             battery_label = battery_container  # Store container reference
@@ -1362,13 +1362,13 @@ class EnhancedDashboard(tk.Tk):
             # Current value in 14pt bold
             current_value = tk.Label(current_container, text=f"{ch3_current:.0f}",
                                     bg=bg_color, fg=display_color,
-                                    font=self.font_card_line3, padx=0, pady=0)
+                                    font=self.font_card_line3, padx=0, pady=0, anchor="s")
             current_value.pack(side="left", padx=0)
             
-            # "mA" unit in 10pt regular
+            # "mA" unit in 10pt regular (light grey)
             current_unit = tk.Label(current_container, text="mA",
-                                   bg=bg_color, fg=display_color,
-                                   font=self.font_card_label, padx=0, pady=0)
+                                   bg=bg_color, fg=self.colors['fg_secondary'],
+                                   font=self.font_card_label, padx=0, pady=0, anchor="s")
             current_unit.pack(side="left", padx=0)
             
             current_label = current_container  # Store container reference
@@ -1394,13 +1394,13 @@ class EnhancedDashboard(tk.Tk):
             # Temperature value in 14pt bold
             temp_value = tk.Label(temp_container, text=f"{temp:.1f}",
                                  bg=bg_color, fg=display_color,
-                                 font=self.font_card_line3, padx=0, pady=0)
+                                 font=self.font_card_line3, padx=0, pady=0, anchor="s")
             temp_value.pack(side="left", padx=0)
             
-            # "°C" unit in 10pt regular
+            # "°C" unit in 10pt regular (light grey)
             temp_unit = tk.Label(temp_container, text="°C",
-                                bg=bg_color, fg=display_color,
-                                font=self.font_card_label, padx=0, pady=0)
+                                bg=bg_color, fg=self.colors['fg_secondary'],
+                                font=self.font_card_label, padx=0, pady=0, anchor="s")
             temp_unit.pack(side="left", padx=0)
             
             temp_label = temp_container  # Store container reference
@@ -1435,7 +1435,7 @@ class EnhancedDashboard(tk.Tk):
             
             # Icon - using text instead of emoji for Linux compatibility
             icon_label = tk.Label(snr_container, text="SNR:", bg=bg_color, 
-                                 fg=self.colors['fg_secondary'], font=self.font_card_label)
+                                 fg=self.colors['fg_secondary'], font=self.font_card_label, anchor="s")
             icon_label.pack(side="left", padx=0)  # No padding
             
             # Get bar colors based on SNR level
@@ -1446,15 +1446,15 @@ class EnhancedDashboard(tk.Tk):
             # Debug: print what we're doing
             logger.debug(f"SNR {snr}: bar_colors = {bar_colors}")
             
-            # Create smaller font for narrower bars
+            # Change SNR bars to 10pt to match other row 2 text
             bar_font = tkfont.Font(family="Consolas" if sys.platform.startswith("win") else "Courier New", 
-                                  size=9)  # Smaller than data font
+                                  size=10)  # Match other row 2 text
             
             # Create each bar with its own color - NO spacing between bars
-            # No anchor specified - use default center alignment to match text baseline
+            # Use anchor="s" for baseline alignment
             for i, (char, color) in enumerate(zip(bar_chars, bar_colors)):
                 bar_label = tk.Label(snr_container, text=char, bg=bg_color,
-                                   fg=color, font=bar_font, padx=0, pady=0)
+                                   fg=color, font=bar_font, padx=0, pady=0, anchor="s")
                 bar_label.pack(side="left", padx=0, pady=0)
             
             snr_label = snr_container  # Store container reference
@@ -1471,22 +1471,22 @@ class EnhancedDashboard(tk.Tk):
             util_container = tk.Frame(row2_col2_frame, bg=bg_color)
             util_container.pack(anchor="center")
             
-            # "Ch:" label in 10pt regular
+            # "Ch:" label in 10pt regular (light grey)
             ch_label = tk.Label(util_container, text="Ch:",
-                               bg=bg_color, fg=display_color,
-                               font=self.font_card_label, padx=0, pady=0)
+                               bg=bg_color, fg=self.colors['fg_secondary'],
+                               font=self.font_card_label, padx=0, pady=0, anchor="s")
             ch_label.pack(side="left", padx=0)
             
-            # Value in 12pt regular
+            # Value in 10pt regular
             ch_value = tk.Label(util_container, text=f"{channel_util:.1f}",
                                bg=bg_color, fg=display_color,
-                               font=self.font_data, padx=0, pady=0)
+                               font=self.font_card_label, padx=0, pady=0, anchor="s")
             ch_value.pack(side="left", padx=0)
             
-            # "%" unit in 10pt regular
+            # "%" unit in 10pt regular (light grey)
             ch_unit = tk.Label(util_container, text="%",
-                              bg=bg_color, fg=display_color,
-                              font=self.font_card_label, padx=0, pady=0)
+                              bg=bg_color, fg=self.colors['fg_secondary'],
+                              font=self.font_card_label, padx=0, pady=0, anchor="s")
             ch_unit.pack(side="left", padx=0)
             
             util_label = util_container
@@ -1509,22 +1509,22 @@ class EnhancedDashboard(tk.Tk):
             humidity_container = tk.Frame(row2_col3_frame, bg=bg_color)
             humidity_container.pack(anchor="e")
             
-            # "Hum:" label in 10pt regular
+            # "Hum:" label in 10pt regular (light grey)
             hum_label = tk.Label(humidity_container, text="Hum:",
-                                bg=bg_color, fg=display_color,
-                                font=self.font_card_label, padx=0, pady=0)
+                                bg=bg_color, fg=self.colors['fg_secondary'],
+                                font=self.font_card_label, padx=0, pady=0, anchor="s")
             hum_label.pack(side="left", padx=0)
             
-            # Value in 12pt regular
+            # Value in 10pt regular
             hum_value = tk.Label(humidity_container, text=f"{humidity:.0f}",
                                 bg=bg_color, fg=display_color,
-                                font=self.font_data, padx=0, pady=0)
+                                font=self.font_card_label, padx=0, pady=0, anchor="s")
             hum_value.pack(side="left", padx=0)
             
-            # "%" unit in 10pt regular
+            # "%" unit in 10pt regular (light grey)
             hum_unit = tk.Label(humidity_container, text="%",
-                               bg=bg_color, fg=display_color,
-                               font=self.font_card_label, padx=0, pady=0)
+                               bg=bg_color, fg=self.colors['fg_secondary'],
+                               font=self.font_card_label, padx=0, pady=0, anchor="s")
             hum_unit.pack(side="left", padx=0)
             
             humidity_label = humidity_container
@@ -1776,9 +1776,13 @@ class EnhancedDashboard(tk.Tk):
             
             # Update all children in the container (label + value)
             for child in card_info['battery_label'].winfo_children():
-                child.config(fg=display_color)
-                if "Batt:" not in child.cget("text"):  # Update the percentage value
-                    child.config(text=pct_value)
+                text = child.cget("text")
+                if "Batt:" in text:
+                    # Keep label grey
+                    child.config(fg=self.colors['fg_secondary'])
+                else:
+                    # Update value color and text
+                    child.config(fg=display_color, text=pct_value)
         elif battery_text == "No battery":
             logger.debug(f"Card update for {node_id}: No battery data (Ch3 Voltage={node_data.get('Ch3 Voltage')}, Battery Level={node_data.get('Battery Level')})")
         elif not card_info['battery_label']:
@@ -1798,9 +1802,13 @@ class EnhancedDashboard(tk.Tk):
             
             # Update all children in the container (value + unit)
             for child in card_info['current_label'].winfo_children():
-                child.config(fg=display_color)
-                if "mA" not in child.cget("text"):  # Update the current value
-                    child.config(text=f"{ch3_current:.0f}")
+                text = child.cget("text")
+                if "mA" in text:
+                    # Keep unit grey
+                    child.config(fg=self.colors['fg_secondary'])
+                else:
+                    # Update value color and text
+                    child.config(fg=display_color, text=f"{ch3_current:.0f}")
             
         temp = node_data.get('Temperature')
         if temp is not None and card_info['temp_label']:
@@ -1816,9 +1824,13 @@ class EnhancedDashboard(tk.Tk):
             
             # Update all children in the container (value + unit)
             for child in card_info['temp_label'].winfo_children():
-                child.config(fg=display_color)
-                if "°C" not in child.cget("text"):  # Update the temperature value
-                    child.config(text=f"{temp:.1f}")
+                text = child.cget("text")
+                if "°C" in text:
+                    # Keep unit grey
+                    child.config(fg=self.colors['fg_secondary'])
+                else:
+                    # Update value color and text
+                    child.config(fg=display_color, text=f"{temp:.1f}")
             
         # Row 2: SNR, Channel Utilization, Humidity
         snr = node_data.get('SNR')
@@ -1847,11 +1859,13 @@ class EnhancedDashboard(tk.Tk):
             
             # Update all children in the container (label + value + unit)
             for child in card_info['util_label'].winfo_children():
-                child.config(fg=display_color)
-                # Update only the value child (not "Ch:" or "%")
                 text = child.cget("text")
-                if text not in ["Ch:", "%"]:
-                    child.config(text=f"{channel_util:.1f}")
+                if text in ["Ch:", "%"]:
+                    # Keep labels/units grey
+                    child.config(fg=self.colors['fg_secondary'])
+                else:
+                    # Update value color and text
+                    child.config(fg=display_color, text=f"{channel_util:.1f}")
         
         humidity = node_data.get('Humidity')
         if humidity is not None and card_info['humidity_label']:
@@ -1865,11 +1879,13 @@ class EnhancedDashboard(tk.Tk):
             
             # Update all children in the container (label + value + unit)
             for child in card_info['humidity_label'].winfo_children():
-                child.config(fg=display_color)
-                # Update only the value child (not "Hum:" or "%")
                 text = child.cget("text")
-                if text not in ["Hum:", "%"]:
-                    child.config(text=f"{humidity:.0f}")
+                if text in ["Hum:", "%"]:
+                    # Keep labels/units grey
+                    child.config(fg=self.colors['fg_secondary'])
+                else:
+                    # Update value color and text
+                    child.config(fg=display_color, text=f"{humidity:.0f}")
     
     def show_node_detail(self, node_id: str):
         """Show detailed information window for a node"""
