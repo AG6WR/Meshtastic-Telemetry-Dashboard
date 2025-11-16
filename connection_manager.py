@@ -155,21 +155,15 @@ class ConnectionManager:
         
         logger.info(f"Connecting to Serial {port} at {baud} baud")
         
-        self.interface = meshtastic.serial_interface.SerialInterface(
-            devPath=port,
-            baudrate=baud,
-            connectNow=False
-        )
-        
         # Subscribe to packets before creating interface
         pub.subscribe(self._on_packet_received, "meshtastic.receive")
         pub.subscribe(self._on_connection_established, "meshtastic.connection.established")
         pub.subscribe(self._on_connection_lost, "meshtastic.connection.lost")
         
         # Create interface with automatic connection
+        # Note: SerialInterface doesn't accept baudrate parameter, uses default 115200
         self.interface = meshtastic.serial_interface.SerialInterface(
-            devPath=port,
-            baudrate=baud
+            devPath=port
         )
         time.sleep(2)
         
