@@ -490,6 +490,7 @@ class EnhancedDashboard(tk.Tk):
         self.font_card_header = tkfont.Font(family=base_family, size=14, weight="bold")  # Card header 14pt
         self.font_card_line2 = tkfont.Font(family=base_family, size=12)  # Card line 2 (Motion/Last Heard) 12pt - matches line 4
         self.font_card_line3 = tkfont.Font(family=base_family, size=14, weight="bold")  # Card line 3 (V/I/T) 14pt
+        self.font_card_label = tkfont.Font(family=base_family, size=10)  # Card labels 10pt regular
         self.font_italic = tkfont.Font(family=base_family, size=11, slant="italic")
         self.font_title = tkfont.Font(family=base_family, size=18, weight="bold")
         
@@ -1324,10 +1325,10 @@ class EnhancedDashboard(tk.Tk):
             battery_container = tk.Frame(col1_frame, bg=bg_color)
             battery_container.pack(fill="both", expand=True, anchor="w")
             
-            # "Batt:" label in 12pt regular
+            # "Batt:" label in 10pt regular
             batt_label_text = tk.Label(battery_container, text="Batt:",
                                       bg=bg_color, fg=display_color,
-                                      font=self.font_data, padx=0, pady=0)
+                                      font=self.font_card_label, padx=0, pady=0)
             batt_label_text.pack(side="left", padx=0)
             
             # Percentage value in 14pt bold
@@ -1354,9 +1355,9 @@ class EnhancedDashboard(tk.Tk):
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else current_color
             
-            # Create container for mixed font display
+            # Create container for mixed font display (centered)
             current_container = tk.Frame(col2_frame, bg=bg_color)
-            current_container.pack(fill="both", expand=True)
+            current_container.pack(anchor="center")
             
             # Current value in 14pt bold
             current_value = tk.Label(current_container, text=f"{ch3_current:.0f}",
@@ -1364,10 +1365,10 @@ class EnhancedDashboard(tk.Tk):
                                     font=self.font_card_line3, padx=0, pady=0)
             current_value.pack(side="left", padx=0)
             
-            # "mA" unit in 12pt regular
+            # "mA" unit in 10pt regular
             current_unit = tk.Label(current_container, text="mA",
                                    bg=bg_color, fg=display_color,
-                                   font=self.font_data, padx=0, pady=0)
+                                   font=self.font_card_label, padx=0, pady=0)
             current_unit.pack(side="left", padx=0)
             
             current_label = current_container  # Store container reference
@@ -1396,10 +1397,10 @@ class EnhancedDashboard(tk.Tk):
                                  font=self.font_card_line3, padx=0, pady=0)
             temp_value.pack(side="left", padx=0)
             
-            # "°C" unit in 12pt regular
+            # "°C" unit in 10pt regular
             temp_unit = tk.Label(temp_container, text="°C",
                                 bg=bg_color, fg=display_color,
-                                font=self.font_data, padx=0, pady=0)
+                                font=self.font_card_label, padx=0, pady=0)
             temp_unit.pack(side="left", padx=0)
             
             temp_label = temp_container  # Store container reference
@@ -1434,7 +1435,7 @@ class EnhancedDashboard(tk.Tk):
             
             # Icon - using text instead of emoji for Linux compatibility
             icon_label = tk.Label(snr_container, text="SNR:", bg=bg_color, 
-                                 fg=self.colors['fg_secondary'], font=self.font_data)
+                                 fg=self.colors['fg_secondary'], font=self.font_card_label)
             icon_label.pack(side="left", padx=0)  # No padding
             
             # Get bar colors based on SNR level
@@ -1465,11 +1466,30 @@ class EnhancedDashboard(tk.Tk):
             util_color = self.colors['fg_bad'] if channel_util > 80 else self.colors['fg_warning'] if channel_util > 50 else self.colors['fg_good']
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else util_color
-            util_text = f"Ch:{channel_util:.1f}%"  # No space after colon
-            util_label = tk.Label(row2_col2_frame, text=util_text,
-                                 bg=bg_color, fg=display_color,
-                                 font=self.font_data, anchor='center')
-            util_label.pack(fill="both", expand=True)
+            
+            # Create container for mixed font display
+            util_container = tk.Frame(row2_col2_frame, bg=bg_color)
+            util_container.pack(anchor="center")
+            
+            # "Ch:" label in 10pt regular
+            ch_label = tk.Label(util_container, text="Ch:",
+                               bg=bg_color, fg=display_color,
+                               font=self.font_card_label, padx=0, pady=0)
+            ch_label.pack(side="left", padx=0)
+            
+            # Value in 12pt regular
+            ch_value = tk.Label(util_container, text=f"{channel_util:.1f}",
+                               bg=bg_color, fg=display_color,
+                               font=self.font_data, padx=0, pady=0)
+            ch_value.pack(side="left", padx=0)
+            
+            # "%" unit in 10pt regular
+            ch_unit = tk.Label(util_container, text="%",
+                              bg=bg_color, fg=display_color,
+                              font=self.font_card_label, padx=0, pady=0)
+            ch_unit.pack(side="left", padx=0)
+            
+            util_label = util_container
         else:
             logger.debug(f"Card creation for {node_id}: No channel util data (Channel Utilization={node_data.get('Channel Utilization')})")
         
@@ -1484,11 +1504,30 @@ class EnhancedDashboard(tk.Tk):
                 humidity_color = self.colors['fg_good']  # Green for normal (20-60%)
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else humidity_color
-            humidity_text = f"Hum:{humidity:.0f}%"  # No space after colon
-            humidity_label = tk.Label(row2_col3_frame, text=humidity_text,
-                                     bg=bg_color, fg=display_color,
-                                     font=self.font_data, anchor='e')
-            humidity_label.pack(fill="both", expand=True)
+            
+            # Create container for mixed font display (right-aligned)
+            humidity_container = tk.Frame(row2_col3_frame, bg=bg_color)
+            humidity_container.pack(anchor="e")
+            
+            # "Hum:" label in 10pt regular
+            hum_label = tk.Label(humidity_container, text="Hum:",
+                                bg=bg_color, fg=display_color,
+                                font=self.font_card_label, padx=0, pady=0)
+            hum_label.pack(side="left", padx=0)
+            
+            # Value in 12pt regular
+            hum_value = tk.Label(humidity_container, text=f"{humidity:.0f}",
+                                bg=bg_color, fg=display_color,
+                                font=self.font_data, padx=0, pady=0)
+            hum_value.pack(side="left", padx=0)
+            
+            # "%" unit in 10pt regular
+            hum_unit = tk.Label(humidity_container, text="%",
+                               bg=bg_color, fg=display_color,
+                               font=self.font_card_label, padx=0, pady=0)
+            hum_unit.pack(side="left", padx=0)
+            
+            humidity_label = humidity_container
         
         # Click handler for showing node detail window
         def on_card_click(event):
@@ -1805,8 +1844,14 @@ class EnhancedDashboard(tk.Tk):
             util_color = self.colors['fg_bad'] if channel_util > 80 else self.colors['fg_warning'] if channel_util > 50 else self.colors['fg_good']
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else util_color
-            util_text = f"Ch: {channel_util:.1f}%"
-            card_info['util_label'].config(text=util_text, fg=display_color)
+            
+            # Update all children in the container (label + value + unit)
+            for child in card_info['util_label'].winfo_children():
+                child.config(fg=display_color)
+                # Update only the value child (not "Ch:" or "%")
+                text = child.cget("text")
+                if text not in ["Ch:", "%"]:
+                    child.config(text=f"{channel_util:.1f}")
         
         humidity = node_data.get('Humidity')
         if humidity is not None and card_info['humidity_label']:
@@ -1817,8 +1862,14 @@ class EnhancedDashboard(tk.Tk):
                 humidity_color = self.colors['fg_good']  # Green for normal (20-60%)
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else humidity_color
-            humidity_text = f"Hum: {humidity:.0f}%"
-            card_info['humidity_label'].config(text=humidity_text, fg=display_color)
+            
+            # Update all children in the container (label + value + unit)
+            for child in card_info['humidity_label'].winfo_children():
+                child.config(fg=display_color)
+                # Update only the value child (not "Hum:" or "%")
+                text = child.cget("text")
+                if text not in ["Hum:", "%"]:
+                    child.config(text=f"{humidity:.0f}")
     
     def show_node_detail(self, node_id: str):
         """Show detailed information window for a node"""
