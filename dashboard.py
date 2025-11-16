@@ -1828,6 +1828,10 @@ class EnhancedDashboard(tk.Tk):
                            'motion_label', 'current_label', 'humidity_label']:
                     if key in card_info and card_info[key]:
                         card_info[key].config(bg=normal_bg)
+                        # Restore children of container labels (battery, current, temp, snr, util, humidity)
+                        for child in card_info[key].winfo_children():
+                            if isinstance(child, tk.Label):
+                                child.config(bg=normal_bg)
                 
                 # Clear timer reference
                 if node_id in self.flash_timers:
