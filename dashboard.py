@@ -1315,12 +1315,28 @@ class EnhancedDashboard(tk.Tk):
         battery_label = None
         battery_text, battery_color = self.get_battery_percentage_display(node_data)
         if battery_text != "No battery":
+            # Extract percentage value from "Bat:XX%"
+            pct_value = battery_text.replace("Bat:", "")
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else battery_color
-            battery_label = tk.Label(col1_frame, text=battery_text,
-                                    bg=bg_color, fg=display_color,
-                                    font=self.font_card_line3, anchor='w')
-            battery_label.pack(fill="both", expand=True)
+            
+            # Create container for mixed font display
+            battery_container = tk.Frame(col1_frame, bg=bg_color)
+            battery_container.pack(fill="both", expand=True, anchor="w")
+            
+            # "Batt:" label in 12pt regular
+            batt_label_text = tk.Label(battery_container, text="Batt:",
+                                      bg=bg_color, fg=display_color,
+                                      font=self.font_data, padx=0, pady=0)
+            batt_label_text.pack(side="left", padx=0)
+            
+            # Percentage value in 14pt bold
+            batt_value_text = tk.Label(battery_container, text=pct_value,
+                                      bg=bg_color, fg=display_color,
+                                      font=self.font_card_line3, padx=0, pady=0)
+            batt_value_text.pack(side="left", padx=0)
+            
+            battery_label = battery_container  # Store container reference
         else:
             logger.debug(f"Card creation for {node_id}: No battery data (Ch3 Voltage={node_data.get('Ch3 Voltage')}, Battery Level={node_data.get('Battery Level')})")
         
@@ -1337,11 +1353,24 @@ class EnhancedDashboard(tk.Tk):
                 current_color = self.colors['fg_good']  # Green for low current
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else current_color
-            current_text = f"{ch3_current:.1f}mA"
-            current_label = tk.Label(col2_frame, text=current_text,
+            
+            # Create container for mixed font display
+            current_container = tk.Frame(col2_frame, bg=bg_color)
+            current_container.pack(fill="both", expand=True)
+            
+            # Current value in 14pt bold
+            current_value = tk.Label(current_container, text=f"{ch3_current:.0f}",
+                                    bg=bg_color, fg=display_color,
+                                    font=self.font_card_line3, padx=0, pady=0)
+            current_value.pack(side="left", padx=0)
+            
+            # "mA" unit in 12pt regular
+            current_unit = tk.Label(current_container, text="mA",
                                    bg=bg_color, fg=display_color,
-                                   font=self.font_card_line3, anchor='center')
-            current_label.pack(fill="both", expand=True)
+                                   font=self.font_data, padx=0, pady=0)
+            current_unit.pack(side="left", padx=0)
+            
+            current_label = current_container  # Store container reference
         
         # Temperature in column 3
         temp = node_data.get('Temperature')
@@ -1356,11 +1385,24 @@ class EnhancedDashboard(tk.Tk):
                 temp_color = self.colors['fg_good']  # Green for normal temps (0-30°C)
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else temp_color
-            temp_text = f"{temp:.1f}°C"
-            temp_label = tk.Label(col3_frame, text=temp_text,
+            
+            # Create container for mixed font display
+            temp_container = tk.Frame(col3_frame, bg=bg_color)
+            temp_container.pack(fill="both", expand=True, anchor="e")
+            
+            # Temperature value in 14pt bold
+            temp_value = tk.Label(temp_container, text=f"{temp:.1f}",
                                  bg=bg_color, fg=display_color,
-                                 font=self.font_card_line3, anchor='e')
-            temp_label.pack(fill="both", expand=True)
+                                 font=self.font_card_line3, padx=0, pady=0)
+            temp_value.pack(side="left", padx=0)
+            
+            # "°C" unit in 12pt regular
+            temp_unit = tk.Label(temp_container, text="°C",
+                                bg=bg_color, fg=display_color,
+                                font=self.font_data, padx=0, pady=0)
+            temp_unit.pack(side="left", padx=0)
+            
+            temp_label = temp_container  # Store container reference
         else:
             logger.debug(f"Card creation for {node_id}: No temperature data (Temperature={node_data.get('Temperature')})")
         
@@ -1688,9 +1730,16 @@ class EnhancedDashboard(tk.Tk):
         # Update telemetry fields - Row 1: Battery %, Ch3 Current, Temperature
         battery_text, battery_color = self.get_battery_percentage_display(node_data)
         if battery_text != "No battery" and card_info['battery_label']:
+            # Extract percentage value
+            pct_value = battery_text.replace("Bat:", "")
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else battery_color
-            card_info['battery_label'].config(text=battery_text, fg=display_color)
+            
+            # Update all children in the container (label + value)
+            for child in card_info['battery_label'].winfo_children():
+                child.config(fg=display_color)
+                if "Batt:" not in child.cget("text"):  # Update the percentage value
+                    child.config(text=pct_value)
         elif battery_text == "No battery":
             logger.debug(f"Card update for {node_id}: No battery data (Ch3 Voltage={node_data.get('Ch3 Voltage')}, Battery Level={node_data.get('Battery Level')})")
         elif not card_info['battery_label']:
@@ -1707,8 +1756,12 @@ class EnhancedDashboard(tk.Tk):
                 current_color = self.colors['fg_good']  # Green for low current
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else current_color
-            current_text = f"{ch3_current:.1f}mA"
-            card_info['current_label'].config(text=current_text, fg=display_color)
+            
+            # Update all children in the container (value + unit)
+            for child in card_info['current_label'].winfo_children():
+                child.config(fg=display_color)
+                if "mA" not in child.cget("text"):  # Update the current value
+                    child.config(text=f"{ch3_current:.0f}")
             
         temp = node_data.get('Temperature')
         if temp is not None and card_info['temp_label']:
@@ -1721,8 +1774,12 @@ class EnhancedDashboard(tk.Tk):
                 temp_color = self.colors['fg_good']  # Green for normal temps
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else temp_color
-            temp_text = f"{temp:.1f}°C"
-            card_info['temp_label'].config(text=temp_text, fg=display_color)
+            
+            # Update all children in the container (value + unit)
+            for child in card_info['temp_label'].winfo_children():
+                child.config(fg=display_color)
+                if "°C" not in child.cget("text"):  # Update the temperature value
+                    child.config(text=f"{temp:.1f}")
             
         # Row 2: SNR, Channel Utilization, Humidity
         snr = node_data.get('SNR')
