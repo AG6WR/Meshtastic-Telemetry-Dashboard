@@ -1370,7 +1370,20 @@ class EnhancedDashboard(tk.Tk):
         left_header.pack(side="left")
         
         # Node name (bold, larger - 14pt)
+        # If name is unknown in node_data, look it up from data_collector's cache
         long_name = node_data.get('Node LongName', 'Unknown')
+        short_name = node_data.get('Node ShortName', node_id[-4:])
+        
+        # If we have "Unknown" or "Unknown Node", try to get real name from cache
+        if long_name in ('Unknown', 'Unknown Node') and self.data_collector:
+            cached_info = self.data_collector.node_info_cache.get(node_id)
+            if cached_info:
+                cached_long, cached_short = cached_info
+                if cached_long and cached_long not in ('Unknown', 'Unknown Node'):
+                    long_name = cached_long
+                if cached_short and cached_short != 'Unknown':
+                    short_name = cached_short
+        
         display_name = long_name.replace("AG6WR-", "") if long_name.startswith("AG6WR-") else long_name
         name_label = tk.Label(left_header, text=display_name, 
                              bg=bg_color, fg=self.colors['fg_normal'], 
@@ -1395,8 +1408,7 @@ class EnhancedDashboard(tk.Tk):
         lastheard_frame.pack(fill="x", padx=6, pady=1)
         lastheard_frame.pack_propagate(False)
         
-        # Get short name for line 2
-        short_name = node_data.get('Node ShortName', node_id[-4:])
+        # short_name was already looked up above with long_name from cache
         
         heard_label = None
         motion_label = None
@@ -1815,12 +1827,22 @@ class EnhancedDashboard(tk.Tk):
             self.flash_timers[node_id] = timer_id
         
         # Update node name if it changed (e.g., from "Unknown Node" to actual name)
+        # If name is unknown in node_data, look it up from data_collector's cache
         long_name = node_data.get('Node LongName', 'Unknown')
+        short_name = node_data.get('Node ShortName', node_id[-4:])
+        
+        # If we have "Unknown" or "Unknown Node", try to get real name from cache
+        if long_name in ('Unknown', 'Unknown Node') and self.data_collector:
+            cached_info = self.data_collector.node_info_cache.get(node_id)
+            if cached_info:
+                cached_long, cached_short = cached_info
+                if cached_long and cached_long not in ('Unknown', 'Unknown Node'):
+                    long_name = cached_long
+                if cached_short and cached_short != 'Unknown':
+                    short_name = cached_short
+        
         display_name = long_name.replace("AG6WR-", "") if long_name.startswith("AG6WR-") else long_name
         card_info['name_label'].config(text=display_name)
-        
-        # Update short name if it changed
-        short_name = node_data.get('Node ShortName', node_id[-4:])
         card_info['shortname_label'].config(text=f"({short_name})")
         
         # Update status based on any packet received
