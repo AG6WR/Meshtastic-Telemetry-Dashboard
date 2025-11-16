@@ -1557,15 +1557,16 @@ class EnhancedDashboard(tk.Tk):
         metrics2_frame.pack(fill="x", padx=6, pady=1)
         
         # Create three columns for row 2 - SNR reduced 10% (100→90), giving more room to Ch Util
-        row2_col1_frame = tk.Frame(metrics2_frame, bg=bg_color, width=90, height=25)
+        # Height reduced from 25 to 18 to match 10pt font size
+        row2_col1_frame = tk.Frame(metrics2_frame, bg=bg_color, width=90, height=18)
         row2_col1_frame.pack(side="left")
         row2_col1_frame.pack_propagate(False)
         
-        row2_col2_frame = tk.Frame(metrics2_frame, bg=bg_color, width=86, height=25)
+        row2_col2_frame = tk.Frame(metrics2_frame, bg=bg_color, width=86, height=18)
         row2_col2_frame.pack(side="left", padx=(6, 0))
         row2_col2_frame.pack_propagate(False)
         
-        row2_col3_frame = tk.Frame(metrics2_frame, bg=bg_color, width=88, height=25)
+        row2_col3_frame = tk.Frame(metrics2_frame, bg=bg_color, width=88, height=18)
         row2_col3_frame.pack(side="left", padx=(6, 0))
         row2_col3_frame.pack_propagate(False)
         
