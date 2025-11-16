@@ -306,7 +306,7 @@ class NodeDetailWindow:
             spacer.pack(fill="x")
             
             # Section header for external battery
-            external_header = tk.Label(content_frame, text="ICP Main Battery:",
+            external_header = tk.Label(content_frame, text="Main System Battery:",
                                       bg=self.colors['bg_frame'],
                                       fg=self.colors['fg_secondary'],
                                       font=tkfont.Font(family="Segoe UI", size=10, slant="italic"))
@@ -410,12 +410,12 @@ class NodeDetailWindow:
     
     def _get_battery_color(self, battery):
         """Get color for battery level"""
-        if battery >= 80:
-            return self.colors['fg_good']
-        elif battery >= 20:
-            return self.colors['fg_warning']
+        if battery > 50:
+            return self.colors['fg_good']     # Green for >50%
+        elif battery >= 25:
+            return self.colors['fg_warning']  # Yellow for 25-50%
         else:
-            return self.colors['fg_bad']
+            return self.colors['fg_bad']      # Red for 0-25%
     
     def _format_uptime(self, seconds):
         """Convert seconds to human readable uptime string"""

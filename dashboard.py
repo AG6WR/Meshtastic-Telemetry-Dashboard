@@ -1311,19 +1311,18 @@ class EnhancedDashboard(tk.Tk):
         col3_frame.pack(side="left", padx=(6, 0))
         col3_frame.pack_propagate(False)
         
-        # Ch3 Voltage in column 1 - prefer Ch3 Voltage (external) over Voltage (battery)
-        voltage = node_data.get('Ch3 Voltage') or node_data.get('Voltage')
-        voltage_label = None
-        if voltage is not None:
-            voltage_text, voltage_color = self.get_voltage_display(voltage)
+        # Battery Percentage in column 1 - prefer Ch3 Voltage (external) converted to %, or Battery Level (internal %)
+        battery_label = None
+        battery_text, battery_color = self.get_battery_percentage_display(node_data)
+        if battery_text != "No battery":
             # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else voltage_color
-            voltage_label = tk.Label(col1_frame, text=voltage_text,
+            display_color = stale_color if is_stale else battery_color
+            battery_label = tk.Label(col1_frame, text=battery_text,
                                     bg=bg_color, fg=display_color,
                                     font=self.font_card_line3, anchor='w')
-            voltage_label.pack(fill="both", expand=True)
+            battery_label.pack(fill="both", expand=True)
         else:
-            logger.debug(f"Card creation for {node_id}: No voltage data (Ch3={node_data.get('Ch3 Voltage')}, Voltage={node_data.get('Voltage')})")
+            logger.debug(f"Card creation for {node_id}: No battery data (Ch3 Voltage={node_data.get('Ch3 Voltage')}, Battery Level={node_data.get('Battery Level')})")
         
         # Ch3 Current in column 2
         ch3_current = node_data.get('Ch3 Current')
@@ -1481,7 +1480,7 @@ class EnhancedDashboard(tk.Tk):
             'status_label': status_label,
             'heard_label': heard_label,
             'motion_label': motion_label,
-            'voltage_label': voltage_label,
+            'battery_label': battery_label,
             'current_label': current_label,
             'temp_label': temp_label,
             'snr_label': snr_label,
@@ -1516,7 +1515,7 @@ class EnhancedDashboard(tk.Tk):
                     
                     # Update all labels
                     for key in ['name_label', 'shortname_label', 'status_label', 'heard_label',
-                               'voltage_label', 'temp_label', 'util_label',
+                               'battery_label', 'temp_label', 'util_label',
                                'battery_label', 'motion_label', 'current_label', 'humidity_label']:
                         if key in card_info and card_info[key]:
                             card_info[key].config(bg=normal_bg)
@@ -1686,17 +1685,16 @@ class EnhancedDashboard(tk.Tk):
         is_stale = telemetry_stale
         stale_color = self.colors['fg_secondary']  # Grey for stale data
         
-        # Update telemetry fields - Row 1: Ch3 Voltage, Ch3 Current, Temperature
-        voltage = node_data.get('Ch3 Voltage') or node_data.get('Voltage')
-        if voltage is not None and card_info['voltage_label']:
-            voltage_text, voltage_color = self.get_voltage_display(voltage)
+        # Update telemetry fields - Row 1: Battery %, Ch3 Current, Temperature
+        battery_text, battery_color = self.get_battery_percentage_display(node_data)
+        if battery_text != "No battery" and card_info['battery_label']:
             # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else voltage_color
-            card_info['voltage_label'].config(text=voltage_text, fg=display_color)
-        elif voltage is None:
-            logger.debug(f"Card update for {node_id}: No voltage data (Ch3={node_data.get('Ch3 Voltage')}, Voltage={node_data.get('Voltage')})")
-        elif not card_info['voltage_label']:
-            logger.warning(f"Card update for {node_id}: voltage_label widget missing!")
+            display_color = stale_color if is_stale else battery_color
+            card_info['battery_label'].config(text=battery_text, fg=display_color)
+        elif battery_text == "No battery":
+            logger.debug(f"Card update for {node_id}: No battery data (Ch3 Voltage={node_data.get('Ch3 Voltage')}, Battery Level={node_data.get('Battery Level')})")
+        elif not card_info['battery_label']:
+            logger.warning(f"Card update for {node_id}: battery_label widget missing!")
         
         ch3_current = node_data.get('Ch3 Current')
         if ch3_current is not None and card_info['current_label']:
@@ -1829,6 +1827,44 @@ class EnhancedDashboard(tk.Tk):
             return f"{voltage:.1f}V", color
         else:
             return "No voltage", self.colors['fg_secondary']
+    
+    def get_battery_percentage_display(self, node_data: dict):
+        """Get battery percentage display with appropriate color coding
+        
+        Determines battery % from either:
+        - Ch3 Voltage (external LiFePO4) converted via interpolation
+        - Battery Level (internal Li+ cell) from deviceMetrics
+        
+        Returns: (text, color) tuple
+        """
+        # Try external battery first (Ch3 Voltage)
+        ch3_voltage = node_data.get('Ch3 Voltage')
+        if ch3_voltage is not None and self.data_collector:
+            battery_pct = self.data_collector.voltage_to_percentage(ch3_voltage)
+            if battery_pct is not None:
+                # Color coding: 0-25% red, 25-50% yellow, >50% green
+                if battery_pct > 50:
+                    color = self.colors['fg_good']     # Green
+                elif battery_pct >= 25:
+                    color = self.colors['fg_warning']  # Yellow
+                else:
+                    color = self.colors['fg_bad']      # Red
+                return f"Bat:{battery_pct}%", color
+        
+        # Fall back to internal battery percentage
+        internal_battery = node_data.get('Battery Level')
+        if internal_battery is not None:
+            # Color coding: 0-25% red, 25-50% yellow, >50% green
+            if internal_battery > 50:
+                color = self.colors['fg_good']     # Green
+            elif internal_battery >= 25:
+                color = self.colors['fg_warning']  # Yellow
+            else:
+                color = self.colors['fg_bad']      # Red
+            return f"Bat:{internal_battery}%", color
+        
+        # No battery data available
+        return "No battery", self.colors['fg_secondary']
     
     def get_signal_bar_colors(self, snr: float):
         """Return list of colors for each of the 4 signal bars based on SNR
