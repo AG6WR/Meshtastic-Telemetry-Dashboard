@@ -86,19 +86,49 @@ class SettingsDialog:
     
     def create_connection_tab(self, parent):
         """Create connection settings tab"""
-        # TCP/IP Settings
-        tcp_group = ttk.LabelFrame(parent, text="Meshtastic TCP/IP Interface")
-        tcp_group.pack(fill="x", padx=5, pady=5)
+        # Connection Type Selection
+        type_group = ttk.LabelFrame(parent, text="Connection Type")
+        type_group.pack(fill="x", padx=5, pady=5)
         
-        tk.Label(tcp_group, text="Host/IP Address:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
-        self.tcp_host = tk.Entry(tcp_group, width=20)
+        self.conn_type = tk.StringVar(value="tcp")
+        
+        type_frame = tk.Frame(type_group)
+        type_frame.pack(fill="x", padx=5, pady=5)
+        
+        tk.Radiobutton(type_frame, text="TCP/IP Network", variable=self.conn_type, value="tcp",
+                      command=self._toggle_connection_fields).pack(side="left", padx=10)
+        tk.Radiobutton(type_frame, text="USB/Serial Port", variable=self.conn_type, value="serial",
+                      command=self._toggle_connection_fields).pack(side="left", padx=10)
+        
+        # TCP/IP Settings
+        self.tcp_group = ttk.LabelFrame(parent, text="Meshtastic TCP/IP Interface")
+        self.tcp_group.pack(fill="x", padx=5, pady=5)
+        
+        tk.Label(self.tcp_group, text="Host/IP Address:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        self.tcp_host = tk.Entry(self.tcp_group, width=20)
         self.tcp_host.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
         
-        tk.Label(tcp_group, text="Port:").grid(row=0, column=2, sticky="w", padx=(20, 5), pady=5)
-        self.tcp_port = tk.Entry(tcp_group, width=8)
+        tk.Label(self.tcp_group, text="Port:").grid(row=0, column=2, sticky="w", padx=(20, 5), pady=5)
+        self.tcp_port = tk.Entry(self.tcp_group, width=8)
         self.tcp_port.grid(row=0, column=3, sticky="w", padx=5, pady=5)
         
-        tcp_group.grid_columnconfigure(1, weight=1)
+        self.tcp_group.grid_columnconfigure(1, weight=1)
+        
+        # USB/Serial Settings
+        self.serial_group = ttk.LabelFrame(parent, text="USB/Serial Interface")
+        self.serial_group.pack(fill="x", padx=5, pady=5)
+        
+        tk.Label(self.serial_group, text="Serial Port:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        self.serial_port = tk.Entry(self.serial_group, width=20)
+        self.serial_port.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
+        tk.Label(self.serial_group, text="(e.g., COM3 on Windows, /dev/ttyUSB0 on Linux)").grid(row=0, column=2, sticky="w", padx=5, pady=5)
+        
+        tk.Label(self.serial_group, text="Baud Rate:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        self.serial_baud = ttk.Combobox(self.serial_group, values=["9600", "19200", "38400", "57600", "115200"], width=10)
+        self.serial_baud.grid(row=1, column=1, sticky="w", padx=5, pady=5)
+        self.serial_baud.set("115200")
+        
+        self.serial_group.grid_columnconfigure(1, weight=1)
         
         # Connection Settings
         conn_group = ttk.LabelFrame(parent, text="Connection Options")
@@ -116,15 +146,6 @@ class SettingsDialog:
     
     def create_dashboard_tab(self, parent):
         """Create dashboard settings tab"""
-        # Refresh Settings
-        refresh_group = ttk.LabelFrame(parent, text="Refresh Settings")
-        refresh_group.pack(fill="x", padx=5, pady=5)
-        
-        tk.Label(refresh_group, text="Refresh Rate:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
-        self.refresh_rate = tk.Entry(refresh_group, width=10)
-        self.refresh_rate.grid(row=0, column=1, sticky="w", padx=5, pady=5)
-        tk.Label(refresh_group, text="seconds").grid(row=0, column=2, sticky="w", padx=5, pady=5)
-        
         # Display Settings
         display_group = ttk.LabelFrame(parent, text="Display Options")
         display_group.pack(fill="x", padx=5, pady=5)
@@ -264,17 +285,35 @@ class SettingsDialog:
         self.use_tls = tk.BooleanVar(value=True)
         tk.Checkbutton(smtp_group, text="Use TLS encryption", variable=self.use_tls).grid(row=6, column=1, sticky="w", padx=5, pady=5)
     
+    def _toggle_connection_fields(self):
+        """Show/hide connection fields based on selected type"""
+        conn_type = self.conn_type.get()
+        if conn_type == "tcp":
+            self.tcp_group.pack(fill="x", padx=5, pady=5, after=self.tcp_group.master.winfo_children()[0])
+            self.serial_group.pack_forget()
+        else:  # serial
+            self.serial_group.pack(fill="x", padx=5, pady=5, after=self.serial_group.master.winfo_children()[0])
+            self.tcp_group.pack_forget()
+    
     def load_current_values(self):
         """Load current configuration values into dialog"""
         # Connection settings
+        interface_type = self.config_manager.get('meshtastic.interface.type', 'tcp')
+        self.conn_type.set(interface_type)
+        
         self.tcp_host.insert(0, self.config_manager.get('meshtastic.interface.host', '192.168.1.91'))
         self.tcp_port.insert(0, str(self.config_manager.get('meshtastic.interface.port', 4403)))
+        
+        self.serial_port.insert(0, self.config_manager.get('meshtastic.interface.port', 'COM3'))
+        self.serial_baud.set(str(self.config_manager.get('meshtastic.interface.baud', 115200)))
+        
         self.conn_timeout.insert(0, str(self.config_manager.get('meshtastic.connection_timeout', 30)))
         self.retry_interval.insert(0, str(self.config_manager.get('meshtastic.retry_interval', 60)))
         
+        # Toggle connection fields based on type
+        self._toggle_connection_fields()
+        
         # Dashboard settings
-        refresh_ms = self.config_manager.get('dashboard.refresh_rate_ms', 5000)
-        self.refresh_rate.insert(0, str(refresh_ms // 1000))
         self.time_format.set(self.config_manager.get('dashboard.time_format', 'DDd:HHh:MMm:SSs'))
         self.stale_row_seconds.insert(0, str(self.config_manager.get('dashboard.stale_row_seconds', 300)))
         self.motion_display_seconds.insert(0, str(self.config_manager.get('dashboard.motion_display_seconds', 900)))
@@ -329,14 +368,20 @@ class SettingsDialog:
         """Save dialog values to configuration"""
         try:
             # Connection settings
-            self.config_manager.set('meshtastic.interface.host', self.tcp_host.get())
-            self.config_manager.set('meshtastic.interface.port', int(self.tcp_port.get()))
+            conn_type = self.conn_type.get()
+            self.config_manager.set('meshtastic.interface.type', conn_type)
+            
+            if conn_type == 'tcp':
+                self.config_manager.set('meshtastic.interface.host', self.tcp_host.get())
+                self.config_manager.set('meshtastic.interface.port', int(self.tcp_port.get()))
+            else:  # serial
+                self.config_manager.set('meshtastic.interface.port', self.serial_port.get())
+                self.config_manager.set('meshtastic.interface.baud', int(self.serial_baud.get()))
+            
             self.config_manager.set('meshtastic.connection_timeout', int(self.conn_timeout.get()))
             self.config_manager.set('meshtastic.retry_interval', int(self.retry_interval.get()))
             
             # Dashboard settings
-            refresh_seconds = int(self.refresh_rate.get())
-            self.config_manager.set('dashboard.refresh_rate_ms', refresh_seconds * 1000)
             self.config_manager.set('dashboard.time_format', self.time_format.get())
             self.config_manager.set('dashboard.stale_row_seconds', int(self.stale_row_seconds.get()))
             self.config_manager.set('dashboard.motion_display_seconds', int(self.motion_display_seconds.get()))
@@ -722,6 +767,9 @@ class EnhancedDashboard(tk.Tk):
                 conn_type = interface_info.get('type', 'unknown')
                 if conn_type == 'tcp':
                     conn_text = f"TCP {interface_info.get('host', '')}:{interface_info.get('port', '')}"
+                elif conn_type == 'serial':
+                    port = interface_info.get('port', 'unknown')
+                    conn_text = f"Serial {port}"
                 else:
                     conn_text = f"{conn_type.upper()}"
                 self.conn_status.config(text=f"Connected ({conn_text})", fg=self.colors['fg_good'])
