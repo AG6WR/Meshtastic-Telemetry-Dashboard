@@ -1392,7 +1392,7 @@ class EnhancedDashboard(tk.Tk):
         # Show "Last heard:" for offline nodes OR "Motion detected" for online nodes with recent motion
         # Short name appears on right side of this line
         lastheard_frame = tk.Frame(card_frame, bg=bg_color, height=18)
-        lastheard_frame.pack(fill="x", padx=6)
+        lastheard_frame.pack(fill="x", padx=6, pady=1)
         lastheard_frame.pack_propagate(False)
         
         # Get short name for line 2
