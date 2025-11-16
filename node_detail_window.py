@@ -179,7 +179,7 @@ class NodeDetailWindow:
         last_heard = self.node_data.get('Last Heard', 0)
         import time
         time_since_heard = time.time() - last_heard if last_heard else float('inf')
-        stale_threshold = 300  # 5 minutes
+        stale_threshold = 960  # 16 minutes (accommodates 15-min telemetry intervals)
         
         if time_since_heard < stale_threshold:
             status = "Online"

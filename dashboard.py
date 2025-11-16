@@ -1348,7 +1348,7 @@ class EnhancedDashboard(tk.Tk):
         current_time = time.time()
         last_heard = node_data.get('Last Heard', 0)
         time_diff = current_time - last_heard if last_heard else float('inf')
-        status = "Online" if time_diff <= 300 else "Offline"  # 5 minutes threshold for any packet
+        status = "Online" if time_diff <= 960 else "Offline"  # 16 minutes threshold (accommodates 15-min telemetry intervals)
         
         # Debug logging for node 30c0
         if '30c0' in node_id.lower():
@@ -1879,7 +1879,7 @@ class EnhancedDashboard(tk.Tk):
         # Update status based on any packet received
         last_heard = node_data.get('Last Heard', 0)
         time_diff = current_time - last_heard if last_heard else float('inf')
-        status = "Online" if time_diff <= 300 else "Offline"
+        status = "Online" if time_diff <= 960 else "Offline"  # 16 minutes threshold (accommodates 15-min telemetry intervals)
         
         # Debug logging for node 30c0
         if '30c0' in node_id.lower():
