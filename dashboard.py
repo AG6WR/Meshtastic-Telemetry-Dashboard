@@ -691,6 +691,7 @@ class EnhancedDashboard(tk.Tk):
             ("Short", "short", 8, "center", False),
             ("Status", "status", 12, "center", False),
             ("Last Heard", "last_heard", 18, "center", False),
+            ("Motion", "motion", 16, "center", False),
             ("SNR dB", "SNR", 8, "e", True),
             ("Temp °C", "Temperature", 8, "e", True),
             ("Hum %", "Humidity", 8, "e", True),
@@ -969,6 +970,20 @@ class EnhancedDashboard(tk.Tk):
                         font = self.font_italic
                 else:
                     text = "Never"
+            elif key == "motion":
+                motion_detected = node_data.get('Motion Detected')
+                if motion_detected:
+                    age_seconds = current_time - motion_detected
+                    if age_seconds < 60:
+                        text = "Just now"
+                    elif age_seconds < 3600:
+                        text = f"{int(age_seconds / 60)} min ago"
+                    elif age_seconds < 86400:
+                        text = f"{int(age_seconds / 3600)} hr ago"
+                    else:
+                        text = f"{int(age_seconds / 86400)} days ago"
+                else:
+                    text = "—"
             elif key == "Uptime":
                 uptime = node_data.get('Uptime')
                 if uptime is not None:
@@ -998,7 +1013,7 @@ class EnhancedDashboard(tk.Tk):
                                 fg = self.colors['fg_good']  # Green for normal temps (0-30°C)
                         elif key == 'Voltage':
                             # Prefer Ch3 Voltage (external) over Voltage (battery)
-                            display_voltage = node_data.get('Ch3 Voltage') or value
+                            display_voltage = node_data.get('Ch3 Voltage', value)
                             
                             if display_voltage is not None and display_voltage != 0.0:
                                 # Voltage color coding based on battery health ranges
@@ -1015,10 +1030,48 @@ class EnhancedDashboard(tk.Tk):
                                 text = "—"  # No voltage data available
                         elif key == 'Channel Utilization':
                             text = f"{value:.1f}"  # Display as percentage to nearest tenth
-                        elif key in ['Humidity', 'Battery Level']:
+                            # Color coding: >15% red (congested), 10-15% yellow (busy), <10% green (good)
+                            if value > 15:
+                                fg = self.colors['fg_bad']  # Red for high utilization
+                            elif value >= 10:
+                                fg = self.colors['fg_warning']  # Yellow for moderate utilization
+                            else:
+                                fg = self.colors['fg_good']  # Green for low utilization
+                        elif key == 'Humidity':
                             text = f"{value:.0f}"
+                            # Color coding: 20-60% green (ideal), else yellow
+                            if 20 <= value <= 60:
+                                fg = self.colors['fg_good']  # Green for ideal range
+                            else:
+                                fg = self.colors['fg_warning']  # Yellow for too dry/humid
+                        elif key == 'Battery Level':
+                            # Use get_battery_percentage_display to handle external battery (Ch3 Voltage)
+                            battery_text, battery_color = self.get_battery_percentage_display(node_data)
+                            # Extract just the percentage number from "Bat:XX%" format
+                            if battery_text.startswith('Bat:'):
+                                text = battery_text.replace('Bat:', '').replace('%', '')
+                                fg = battery_color
+                            elif battery_text == "No battery":
+                                text = "—"
+                                fg = self.colors['fg_secondary']
+                            else:
+                                text = f"{value:.0f}"
+                                # Color coding: 0-25% red, 25-50% yellow, >50% green
+                                if value > 50:
+                                    fg = self.colors['fg_good']
+                                elif value >= 25:
+                                    fg = self.colors['fg_warning']
+                                else:
+                                    fg = self.colors['fg_bad']
                         elif key == 'Current':
                             text = f"{value:.0f}"
+                            # Color coding: >100mA red (high draw), 50-100 yellow, <50 green (low draw)
+                            if value > 100:
+                                fg = self.colors['fg_bad']  # Red for high current draw
+                            elif value >= 50:
+                                fg = self.colors['fg_warning']  # Yellow for moderate draw
+                            else:
+                                fg = self.colors['fg_good']  # Green for low draw
                         else:
                             text = str(value)
                     else:
