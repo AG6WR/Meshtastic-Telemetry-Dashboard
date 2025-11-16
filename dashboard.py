@@ -1778,6 +1778,13 @@ class EnhancedDashboard(tk.Tk):
             return
             
         card_info = self.card_widgets[node_id]
+        card_frame = card_info['frame']
+        
+        # Determine current bg_color based on status
+        last_heard = node_data.get('Last Heard', 0)
+        time_diff = current_time - last_heard if last_heard else float('inf')
+        status = "Online" if time_diff <= 300 else "Offline"
+        bg_color = self.colors['bg_frame']  # Normal background
         
         # Apply blue flash if data changed
         if is_changed:
@@ -1790,29 +1797,32 @@ class EnhancedDashboard(tk.Tk):
             
             logger.info(f"Applying BLUE flash to existing card for {node_id}")
             flash_color = self.colors['bg_selected']
-            normal_bg = self.colors['bg_frame']
             
-            # Apply flash to all widgets in the card
-            card_frame = card_info['frame']
+            # Save original backgrounds before flashing
+            original_bgs = {}
             
-            def apply_flash_recursive(widget):
-                """Recursively apply flash to widget and children"""
+            def save_and_flash(widget, path=""):
+                """Save original bg and apply flash to Frame widgets only"""
                 try:
-                    widget.config(bg=flash_color)
+                    # Only flash Frame widgets, not Labels (to preserve text backgrounds)
+                    if isinstance(widget, tk.Frame):
+                        original_bgs[path] = widget.cget('bg')
+                        widget.config(bg=flash_color)
                 except:
-                    pass  # Some widgets may not support bg
-                for child in widget.winfo_children():
-                    apply_flash_recursive(child)
+                    pass
+                for i, child in enumerate(widget.winfo_children()):
+                    save_and_flash(child, f"{path}/{i}")
             
             def restore_colors():
-                """Restore all to normal frame color"""
-                def restore_recursive(widget):
+                """Restore all to original backgrounds"""
+                def restore_recursive(widget, path=""):
                     try:
-                        widget.config(bg=normal_bg)
+                        if isinstance(widget, tk.Frame) and path in original_bgs:
+                            widget.config(bg=original_bgs[path])
                     except:
                         pass
-                    for child in widget.winfo_children():
-                        restore_recursive(child)
+                    for i, child in enumerate(widget.winfo_children()):
+                        restore_recursive(child, f"{path}/{i}")
                 
                 restore_recursive(card_frame)
                 # Clear timer reference
@@ -1820,7 +1830,7 @@ class EnhancedDashboard(tk.Tk):
                     del self.flash_timers[node_id]
             
             # Apply flash
-            apply_flash_recursive(card_frame)
+            save_and_flash(card_frame)
             
             # Schedule restore after 2 seconds
             timer_id = self.after(2000, restore_colors)
@@ -1880,12 +1890,12 @@ class EnhancedDashboard(tk.Tk):
             
             if card_info['heard_label']:
                 # Update existing label and make it visible
-                card_info['heard_label'].config(text=heard_text, fg=self.colors['fg_bad'])
+                card_info['heard_label'].config(text=heard_text, fg=self.colors['fg_bad'], bg=bg_color)
                 card_info['heard_label'].pack(anchor="w", side="left")
             else:
-                # Create label if it doesn't exist - use same font as motion detected (12pt)
+                # Create label if it doesn't exist - use same font as motion detected (10pt)
                 heard_label = tk.Label(card_info['lastheard_frame'], text=heard_text,
-                                      bg=card_info['lastheard_frame']['bg'], 
+                                      bg=bg_color, 
                                       fg=self.colors['fg_bad'],
                                       font=self.font_card_line2)
                 heard_label.pack(anchor="w", side="left")
@@ -1904,12 +1914,12 @@ class EnhancedDashboard(tk.Tk):
             
             if card_info['motion_label']:
                 # Update existing label and make it visible
-                card_info['motion_label'].config(text=motion_text, fg=self.colors['fg_good'])
+                card_info['motion_label'].config(text=motion_text, fg=self.colors['fg_good'], bg=bg_color)
                 card_info['motion_label'].pack(anchor="w", side="left")
             else:
-                # Create motion label in lastheard_frame - use same font as heard label (12pt)
+                # Create motion label in lastheard_frame - use same font as heard label (10pt)
                 motion_label = tk.Label(card_info['lastheard_frame'], text=motion_text,
-                                       bg=card_info['lastheard_frame']['bg'], 
+                                       bg=bg_color, 
                                        fg=self.colors['fg_good'],
                                        font=self.font_card_line2)
                 motion_label.pack(anchor="w", side="left")
