@@ -272,29 +272,73 @@ class NodeDetailWindow:
         font_label = tkfont.Font(family="Segoe UI", size=11)
         font_value = tkfont.Font(family="Segoe UI", size=11)
         
-        # Battery
-        battery = self.node_data.get('Battery Level')
-        if battery is not None:
-            battery_text = f"{battery}%"
-            battery_color = self._get_battery_color(battery)
-        else:
-            battery_text = "N/A"
-            battery_color = self.colors['fg_secondary']
-        self._add_info_row(content_frame, "Battery:", battery_text, font_label, font_value, battery_color)
+        # === Meshtastic Internal Battery ===
+        internal_battery = self.node_data.get('Battery Level')
+        internal_voltage = self.node_data.get('Internal Battery Voltage')
         
-        # Voltage
-        voltage = self.node_data.get('Voltage')
-        if voltage is not None:
-            voltage_text = f"{voltage:.2f}V"
-            voltage_color = self._get_voltage_color(voltage)
-        else:
-            voltage_text = "N/A"
-            voltage_color = self.colors['fg_secondary']
-        self._add_info_row(content_frame, "Voltage:", voltage_text, font_label, font_value, voltage_color)
+        if internal_battery is not None or internal_voltage is not None:
+            # Section header for internal battery
+            internal_header = tk.Label(content_frame, text="Meshtastic Internal Battery:",
+                                      bg=self.colors['bg_frame'],
+                                      fg=self.colors['fg_secondary'],
+                                      font=tkfont.Font(family="Segoe UI", size=10, slant="italic"))
+            internal_header.pack(anchor="w", pady=(0, 2))
+            
+            # Internal battery percentage
+            if internal_battery is not None:
+                battery_text = f"{internal_battery}%"
+                battery_color = self._get_battery_color(internal_battery)
+                self._add_info_row(content_frame, "  Charge:", battery_text, font_label, font_value, battery_color)
+            
+            # Internal battery voltage
+            if internal_voltage is not None:
+                voltage_text = f"{internal_voltage:.2f}V"
+                voltage_color = self.colors['fg_normal']
+                self._add_info_row(content_frame, "  Voltage:", voltage_text, font_label, font_value, voltage_color)
+        
+        # === ICP Main Battery (External via Ch3) ===
+        ch3_voltage = self.node_data.get('Ch3 Voltage')
+        ch3_current = self.node_data.get('Ch3 Current')
+        
+        if ch3_voltage is not None or ch3_current is not None:
+            # Add spacing
+            spacer = tk.Frame(content_frame, bg=self.colors['bg_frame'], height=10)
+            spacer.pack(fill="x")
+            
+            # Section header for external battery
+            external_header = tk.Label(content_frame, text="ICP Main Battery:",
+                                      bg=self.colors['bg_frame'],
+                                      fg=self.colors['fg_secondary'],
+                                      font=tkfont.Font(family="Segoe UI", size=10, slant="italic"))
+            external_header.pack(anchor="w", pady=(0, 2))
+            
+            # Calculate percentage from voltage using parent's data collector
+            if ch3_voltage is not None and hasattr(self.parent, 'data_collector') and self.parent.data_collector:
+                battery_pct = self.parent.data_collector.voltage_to_percentage(ch3_voltage)
+                if battery_pct is not None:
+                    pct_text = f"{battery_pct}%"
+                    pct_color = self._get_battery_color(battery_pct)
+                    self._add_info_row(content_frame, "  Charge:", pct_text, font_label, font_value, pct_color)
+            
+            # Ch3 voltage (for reference)
+            if ch3_voltage is not None:
+                ch3_text = f"{ch3_voltage:.2f}V"
+                voltage_color = self._get_voltage_color(ch3_voltage)
+                self._add_info_row(content_frame, "  Voltage:", ch3_text, font_label, font_value, voltage_color)
+            
+            # Ch3 current
+            if ch3_current is not None:
+                current_text = f"{ch3_current:.0f}mA"
+                self._add_info_row(content_frame, "  Current:", current_text, font_label, font_value)
         
         # Channel Utilization
         channel_util = self.node_data.get('Channel Utilization')
         if channel_util is not None:
+            # Add spacing before other metrics
+            if internal_battery or ch3_voltage:
+                spacer = tk.Frame(content_frame, bg=self.colors['bg_frame'], height=10)
+                spacer.pack(fill="x")
+            
             util_text = f"{channel_util:.1f}%"
             self._add_info_row(content_frame, "Ch. Utilization:", util_text, font_label, font_value)
         
@@ -308,11 +352,12 @@ class NodeDetailWindow:
             snr_color = self.colors['fg_secondary']
         self._add_info_row(content_frame, "SNR:", snr_text, font_label, font_value, snr_color)
         
-        # Ch3 Voltage (if available)
-        ch3_voltage = self.node_data.get('Ch3 Voltage')
-        if ch3_voltage is not None:
-            ch3_text = f"{ch3_voltage:.2f}V"
-            self._add_info_row(content_frame, "Ch3 Voltage:", ch3_text, font_label, font_value)
+        # Old voltage field (for backward compatibility with nodes that don't have internal battery voltage)
+        voltage = self.node_data.get('Voltage')
+        if voltage is not None and internal_voltage is None:
+            voltage_text = f"{voltage:.2f}V"
+            voltage_color = self._get_voltage_color(voltage)
+            self._add_info_row(content_frame, "Voltage:", voltage_text, font_label, font_value, voltage_color)
     
     def _create_motion_section(self):
         """Create motion detection section"""

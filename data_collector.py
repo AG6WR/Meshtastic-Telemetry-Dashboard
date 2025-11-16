@@ -54,8 +54,32 @@ class DataCollector:
         # Telemetry field mapping
         self.FIELDS = [
             "Temperature", "Humidity", "Pressure", "Voltage", "Current",
-            "Battery Level", "Channel Utilization", "Air Utilization (TX)",
+            "Battery Level", "Internal Battery Voltage", "Channel Utilization", "Air Utilization (TX)",
             "Uptime", "Ch3 Voltage", "Ch3 Current"
+        ]
+        
+        # External battery voltage-to-percentage mapping (LiFePO4 12V system)
+        # Based on resting voltage values for lithium iron phosphate batteries
+        self.external_battery_map = [
+            (10.0, 0),     # 10.0V = 0%
+            (11.0, 5),     # 11.0V = 5%
+            (12.0, 10),    # 12.0V = 10%
+            (12.4, 15),    # 12.4V = 15%
+            (12.8, 20),    # 12.8V = 20%
+            (12.85, 25),   # 12.85V = 25%
+            (12.9, 30),    # 12.9V = 30%
+            (12.95, 35),   # 12.95V = 35%
+            (13.0, 40),    # 13.0V = 40-50% (plateau)
+            (13.05, 55),   # 13.05V = 55%
+            (13.1, 60),    # 13.1V = 60%
+            (13.15, 65),   # 13.15V = 65%
+            (13.2, 70),    # 13.2V = 70%
+            (13.25, 75),   # 13.25V = 75%
+            (13.3, 80),    # 13.3V = 80%
+            (13.35, 85),   # 13.35V = 85%
+            (13.4, 90),    # 13.4V = 90%
+            (13.5, 95),    # 13.5V = 95%
+            (13.6, 100),   # 13.6V = 100% (resting)
         ]
         
         # Set up callbacks
@@ -403,7 +427,9 @@ class DataCollector:
                 if 'batteryLevel' in device_metrics:
                     metrics['Battery Level'] = device_metrics['batteryLevel']
                 if 'voltage' in device_metrics:
+                    # Store both as Voltage (backward compat) and Internal Battery Voltage (new)
                     metrics['Voltage'] = device_metrics['voltage']
+                    metrics['Internal Battery Voltage'] = device_metrics['voltage']
                 if 'channelUtilization' in device_metrics:
                     metrics['Channel Utilization'] = device_metrics['channelUtilization']
                 if 'airUtilTx' in device_metrics:
@@ -448,6 +474,41 @@ class DataCollector:
             record[field] = None
         
         return record
+    
+    def voltage_to_percentage(self, voltage: float) -> int:
+        """
+        Convert external battery voltage to percentage using linear interpolation
+        
+        Args:
+            voltage: Battery voltage in volts
+            
+        Returns:
+            Battery percentage (0-100)
+        """
+        if voltage is None:
+            return None
+        
+        # Sort map by voltage (should already be sorted)
+        voltage_map = sorted(self.external_battery_map, key=lambda x: x[0])
+        
+        # Clamp to min/max values
+        if voltage <= voltage_map[0][0]:
+            return voltage_map[0][1]
+        if voltage >= voltage_map[-1][0]:
+            return voltage_map[-1][1]
+        
+        # Find bracketing points and interpolate
+        for i in range(len(voltage_map) - 1):
+            v1, p1 = voltage_map[i]
+            v2, p2 = voltage_map[i + 1]
+            
+            if v1 <= voltage <= v2:
+                # Linear interpolation
+                ratio = (voltage - v1) / (v2 - v1)
+                percentage = p1 + ratio * (p2 - p1)
+                return int(round(percentage))
+        
+        return 0  # Fallback
     
     def _normalize_node_id(self, node_id) -> Optional[str]:
         """Normalize node ID to consistent format"""
