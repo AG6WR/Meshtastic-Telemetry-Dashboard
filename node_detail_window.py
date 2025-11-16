@@ -82,6 +82,9 @@ class NodeDetailWindow:
         scrollbar.pack(side="right", fill="y")
         logger.info(f"NodeDetailWindow canvas packed")
         
+        # Enable mousewheel scrolling for Windows and Linux
+        self._bind_mousewheel(canvas)
+        
         # Add content to scrollable frame
         logger.info(f"NodeDetailWindow creating content sections...")
         self._create_header()
@@ -245,7 +248,8 @@ class NodeDetailWindow:
         humidity = self.node_data.get('Humidity')
         if humidity is not None:
             humidity_text = f"{humidity:.1f}%"
-            self._add_info_row(content_frame, "Humidity:", humidity_text, font_label, font_value)
+            humidity_color = self._get_humidity_color(humidity)
+            self._add_info_row(content_frame, "Humidity:", humidity_text, font_label, font_value, humidity_color)
         
         # Pressure
         pressure = self.node_data.get('Pressure')
@@ -385,7 +389,7 @@ class NodeDetailWindow:
         # Last motion time
         motion_dt = datetime.fromtimestamp(last_motion)
         motion_str = motion_dt.strftime('%Y-%m-%d %H:%M:%S')
-        self._add_info_row(content_frame, "Last Motion:", motion_str, font_label, font_value, self.colors['fg_warning'])
+        self._add_info_row(content_frame, "Last Motion:", motion_str, font_label, font_value)
     
     def _add_info_row(self, parent, label_text, value_text, font_label, font_value, value_color=None):
         """Add an info row with label and value"""
@@ -465,6 +469,13 @@ class NodeDetailWindow:
             return self.colors['fg_yellow']    # Yellow - OK signal (-10dB to +5dB)
         else:
             return self.colors['fg_bad']       # Red - Bad signal (below -10dB)
+    
+    def _get_humidity_color(self, humidity):
+        """Get color for humidity - matches card view"""
+        if humidity < 20 or humidity > 60:
+            return self.colors['fg_warning']  # Yellow for dry or humid
+        else:
+            return self.colors['fg_good']     # Green for normal (20-60%)
     
     def _bind_mousewheel(self, canvas):
         """Bind mousewheel to canvas for scrolling - supports both Windows and Linux"""
