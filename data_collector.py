@@ -228,7 +228,9 @@ class DataCollector:
             rx_snr = packet.get('rxSnr')
             hop_limit = packet.get('hopLimit')
             
-            # Skip preloaded packets - they shouldn't update Last Heard
+            # v1.0.8 (2025-11-16): Skip preloaded packets - they shouldn't update Last Heard
+            # Preloaded synthetic NODEINFO packets populate node names at startup
+            # but should not overwrite historical Last Heard timestamps from JSON.
             is_preloaded = packet.get('_preloaded', False)
             
             # Handle different packet types

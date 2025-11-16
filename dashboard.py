@@ -487,7 +487,7 @@ class SettingsDialog:
         self.dialog.destroy()
 
 # Version number - update manually with each release
-VERSION = "1.0.7a"
+VERSION = "1.0.8"
 
 def get_version_info():
     """Get version information"""
@@ -791,9 +791,10 @@ class EnhancedDashboard(tk.Tk):
     
     def start_periodic_refresh(self):
         """Start periodic refresh timer to catch status changes (online->offline transitions)"""
-        # Refresh every 5 minutes (300000 ms) to update node status
-        # This catches nodes going offline even when no new telemetry arrives
-        # Clear last_node_data cache to force status recalculation for all cards
+        # v1.0.8 (2025-11-16): Refresh every 5 minutes to update node status
+        # Status is time-based (current_time - last_heard) not data-based,
+        # so offline transitions won't trigger updates without periodic refresh.
+        # Clear last_node_data cache to force all cards to recalculate status.
         self.last_node_data.clear()
         self.refresh_display()
         self.after(300000, self.start_periodic_refresh)  # 5 minutes
@@ -1348,7 +1349,9 @@ class EnhancedDashboard(tk.Tk):
         current_time = time.time()
         last_heard = node_data.get('Last Heard', 0)
         time_diff = current_time - last_heard if last_heard else float('inf')
-        status = "Online" if time_diff <= 960 else "Offline"  # 16 minutes threshold (accommodates 15-min telemetry intervals)
+        # v1.0.8 (2025-11-16): Changed from 5min to 16min threshold
+        # Nodes send telemetry every 15 minutes, 5min caused false offline states
+        status = "Online" if time_diff <= 960 else "Offline"  # 16 minutes (960s)
         
         # Debug logging for node 30c0
         if '30c0' in node_id.lower():
