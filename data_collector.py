@@ -659,6 +659,56 @@ class DataCollector:
         except Exception as e:
             logger.error(f"Error during log cleanup: {e}")
     
+    def forget_node(self, node_id: str, delete_logs: bool = False) -> bool:
+        """
+        Remove a node from the system
+        
+        Args:
+            node_id: Node ID to forget (!xxxxxxxx format)
+            delete_logs: If True, also delete CSV log directory for this node
+            
+        Returns:
+            True if node was removed, False if node didn't exist
+        """
+        try:
+            with self.data_lock:
+                # Remove from nodes_data
+                if node_id not in self.nodes_data:
+                    logger.warning(f"Cannot forget {node_id}: node not found")
+                    return False
+                
+                node_name = self.nodes_data[node_id].get('Node LongName', node_id)
+                del self.nodes_data[node_id]
+                
+                # Remove from caches
+                if node_id in self.node_info_cache:
+                    del self.node_info_cache[node_id]
+                
+                if node_id in self.last_motion_by_node:
+                    del self.last_motion_by_node[node_id]
+            
+            # Remove from alert manager
+            if hasattr(self.alert_manager, 'clear_node_alerts'):
+                self.alert_manager.clear_node_alerts(node_id)
+            
+            # Delete CSV logs if requested
+            if delete_logs:
+                log_dir = os.path.join(self.log_directory, node_id.replace('!', ''))
+                if os.path.exists(log_dir):
+                    import shutil
+                    shutil.rmtree(log_dir)
+                    logger.info(f"Deleted log directory for {node_id}")
+            
+            # Save updated data immediately
+            self._save_all_data()
+            
+            logger.info(f"Forgot node {node_id} ({node_name})")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error forgetting node {node_id}: {e}")
+            return False
+    
     def get_nodes_data(self) -> Dict[str, Any]:
         """Get current nodes data (thread-safe)"""
         with self.data_lock:

@@ -11,7 +11,7 @@ class NodeDetailWindow:
     """Window displaying detailed information for a single Meshtastic node"""
     
     def __init__(self, parent, node_id: str, node_data: dict, 
-                 on_logs=None, on_csv=None, on_plot=None):
+                 on_logs=None, on_csv=None, on_plot=None, data_collector=None):
         """
         Create a node detail window
         
@@ -22,6 +22,7 @@ class NodeDetailWindow:
             on_logs: Callback for logs button
             on_csv: Callback for CSV button
             on_plot: Callback for plot button
+            data_collector: DataCollector instance for forget_node functionality
         """
         self.parent = parent
         self.node_id = node_id
@@ -29,6 +30,7 @@ class NodeDetailWindow:
         self.on_logs = on_logs
         self.on_csv = on_csv
         self.on_plot = on_plot
+        self.data_collector = data_collector
         
         # Debug: Log callback status
         import logging
@@ -129,6 +131,11 @@ class NodeDetailWindow:
         
         if self.on_plot:
             tk.Button(button_frame, text="Plot", command=self.on_plot, **btn_config).pack(side="left", padx=(0, 5))
+        
+        # FORGET NODE BUTTON (right side, before Close)
+        forget_config = btn_config.copy()
+        forget_config['fg'] = self.colors['fg_bad']  # Crimson to indicate destructive action
+        tk.Button(button_frame, text="Forget Node", command=self._forget_node, **forget_config).pack(side="right", padx=(5, 0))
         
         # CLOSE BUTTON  
         tk.Button(button_frame, text="Close", command=self.window.destroy, **btn_config).pack(side="right")
@@ -390,6 +397,46 @@ class NodeDetailWindow:
         motion_dt = datetime.fromtimestamp(last_motion)
         motion_str = motion_dt.strftime('%Y-%m-%d %H:%M:%S')
         self._add_info_row(content_frame, "Last Motion:", motion_str, font_label, font_value)
+    
+    def _forget_node(self):
+        """Forget (remove) this node from the system"""
+        import tkinter.messagebox as messagebox
+        
+        node_name = self.node_data.get('Node LongName', self.node_id)
+        
+        # Confirmation dialog
+        response = messagebox.askyesno(
+            "Forget Node",
+            f"Forget node '{node_name}' ({self.node_id})?\n\n"
+            "This will:\n"
+            "• Remove all node data from the dashboard\n"
+            "• Clear alerts for this node\n"
+            "• Keep CSV logs (unless deleted manually)\n\n"
+            "This cannot be undone. Continue?",
+            icon='warning'
+        )
+        
+        if response:
+            # Ask about deleting logs
+            delete_logs = messagebox.askyesno(
+                "Delete Logs?",
+                f"Also delete CSV log files for '{node_name}'?\n\n"
+                "If you select No, logs will be preserved\n"
+                "and can be accessed manually.",
+                icon='question'
+            )
+            
+            # Call data_collector to forget the node
+            if hasattr(self, 'data_collector') and self.data_collector:
+                success = self.data_collector.forget_node(self.node_id, delete_logs)
+                
+                if success:
+                    messagebox.showinfo("Node Forgotten", f"Node '{node_name}' has been removed.")
+                    self.window.destroy()
+                else:
+                    messagebox.showerror("Error", f"Failed to forget node '{node_name}'.")
+            else:
+                messagebox.showerror("Error", "Data collector not available.")
     
     def _add_info_row(self, parent, label_text, value_text, font_label, font_value, value_color=None):
         """Add an info row with label and value"""

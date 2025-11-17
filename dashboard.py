@@ -1703,9 +1703,14 @@ class EnhancedDashboard(tk.Tk):
         def on_card_click(event):
             self.show_node_detail(node_id)
         
+        # Right-click handler for context menu
+        def on_card_right_click(event):
+            self._show_card_context_menu(event, node_id)
+        
         # Bind click to card frame and all children recursively
         def bind_click_recursive(widget):
             widget.bind("<Button-1>", on_card_click)
+            widget.bind("<Button-3>", on_card_right_click)  # Right-click
             for child in widget.winfo_children():
                 bind_click_recursive(child)
         
@@ -2124,8 +2129,85 @@ class EnhancedDashboard(tk.Tk):
             node_data,
             on_logs=open_logs,
             on_csv=open_csv,
-            on_plot=show_plot
+            on_plot=show_plot,
+            data_collector=self.data_collector
         )
+    
+    def _show_card_context_menu(self, event, node_id):
+        """Show context menu for card right-click"""
+        nodes_data = self.data_collector.get_nodes_data() if self.data_collector else {}
+        node_data = nodes_data.get(node_id, {})
+        node_name = node_data.get('Node LongName', node_id)
+        
+        # Create context menu
+        menu = tk.Menu(self, tearoff=0,
+                      bg=self.colors['bg_frame'],
+                      fg=self.colors['fg_normal'],
+                      activebackground=self.colors['bg_selected'],
+                      activeforeground=self.colors['fg_normal'])
+        
+        # Add menu items
+        menu.add_command(label=f"View Details", 
+                        command=lambda: self.show_node_detail(node_id))
+        menu.add_command(label=f"Show Logs", 
+                        command=lambda: self.open_node_logs(node_id))
+        menu.add_command(label=f"Open CSV", 
+                        command=lambda: self.open_node_csv(node_id))
+        menu.add_command(label=f"Plot Telemetry", 
+                        command=lambda: self.show_plot_for_node(node_id))
+        menu.add_separator()
+        menu.add_command(label=f"Forget Node '{node_name}'", 
+                        command=lambda: self._forget_node_from_card(node_id),
+                        foreground=self.colors['fg_bad'])  # Red text for destructive action
+        
+        # Show menu at mouse position
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+    
+    def _forget_node_from_card(self, node_id):
+        """Forget a node from card context menu"""
+        import tkinter.messagebox as messagebox
+        
+        nodes_data = self.data_collector.get_nodes_data() if self.data_collector else {}
+        node_data = nodes_data.get(node_id, {})
+        node_name = node_data.get('Node LongName', node_id)
+        
+        # Confirmation dialog (same as detail window)
+        response = messagebox.askyesno(
+            "Forget Node",
+            f"Forget node '{node_name}' ({node_id})?\n\n"
+            "This will:\n"
+            "• Remove all node data from the dashboard\n"
+            "• Clear alerts for this node\n"
+            "• Keep CSV logs (unless deleted manually)\n\n"
+            "This cannot be undone. Continue?",
+            icon='warning'
+        )
+        
+        if response:
+            # Ask about deleting logs
+            delete_logs = messagebox.askyesno(
+                "Delete Logs?",
+                f"Also delete CSV log files for '{node_name}'?\n\n"
+                "If you select No, logs will be preserved\n"
+                "and can be accessed manually.",
+                icon='question'
+            )
+            
+            # Call data_collector to forget the node
+            if self.data_collector:
+                success = self.data_collector.forget_node(node_id, delete_logs)
+                
+                if success:
+                    messagebox.showinfo("Node Forgotten", f"Node '{node_name}' has been removed.")
+                    # Trigger a refresh to remove the card
+                    self.refresh_display()
+                else:
+                    messagebox.showerror("Error", f"Failed to forget node '{node_name}'.")
+            else:
+                messagebox.showerror("Error", "Data collector not available.")
     
     def show_plot_for_node(self, node_id: str, parent_window=None):
         """Show telemetry plot for a specific node
