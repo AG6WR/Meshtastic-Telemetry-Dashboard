@@ -233,6 +233,9 @@ class SettingsDialog:
         self.offline_threshold = tk.Entry(offline_frame, width=8)
         self.offline_threshold.pack(side="left", padx=5)
         tk.Label(offline_frame, text="minutes").pack(side="left", padx=5)
+        # Info label showing offline status threshold (hardcoded at 16 minutes)
+        tk.Label(offline_frame, text="(Offline status threshold: 16 min)", 
+                fg="#808080", font=("TkDefaultFont", 8)).pack(side="left", padx=(10, 0))
         
         # Low Voltage
         voltage_frame = tk.Frame(rules_group)
@@ -487,7 +490,7 @@ class SettingsDialog:
         self.dialog.destroy()
 
 # Version number - update manually with each release
-VERSION = "1.0.8"
+VERSION = "1.0.9"
 
 def get_version_info():
     """Get version information"""
@@ -551,20 +554,21 @@ class EnhancedDashboard(tk.Tk):
         
         self.geometry(geometry)
         
-        # Dark theme colors
+        # Dark theme color palette
+        # Usage: self.colors['key_name'] to reference colors throughout the application
         self.colors = {
-            'bg_main': '#1e1e1e',        # Dark background
-            'bg_frame': '#2d2d2d',       # Slightly lighter for frames
-            'bg_stale': '#3d2d2d',       # Dark red-tinted for stale rows
-            'bg_selected': '#1a237e',    # Very dark blue for selected row
-            'fg_normal': '#ffffff',       # White text
-            'fg_secondary': '#b0b0b0',   # Light gray for secondary text
-            'button_bg': '#404040',      # Button background
+            'bg_main': '#1e1e1e',        # Main window background
+            'bg_frame': '#2d2d2d',       # Card/frame background (normal state)
+            'bg_stale': '#3d2d2d',       # Table rows with stale data (dark red tint)
+            'bg_selected': '#1a237e',    # Selected table rows and flash effect (very dark blue)
+            'fg_normal': '#ffffff',      # Primary text color (white)
+            'fg_secondary': '#b0b0b0',   # Labels and stale data text (light gray)
+            'button_bg': '#404040',      # Button backgrounds
             'button_fg': '#ffffff',      # Button text
-            'fg_good': '#228B22',        # Forest green - for positive status/values
-            'fg_warning': '#FFA500',     # Orange - for warning status/values
-            'fg_yellow': '#FFFF00',      # Yellow - for caution status/values
-            'fg_bad': '#FF6B9D'          # Coral pink - for negative status/values (better contrast than crimson)
+            'fg_good': '#228B22',        # Positive values: Online status, high battery, good SNR (forest green)
+            'fg_warning': '#FFA500',     # Warning values: Medium battery, elevated temps (orange)
+            'fg_yellow': '#FFFF00',      # Caution values: Moderate concerns (yellow)
+            'fg_bad': '#FF6B9D'          # Negative values: Offline status, low battery, errors (coral pink - better contrast than crimson)
         }
         
         # Configure main window
@@ -1363,7 +1367,7 @@ class EnhancedDashboard(tk.Tk):
         telemetry_stale = telemetry_diff > 960  # 16 minutes = 960 seconds
         
         # Main card frame - start with flash color if changed
-        bg_color = self.colors['bg_selected'] if is_changed else self.colors['bg_frame']  # Use same dark blue as selected table row
+        bg_color = self.colors['bg_selected'] if is_changed else self.colors['bg_frame']  # Flash with very dark blue (#1a237e)
         if is_changed:
             logger.info(f"Creating card for {node_id} with BLUE flash background")
         card_frame = tk.Frame(parent, bg=bg_color, relief='raised', bd=2, width=card_width)
@@ -1787,6 +1791,7 @@ class EnhancedDashboard(tk.Tk):
                 if node_id in self.flash_timers:
                     del self.flash_timers[node_id]
             
+            # Schedule flash restoration after 2 seconds (2000ms)
             self.flash_timers[node_id] = self.after(2000, restore_normal)
     
     def update_node_card(self, node_id: str, node_data: Dict[str, Any], current_time: float, is_changed: bool = False):
@@ -1810,7 +1815,7 @@ class EnhancedDashboard(tk.Tk):
                     pass
             
             logger.info(f"Applying BLUE flash to existing card for {node_id}")
-            flash_color = self.colors['bg_selected']
+            flash_color = self.colors['bg_selected']  # Very dark blue (#1a237e)
             
             # Apply flash to card frame and all child frames
             card_frame.config(bg=flash_color)
@@ -1858,7 +1863,7 @@ class EnhancedDashboard(tk.Tk):
                 if node_id in self.flash_timers:
                     del self.flash_timers[node_id]
             
-            # Schedule restore after 2 seconds
+            # Schedule flash restoration after 2 seconds (2000ms)
             timer_id = self.after(2000, restore_colors)
             self.flash_timers[node_id] = timer_id
         

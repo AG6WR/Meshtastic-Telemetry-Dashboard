@@ -1,7 +1,8 @@
 # Meshtastic Telemetry Dashboard - Design Architecture
 
 ## Version History
-- **v1.0.8** (2025-11-16): Offline threshold fix, preloaded packet handling
+- **v1.0.9** (2025-11-17): Documentation improvements, alert threshold UI enhancement, code comment clarification
+- **v1.0.8** (2025-11-16): Offline threshold fix, preloaded packet handling, forget node feature, plotting improvements
 - **v1.0.7a** (2025-11-15): Card view flash mechanism, table feature parity
 - **v1.0.6** (2025-11-14): Grid layout implementation
 - **v1.0.0** (2025-11-02): Initial release
@@ -84,8 +85,9 @@
 Visual feedback when card data updates (new packet received)
 
 #### Implementation
-- **Flash color:** `bg_selected` (blue background) - same color as selected table row
-- **Duration:** 2 seconds
+- **Flash color:** `bg_selected` (#1a237e - very dark blue) - same color as selected table row
+- **Duration:** 2 seconds (2000ms) - set via `self.after(2000, restore_function)`
+- **Applies to:** Both event-driven single card updates and periodic all-card refreshes
 - **Widgets flashed:** All frames, labels, and container children
 - **Container children:** Special handling for battery, current, temperature, SNR, util, humidity containers that have child labels
 
@@ -116,6 +118,37 @@ Adding debug logging statements (even `logger.info()`) to card creation/update f
 - **Motion packets:** `DETECTION_SENSOR_APP` portnum
 - **Storage:** `last_motion_by_node` dict in data_collector
 - **Persistence:** Not persisted to JSON, rebuilt from packet stream
+
+### Forget Node Feature (v1.0.8)
+
+#### Purpose
+Remove nodes from the dashboard that are no longer relevant (renamed, decommissioned, or incorrectly added).
+
+#### Access Points
+- **Card Context Menu:** Right-click on any card → "Forget Node '[name]'" (red text)
+- **Detail Window:** "Forget Node" button (red background) in node detail window
+
+#### Cleanup Operations
+When a node is forgotten, the system performs comprehensive cleanup:
+1. **Remove from nodes_data** - Main node data dictionary
+2. **Remove from node_info_cache** - Cached long/short names
+3. **Remove from last_motion_by_node** - Motion detection cache
+4. **Clear alerts** - Remove all active alerts for the node
+5. **Optional: Delete CSV logs** - User chooses whether to delete historical log files
+
+#### User Flow
+1. User selects "Forget Node" via context menu or detail window
+2. Warning dialog explains what will be removed
+3. User confirms or cancels
+4. If confirmed, secondary dialog asks about CSV log deletion
+5. System performs cleanup and saves `latest_data.json`
+6. Dashboard refreshes to remove the card
+7. Detail window closes (if open)
+
+#### Implementation
+- **Method:** `data_collector.forget_node(node_id, delete_logs=False)`
+- **UI Handlers:** `dashboard._forget_node_from_card()`, `node_detail_window._forget_node()`
+- **Thread Safety:** Uses `data_lock` to ensure safe removal
 
 ---
 
@@ -163,6 +196,35 @@ Adding debug logging statements (even `logger.info()`) to card creation/update f
 
 **Tradeoff:** All cards flash blue every 5 minutes during refresh. Could be optimized to only flash cards with status changes.
 
+#### Forget Node Feature
+**Need:** Users needed a way to remove stale, renamed, or decommissioned nodes from the dashboard.
+
+**Implementation:**
+- Right-click context menu on cards
+- "Forget Node" button in detail window (red styling for caution)
+- Comprehensive cleanup: nodes_data, caches, alerts, optional CSV deletion
+- Two-step confirmation prevents accidental deletion
+- Thread-safe removal with immediate JSON save
+
+**User Experience:**
+- Discoverable via right-click (common UI pattern)
+- Also accessible from detail window
+- Clear warnings explain what will be deleted
+- Separate choice for CSV log deletion (preserves historical data by default)
+
+#### Plotting Improvements
+**Channel Utilization:**
+- Fixed y-axis scale from auto (0-1%) to fixed (0-50%)
+- Rationale: Most values ~1%, auto-scale made graphs useless
+- 50% is critical threshold per Meshtastic documentation
+
+**Voltage Parameters:**
+- Split "Voltage" into "Internal Battery Voltage" and "External Battery Voltage"
+- Internal: 3.0-4.5V scale (LiPo/Li-ion cells)
+- External: 10-15V scale (LiFePO4 12V systems)
+- Explicit selection instead of automatic fallback
+- Fixes empty plots for battery-powered nodes (no Ch3 voltage)
+
 ### v1.0.7a (2025-11-15): UI Polish
 
 #### Card Typography
@@ -196,18 +258,14 @@ Adding debug logging statements (even `logger.info()`) to card creation/update f
 }
 ```
 
-### Color Scheme
+### Visual Feedback
 
-Defined in `dashboard.py:__init__()`:
+**Color Coding:**
+- **Status colors:** Green (online/good), orange (warning), coral pink (offline/bad)
+- **Flash effect:** Blue background indicates card data updates
+- **Stale data:** Gray text with italic font for outdated sensor values
 
-- `bg_dark`: `#1e1e1e` - Main background
-- `bg_frame`: `#2d2d2d` - Card/frame background (normal)
-- `bg_selected`: `#0d3a5f` - Selected/flash background (blue)
-- `fg_normal`: `#e0e0e0` - Normal text (white)
-- `fg_secondary`: `#808080` - Secondary text (gray) - labels, stale data
-- `fg_good`: `#90EE90` - Good status (light green) - Online, high battery
-- `fg_warning`: `#FFD700` - Warning status (gold) - Medium battery
-- `fg_bad`: `#DC143C` - Bad status (crimson) - Offline, low battery, errors
+**Implementation:** Color palette defined in `dashboard.py:__init__()` with inline comments documenting each color's purpose and usage.
 
 ---
 
@@ -234,8 +292,12 @@ Defined in `dashboard.py:__init__()`:
 ### Flash Mechanism Fragility (v1.0.7a)
 Adding logging statements to card creation/update code breaks flash colors. Widgets get stuck with blue backgrounds. Root cause unknown. Workaround: Avoid debug logging in flash-related code.
 
-### Alert Threshold Mismatch (v1.0.8)
-Alert system triggers after 10 minutes offline, but offline threshold is now 16 minutes. This means nodes can be "Online" when alerts trigger. Should align alert threshold with offline threshold or keep separate for early warning.
+### Alert vs Status Threshold Design (v1.0.8)
+The alert threshold and offline status threshold can be set independently:
+- **Offline status threshold:** 16 minutes (hardcoded) - when cards show "Offline"
+- **Alert threshold:** Configurable (default 16 minutes) - when alerts fire
+
+**Rationale:** Allows alerts to fire before status changes (early warning) or at the same time (aligned thresholds). Settings pane displays the offline status threshold for reference when configuring alert threshold.
 
 ---
 

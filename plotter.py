@@ -142,7 +142,8 @@ class TelemetryPlotter:
             ("Temperature (°C)", "temperature"),
             ("SNR (dB)", "snr"),
             ("Humidity (%)", "humidity"), 
-            ("Voltage (V)", "voltage"),
+            ("Internal Battery Voltage (V)", "internal_voltage"),
+            ("External Battery Voltage (V)", "external_voltage"),
             ("Current (mA)", "current"),
             ("Channel Utilization (%)", "channel_utilization")
         ]
@@ -323,7 +324,8 @@ class TelemetryPlotter:
             'temperature': 'temperature',
             'snr': 'snr',
             'humidity': 'humidity',
-            'voltage': 'voltage',  # Will be handled specially below
+            'internal_voltage': 'voltage',
+            'external_voltage': 'ch3_voltage',
             'current': 'current',
             'channel_utilization': 'channel_utilization'
         }
@@ -349,15 +351,8 @@ class TelemetryPlotter:
                             if long_name and long_name != 'Unknown Node':
                                 node_info = {'long_name': long_name, 'short_name': short_name}
                             
-                        # Get parameter value
-                        # Special handling for voltage: prefer ch3_voltage (external) over voltage (internal)
-                        # This matches the card view logic in get_battery_percentage_display()
-                        if parameter == 'voltage':
-                            value_str = row.get('ch3_voltage', '').strip()
-                            if not value_str or value_str == '':
-                                value_str = row.get('voltage', '').strip()
-                        else:
-                            value_str = row.get(csv_column, '').strip()
+                        # Get parameter value from CSV column
+                        value_str = row.get(csv_column, '').strip()
                         
                         if value_str and value_str != '':
                             value = float(value_str)
@@ -382,7 +377,8 @@ class TelemetryPlotter:
             'temperature': {'name': 'Temperature', 'unit': '°C', 'min_val': 0, 'max_val': 50, 'auto_scale': False},
             'snr': {'name': 'SNR', 'unit': 'dB', 'min_val': -15, 'max_val': 15, 'auto_scale': False},
             'humidity': {'name': 'Humidity', 'unit': '%', 'min_val': 0, 'max_val': 100, 'auto_scale': False},
-            'voltage': {'name': 'Voltage', 'unit': 'V', 'min_val': 10, 'max_val': 15, 'auto_scale': False},
+            'internal_voltage': {'name': 'Internal Battery Voltage', 'unit': 'V', 'min_val': 3.0, 'max_val': 4.5, 'auto_scale': False},
+            'external_voltage': {'name': 'External Battery Voltage', 'unit': 'V', 'min_val': 10, 'max_val': 15, 'auto_scale': False},
             'current': {'name': 'Current', 'unit': 'mA', 'min_val': 0, 'max_val': 200, 'auto_scale': False},
             'channel_utilization': {'name': 'Channel Utilization', 'unit': '%', 'min_val': 0, 'max_val': 50, 'auto_scale': False}
         }
