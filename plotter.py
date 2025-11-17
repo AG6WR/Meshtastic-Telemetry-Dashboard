@@ -323,7 +323,7 @@ class TelemetryPlotter:
             'temperature': 'temperature',
             'snr': 'snr',
             'humidity': 'humidity',
-            'voltage': 'voltage', 
+            'voltage': 'voltage',  # Will be handled specially below
             'current': 'current',
             'channel_utilization': 'channel_utilization'
         }
@@ -350,7 +350,15 @@ class TelemetryPlotter:
                                 node_info = {'long_name': long_name, 'short_name': short_name}
                             
                         # Get parameter value
-                        value_str = row.get(csv_column, '').strip()
+                        # Special handling for voltage: prefer ch3_voltage (external) over voltage (internal)
+                        # This matches the card view logic in get_battery_percentage_display()
+                        if parameter == 'voltage':
+                            value_str = row.get('ch3_voltage', '').strip()
+                            if not value_str or value_str == '':
+                                value_str = row.get('voltage', '').strip()
+                        else:
+                            value_str = row.get(csv_column, '').strip()
+                        
                         if value_str and value_str != '':
                             value = float(value_str)
                             data.append((timestamp, value))
@@ -376,7 +384,7 @@ class TelemetryPlotter:
             'humidity': {'name': 'Humidity', 'unit': '%', 'min_val': 0, 'max_val': 100, 'auto_scale': False},
             'voltage': {'name': 'Voltage', 'unit': 'V', 'min_val': 10, 'max_val': 15, 'auto_scale': False},
             'current': {'name': 'Current', 'unit': 'mA', 'min_val': 0, 'max_val': 200, 'auto_scale': False},
-            'channel_utilization': {'name': 'Channel Utilization', 'unit': '%', 'min_val': 0, 'max_val': 1, 'auto_scale': True, 'min_range': 1}
+            'channel_utilization': {'name': 'Channel Utilization', 'unit': '%', 'min_val': 0, 'max_val': 50, 'auto_scale': False}
         }
         
         # Dynamic title based on time window
