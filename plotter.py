@@ -203,9 +203,9 @@ class TelemetryPlotter:
                                activebackground='#2d2d2d', activeforeground='white')
             rb.pack(anchor="w", padx=10, pady=2)
         
-        # Node selection - reduced height by 20%
-        node_frame = tk.LabelFrame(dialog, text="Select Nodes", bg='#2d2d2d', fg='white', height=144)  # Reduced by 20% from 180
-        node_frame.pack(fill="x", padx=20, pady=(0, 10))  # Reduced bottom padding from 20 to 10
+        # Node selection - restored to original height
+        node_frame = tk.LabelFrame(dialog, text="Select Nodes", bg='#2d2d2d', fg='white', height=180)
+        node_frame.pack(fill="x", padx=20, pady=(0, 10))
         node_frame.pack_propagate(False)  # Prevent frame from shrinking/expanding
         
         # "Select All" checkbox - default to True unless pre-selecting a specific node
@@ -214,14 +214,14 @@ class TelemetryPlotter:
         select_all_cb = tk.Checkbutton(node_frame, text="All Nodes", variable=select_all_var,
                                       bg='#2d2d2d', fg='white', selectcolor='#404040',
                                       activebackground='#2d2d2d', activeforeground='white')
-        select_all_cb.pack(anchor="w", padx=10, pady=3)  # Reduced padding from 5 to 3
+        select_all_cb.pack(anchor="w", padx=10, pady=3)
         
         # Individual node checkboxes
         node_vars = {}
         node_checkboxes = []
         
-        # Create scrollable frame for nodes with reduced height
-        canvas = tk.Canvas(node_frame, bg='#2d2d2d', highlightthickness=0, height=104)  # Reduced by 20% from 130
+        # Create scrollable frame for nodes
+        canvas = tk.Canvas(node_frame, bg='#2d2d2d', highlightthickness=0, height=130)
         scrollbar = tk.Scrollbar(node_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg='#2d2d2d')
         
