@@ -259,7 +259,10 @@ class DataCollector:
             if not is_preloaded:
                 self._update_node_basic_info(node_id, rx_time, rx_snr, hop_limit, portnum)
             
-            logger.debug(f"Processed {portnum} packet from {node_id}")
+            # Log if we see unknown packet types (not already logged above)
+            if not is_preloaded and portnum not in ['NODEINFO_APP', 'TELEMETRY_APP', 'DETECTION_SENSOR_APP']:
+                long_name, short_name = self.node_info_cache.get(node_id, ('Unknown Node', 'Unknown'))
+                logger.debug(f"{portnum} | {short_name}/{long_name} ({node_id}) | Packet received")
             
         except Exception as e:
             logger.error(f"Error processing packet: {e}")
@@ -294,7 +297,7 @@ class DataCollector:
             if packet.get('_preloaded'):
                 logger.debug(f"Preloaded node info for {node_id}: {long_name} ({short_name})")
             elif old_info != (long_name, short_name):
-                logger.info(f"Updated node info for {node_id}: {long_name} ({short_name})")
+                logger.info(f"NODEINFO | {short_name}/{long_name} ({node_id}) | Names updated")
             
             # Ensure we have data record for this node
             with self.data_lock:
@@ -317,12 +320,12 @@ class DataCollector:
             if not metrics:
                 return
             
-            # Log when telemetry data arrives
-            timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
-            logger.info(f"[{timestamp}] Telemetry data received for {node_id}: {list(metrics.keys())}")
-            
             # Get node names
             long_name, short_name = self.node_info_cache.get(node_id, ('Unknown Node', 'Unknown'))
+            
+            # Log when telemetry data arrives
+            logger.info(f"TELEMETRY | {short_name}/{long_name} ({node_id}) | Fields: {list(metrics.keys())}")
+            
             
             # Update node data
             with self.data_lock:
@@ -371,12 +374,12 @@ class DataCollector:
     def _process_motion_packet(self, node_id, rx_time):
         """Process motion detection packet"""
         self.last_motion_by_node[node_id] = rx_time
-        timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
-        motion_time = datetime.fromtimestamp(rx_time).strftime('%H:%M:%S')
-        logger.info(f"[{timestamp}] Motion detected from {node_id} at {motion_time} (rx_time={rx_time})")
         
-        # Get node names and log motion event to CSV
+        # Get node names and log motion event
         long_name, short_name = self.node_info_cache.get(node_id, ('Unknown Node', 'Unknown'))
+        logger.info(f"MOTION | {short_name}/{long_name} ({node_id}) | Motion detected")
+        
+        # Log motion event to CSV
         self._log_to_csv(node_id, long_name, short_name, rx_time, None, None, {}, 'Motion', motion_detected=True)
     
     def _update_node_basic_info(self, node_id, rx_time, rx_snr, hop_limit, portnum):

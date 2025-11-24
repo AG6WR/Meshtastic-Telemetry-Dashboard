@@ -1368,8 +1368,6 @@ class EnhancedDashboard(tk.Tk):
         
         # Main card frame - start with flash color if changed
         bg_color = self.colors['bg_selected'] if is_changed else self.colors['bg_frame']  # Flash with very dark blue (#1a237e)
-        if is_changed:
-            logger.info(f"Creating card for {node_id} with BLUE flash background")
         card_frame = tk.Frame(parent, bg=bg_color, relief='raised', bd=2, width=card_width)
         card_frame.grid(row=row, column=col, padx=4, pady=3, sticky="nsew")
         card_frame.grid_propagate(True)
@@ -1814,7 +1812,6 @@ class EnhancedDashboard(tk.Tk):
                 except:
                     pass
             
-            logger.info(f"Applying BLUE flash to existing card for {node_id}")
             flash_color = self.colors['bg_selected']  # Very dark blue (#1a237e)
             
             # Apply flash to card frame and all child frames
