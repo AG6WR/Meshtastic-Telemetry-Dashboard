@@ -245,6 +245,13 @@ class DataCollector:
             # but should not overwrite historical Last Heard timestamps from JSON.
             is_preloaded = packet.get('_preloaded', False)
             
+            # Get node names for logging
+            long_name, short_name = self.node_info_cache.get(node_id, ('Unknown Node', 'Unknown'))
+            
+            # Log all packet arrivals (helps diagnose RF sensitivity issues)
+            if not is_preloaded:
+                logger.debug(f"PACKET | {short_name}/{long_name} ({node_id}) | Type: {portnum}, SNR: {rx_snr}")
+            
             # Handle different packet types
             if portnum == 'NODEINFO_APP':
                 self._process_nodeinfo_packet(packet, node_id, rx_time, rx_snr, hop_limit)

@@ -243,7 +243,8 @@ class AlertManager:
             # Check node offline
             if self.rules['node_offline'].can_trigger(node_id):
                 last_heard = node_data.get('Last Heard', 0)
-                if current_time - last_heard > self.rules['node_offline'].threshold:
+                # Skip if last_heard is None or 0 (node never heard)
+                if last_heard and current_time - last_heard > self.rules['node_offline'].threshold:
                     alert_msg = f"Node {node_id} ({node_data.get('Node LongName', 'Unknown')}) has been offline for {int((current_time - last_heard) / 60)} minutes"
                     self._trigger_alert('node_offline', node_id, alert_msg, node_data)
                     triggered_alerts.append(alert_msg)
