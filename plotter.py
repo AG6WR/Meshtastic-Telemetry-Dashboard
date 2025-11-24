@@ -161,27 +161,50 @@ class TelemetryPlotter:
                                activebackground='#2d2d2d', activeforeground='white')
             rb.pack(anchor="w", pady=2)
         
-        # Time window selection
+        # Time window selection - two column layout
         time_frame = tk.LabelFrame(dialog, text="Time Window", bg='#2d2d2d', fg='white')
         time_frame.pack(fill="x", padx=20, pady=(0, 5))  # Reduced padding
         
         time_var = tk.StringVar(value="7")
-        time_options = [
+        
+        # Create two-column layout
+        time_cols = tk.Frame(time_frame, bg='#2d2d2d')
+        time_cols.pack(fill="x", padx=5, pady=5)
+        
+        col1 = tk.Frame(time_cols, bg='#2d2d2d')
+        col1.pack(side="left", fill="both", expand=True)
+        
+        col2 = tk.Frame(time_cols, bg='#2d2d2d')
+        col2.pack(side="left", fill="both", expand=True)
+        
+        # Left column options
+        left_options = [
             ("Last 24 hours", "1"),
-            ("Last 3 days", "3"), 
-            ("Last week", "7"),
-            ("Last 2 weeks", "14"),
-            ("Last month", "30")
+            ("Last 3 days", "3"),
+            ("Last week", "7")
         ]
         
-        for text, value in time_options:
-            rb = tk.Radiobutton(time_frame, text=text, variable=time_var, value=value,
+        # Right column options
+        right_options = [
+            ("Last 2 weeks", "14"),
+            ("Last month", "30"),
+            ("All available", "all")
+        ]
+        
+        for text, value in left_options:
+            rb = tk.Radiobutton(col1, text=text, variable=time_var, value=value,
                                bg='#2d2d2d', fg='white', selectcolor='#404040',
                                activebackground='#2d2d2d', activeforeground='white')
             rb.pack(anchor="w", padx=10, pady=2)
         
-        # Node selection - reduced height for smaller displays
-        node_frame = tk.LabelFrame(dialog, text="Select Nodes", bg='#2d2d2d', fg='white', height=180)  # Reduced from 300 to 180
+        for text, value in right_options:
+            rb = tk.Radiobutton(col2, text=text, variable=time_var, value=value,
+                               bg='#2d2d2d', fg='white', selectcolor='#404040',
+                               activebackground='#2d2d2d', activeforeground='white')
+            rb.pack(anchor="w", padx=10, pady=2)
+        
+        # Node selection - reduced height by 20%
+        node_frame = tk.LabelFrame(dialog, text="Select Nodes", bg='#2d2d2d', fg='white', height=144)  # Reduced by 20% from 180
         node_frame.pack(fill="x", padx=20, pady=(0, 10))  # Reduced bottom padding from 20 to 10
         node_frame.pack_propagate(False)  # Prevent frame from shrinking/expanding
         
@@ -198,7 +221,7 @@ class TelemetryPlotter:
         node_checkboxes = []
         
         # Create scrollable frame for nodes with reduced height
-        canvas = tk.Canvas(node_frame, bg='#2d2d2d', highlightthickness=0, height=130)  # Reduced from 220 to 130
+        canvas = tk.Canvas(node_frame, bg='#2d2d2d', highlightthickness=0, height=104)  # Reduced by 20% from 130
         scrollbar = tk.Scrollbar(node_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg='#2d2d2d')
         
@@ -254,7 +277,9 @@ class TelemetryPlotter:
                 return
                 
             result['nodes'] = selected_nodes
-            result['days'] = int(time_var.get())
+            # Handle 'all' for all available data, otherwise convert to int
+            time_value = time_var.get()
+            result['days'] = time_value if time_value == 'all' else int(time_value)
             result['parameter'] = param_var.get()
             dialog.destroy()
         
@@ -275,9 +300,13 @@ class TelemetryPlotter:
         """Load telemetry data for selected nodes and time period"""
         log_dir = Path(self.config_manager.get('data.log_directory', 'logs'))
         
-        # Calculate date range
+        # Calculate date range - 'all' means load all available data
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=days)
+        if days == 'all':
+            # Start from a very early date to capture all data
+            start_date = datetime(2020, 1, 1)
+        else:
+            start_date = end_date - timedelta(days=days)
         
         all_data = {}
         
