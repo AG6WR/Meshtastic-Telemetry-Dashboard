@@ -107,6 +107,10 @@ class ConfigManager:
                 "backup_enabled": True,
                 "backup_interval_hours": 24
             },
+            "logging": {
+                "level": "INFO",
+                "retention_days": 30
+            },
             "alerts": {
                 "enabled": True,
                 "check_interval_seconds": 60,

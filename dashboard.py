@@ -75,6 +75,11 @@ class SettingsDialog:
         notebook.add(email_frame, text="Email")
         self.create_email_tab(email_frame)
         
+        # Logging tab
+        logging_frame = ttk.Frame(notebook)
+        notebook.add(logging_frame, text="Logging")
+        self.create_logging_tab(logging_frame)
+        
         # Buttons
         button_frame = tk.Frame(self.dialog)
         button_frame.pack(fill="x", padx=10, pady=(0, 10))
@@ -389,8 +394,73 @@ class SettingsDialog:
         self.smtp_password.insert(0, self.config_manager.get('alerts.email_config.password', ''))
         self.from_address.insert(0, self.config_manager.get('alerts.email_config.from_address', ''))
         to_addrs = self.config_manager.get('alerts.email_config.to_addresses', [])
+        
+        # Logging settings
+        log_level = self.config_manager.get('logging.level', 'INFO')
+        if log_level == 'NOTSET':
+            self.log_level.set('Disable Logging')
+        else:
+            self.log_level.set(log_level)
+        
+        retention_days = self.config_manager.get('logging.retention_days', -1)
+        if retention_days == -1:
+            self.log_retention_days.set('Forever')
+        else:
+            self.log_retention_days.set(f'{retention_days} days')
         self.to_addresses.insert(0, ', '.join(to_addrs))
         self.use_tls.set(self.config_manager.get('alerts.email_config.use_tls', True))
+    
+    def create_logging_tab(self, parent):
+        """Create logging settings tab"""
+        # Log Level Group
+        level_group = ttk.LabelFrame(parent, text="Log Level")
+        level_group.pack(fill="x", padx=5, pady=5)
+        
+        tk.Label(level_group, text="Select logging verbosity:").pack(anchor="w", padx=5, pady=(5, 0))
+        
+        self.log_level = ttk.Combobox(level_group, values=[
+            "Disable Logging",
+            "CRITICAL",
+            "ERROR",
+            "WARNING",
+            "INFO",
+            "DEBUG"
+        ], state="readonly", width=20)
+        self.log_level.pack(anchor="w", padx=5, pady=5)
+        
+        # Help text
+        help_text = (
+            "DEBUG: Most verbose - shows all diagnostic details\n"
+            "INFO: Normal operation messages and updates\n"
+            "WARNING: Unexpected events that don't stop operation\n"
+            "ERROR: Serious problems that prevent features from working\n"
+            "CRITICAL: Severe errors that may crash the application\n"
+            "Disable Logging: Turn off all logging output"
+        )
+        help_label = tk.Label(level_group, text=help_text, justify="left", font=("TkDefaultFont", 8))
+        help_label.pack(anchor="w", padx=5, pady=(0, 5))
+        
+        # Log Retention Group
+        retention_group = ttk.LabelFrame(parent, text="Log File Retention")
+        retention_group.pack(fill="x", padx=5, pady=5)
+        
+        tk.Label(retention_group, text="Delete log files older than:").pack(anchor="w", padx=5, pady=(5, 0))
+        
+        self.log_retention_days = ttk.Combobox(retention_group, values=[
+            "5 days",
+            "30 days",
+            "60 days",
+            "90 days",
+            "360 days",
+            "Forever"
+        ], state="readonly", width=20)
+        self.log_retention_days.pack(anchor="w", padx=5, pady=5)
+        
+        retention_help = tk.Label(retention_group, 
+            text="Application logs (meshtastic_monitor.log) will be cleaned up automatically.\n"
+                 "Node CSV logs are managed separately by the Data settings.",
+            justify="left", font=("TkDefaultFont", 8))
+        retention_help.pack(anchor="w", padx=5, pady=(0, 5))
     
     def test_email(self):
         """Test email configuration"""
@@ -462,6 +532,20 @@ class SettingsDialog:
             self.config_manager.set('alerts.email_config.to_addresses', to_addrs)
             self.config_manager.set('alerts.email_config.use_tls', self.use_tls.get())
             
+            # Logging settings
+            log_level_value = self.log_level.get()
+            if log_level_value == 'Disable Logging':
+                self.config_manager.set('logging.level', 'NOTSET')
+            else:
+                self.config_manager.set('logging.level', log_level_value)
+            
+            retention_value = self.log_retention_days.get()
+            if retention_value == 'Forever':
+                self.config_manager.set('logging.retention_days', -1)
+            else:
+                days = int(retention_value.split()[0])
+                self.config_manager.set('logging.retention_days', days)
+            
             # Save to file
             self.config_manager.save_config()
             
@@ -490,7 +574,7 @@ class SettingsDialog:
         self.dialog.destroy()
 
 # Version number - update manually with each release
-VERSION = "1.0.9"
+VERSION = "1.0.10"
 
 def get_version_info():
     """Get version information"""
@@ -535,6 +619,9 @@ class EnhancedDashboard(tk.Tk):
         # Start periodic refresh timer (every 15 minutes) to catch status changes
         # This ensures nodes transition to offline even when no new telemetry arrives
         self.start_periodic_refresh()
+        
+        # Start log cleanup timer (daily)
+        self.after(60000, self.cleanup_old_logs)  # Start after 1 minute, then runs daily
     
     def setup_gui(self):
         """Setup the GUI"""
@@ -802,6 +889,59 @@ class EnhancedDashboard(tk.Tk):
         self.last_node_data.clear()
         self.refresh_display()
         self.after(300000, self.start_periodic_refresh)  # 5 minutes
+    
+    def cleanup_old_logs(self):
+        """Clean up old application log files based on retention settings"""
+        try:
+            retention_days = self.config_manager.get('logging.retention_days', 30)
+            
+            # -1 means keep forever, don't clean up
+            if retention_days == -1:
+                logger.debug("Log retention set to Forever - skipping cleanup")
+                return
+            
+            log_file = 'logs/meshtastic_monitor.log'
+            if not os.path.exists(log_file):
+                return
+            
+            # Check file age
+            file_mtime = os.path.getmtime(log_file)
+            file_age_days = (time.time() - file_mtime) / 86400  # seconds to days
+            
+            if file_age_days > retention_days:
+                # Archive old log with timestamp before deleting
+                archive_name = f'logs/meshtastic_monitor_{datetime.fromtimestamp(file_mtime).strftime("%Y%m%d")}.log.old'
+                try:
+                    # Rename to archive
+                    os.rename(log_file, archive_name)
+                    logger.info(f"Archived old log file to {archive_name}")
+                    
+                    # Delete the archive (we just wanted to preserve it briefly)
+                    os.remove(archive_name)
+                    logger.info(f"Cleaned up log file older than {retention_days} days")
+                except Exception as e:
+                    logger.warning(f"Failed to clean up old log: {e}")
+            else:
+                logger.debug(f"Log file is {file_age_days:.1f} days old, retention is {retention_days} days")
+            
+            # Also clean up any .old archived logs older than retention period
+            if os.path.exists('logs'):
+                for filename in os.listdir('logs'):
+                    if filename.endswith('.log.old'):
+                        filepath = os.path.join('logs', filename)
+                        file_age = (time.time() - os.path.getmtime(filepath)) / 86400
+                        if file_age > retention_days:
+                            try:
+                                os.remove(filepath)
+                                logger.info(f"Removed old archived log: {filename}")
+                            except Exception as e:
+                                logger.warning(f"Failed to remove {filename}: {e}")
+        
+        except Exception as e:
+            logger.error(f"Error during log cleanup: {e}")
+        
+        # Schedule next cleanup in 24 hours
+        self.after(86400000, self.cleanup_old_logs)  # 24 hours in milliseconds
     
     def refresh_display(self):
         """Refresh the dashboard display (event-driven, called when data changes)"""
@@ -1298,15 +1438,20 @@ class EnhancedDashboard(tk.Tk):
         
         # Check which nodes have changed data
         changed_nodes = set()
+        changed_nodes_info = []  # For logging with names
         for node_id, node_data in sorted_nodes:
             if node_id not in self.last_node_data or self.last_node_data[node_id] != node_data:
                 changed_nodes.add(node_id)
                 self.last_node_data[node_id] = node_data.copy()
+                # Collect node info for logging
+                long_name = node_data.get('Node LongName', 'Unknown')
+                short_name = node_data.get('Node ShortName', node_id[-4:])
+                changed_nodes_info.append(f"{node_id} ({short_name}/{long_name})")
         
         # Log when cards are being updated
         if changed_nodes:
             timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
-            logger.info(f"[{timestamp}] Card display updating for changed nodes: {changed_nodes}")
+            logger.info(f"[{timestamp}] Card display updating for changed nodes: {', '.join(changed_nodes_info)}")
         
         # If layout needs rebuild (new/removed nodes or first time)
         existing_nodes = set(self.card_widgets.keys())
@@ -2349,10 +2494,22 @@ class EnhancedDashboard(tk.Tk):
 
 def main():
     """Main entry point"""
+    # Load config to get logging preferences
+    config_mgr = ConfigManager()
+    
     # Setup logging to file and console
     os.makedirs('logs', exist_ok=True)
+    
+    # Get log level from config
+    log_level_str = config_mgr.get('logging.level', 'INFO').upper()
+    if log_level_str == 'NOTSET':
+        # Disable logging by setting to a level that shows nothing
+        log_level = logging.CRITICAL + 1
+    else:
+        log_level = getattr(logging, log_level_str, logging.INFO)
+    
     logging.basicConfig(
-        level=logging.INFO,
+        level=log_level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
             logging.FileHandler('logs/meshtastic_monitor.log'),
