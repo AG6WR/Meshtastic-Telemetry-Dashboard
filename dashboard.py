@@ -586,7 +586,7 @@ class SettingsDialog:
         self.dialog.destroy()
 
 # Version number - update manually with each release
-VERSION = "1.0.11"
+VERSION = "1.0.12"
 
 def get_version_info():
     """Get version information"""
@@ -652,29 +652,6 @@ class EnhancedDashboard(tk.Tk):
             geometry = '960x800'
         
         self.geometry(geometry)
-    
-    def convert_temperature(self, temp_c, to_unit=None):
-        """Convert temperature from Celsius to the configured unit
-        
-        Args:
-            temp_c: Temperature in Celsius
-            to_unit: Override unit ('C' or 'F'), or None to use config setting
-            
-        Returns:
-            tuple: (converted_value, unit_string, thresholds_tuple)
-                   thresholds_tuple = (red_threshold, yellow_threshold)
-        """
-        if to_unit is None:
-            to_unit = self.config_manager.get('dashboard.temperature_unit', 'C')
-        
-        if to_unit == 'F':
-            # Convert to Fahrenheit: F = C * 9/5 + 32
-            temp_f = temp_c * 9/5 + 32
-            # Thresholds: 45°C = 113°F, 35°C = 95°F
-            return (temp_f, '°F', (113, 95))
-        else:
-            # Keep in Celsius
-            return (temp_c, '°C', (45, 35))
         
         # Dark theme color palette
         # Usage: self.colors['key_name'] to reference colors throughout the application
@@ -807,6 +784,29 @@ class EnhancedDashboard(tk.Tk):
         
         # Protocol for window close
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
+    
+    def convert_temperature(self, temp_c, to_unit=None):
+        """Convert temperature from Celsius to the configured unit
+        
+        Args:
+            temp_c: Temperature in Celsius
+            to_unit: Override unit ('C' or 'F'), or None to use config setting
+            
+        Returns:
+            tuple: (converted_value, unit_string, thresholds_tuple)
+                   thresholds_tuple = (red_threshold, yellow_threshold)
+        """
+        if to_unit is None:
+            to_unit = self.config_manager.get('dashboard.temperature_unit', 'C')
+        
+        if to_unit == 'F':
+            # Convert to Fahrenheit: F = C * 9/5 + 32
+            temp_f = temp_c * 9/5 + 32
+            # Thresholds: 45°C = 113°F, 35°C = 95°F
+            return (temp_f, '°F', (113, 95))
+        else:
+            # Keep in Celsius
+            return (temp_c, '°C', (45, 35))
     
     def setup_table(self):
         """Setup the data table"""
