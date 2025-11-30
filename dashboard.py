@@ -177,6 +177,10 @@ class SettingsDialog:
         self.motion_display_seconds = tk.Entry(display_group, width=10)
         self.motion_display_seconds.grid(row=2, column=1, sticky="w", padx=5, pady=5)
         tk.Label(display_group, text="seconds (show motion indicator)").grid(row=2, column=2, sticky="w", padx=5, pady=5)
+        
+        tk.Label(display_group, text="Temperature Unit:").grid(row=3, column=0, sticky="w", padx=5, pady=5)
+        self.temp_unit = ttk.Combobox(display_group, values=["Celsius (°C)", "Fahrenheit (°F)"], state="readonly", width=15)
+        self.temp_unit.grid(row=3, column=1, sticky="w", padx=5, pady=5)
     
     def create_telemetry_tab(self, parent):
         """Create telemetry field settings tab"""
@@ -370,6 +374,10 @@ class SettingsDialog:
         self.stale_row_seconds.insert(0, str(self.config_manager.get('dashboard.stale_row_seconds', 300)))
         self.motion_display_seconds.insert(0, str(self.config_manager.get('dashboard.motion_display_seconds', 900)))
         
+        # Temperature unit setting
+        temp_unit_value = self.config_manager.get('dashboard.temperature_unit', 'C')
+        self.temp_unit.set('Celsius (°C)' if temp_unit_value == 'C' else 'Fahrenheit (°F)')
+        
         # Telemetry field settings
         telemetry_config = self.config_manager.get('dashboard.telemetry_fields', {})
         for field_key, var in self.telemetry_vars.items():
@@ -503,6 +511,10 @@ class SettingsDialog:
             self.config_manager.set('dashboard.stale_row_seconds', int(self.stale_row_seconds.get()))
             self.config_manager.set('dashboard.motion_display_seconds', int(self.motion_display_seconds.get()))
             
+            # Temperature unit setting
+            temp_unit_value = 'C' if 'Celsius' in self.temp_unit.get() else 'F'
+            self.config_manager.set('dashboard.temperature_unit', temp_unit_value)
+            
             # Telemetry field settings
             telemetry_fields = {}
             for field_key, var in self.telemetry_vars.items():
@@ -574,7 +586,7 @@ class SettingsDialog:
         self.dialog.destroy()
 
 # Version number - update manually with each release
-VERSION = "1.0.10"
+VERSION = "1.0.11"
 
 def get_version_info():
     """Get version information"""
@@ -640,6 +652,29 @@ class EnhancedDashboard(tk.Tk):
             geometry = '960x800'
         
         self.geometry(geometry)
+    
+    def convert_temperature(self, temp_c, to_unit=None):
+        """Convert temperature from Celsius to the configured unit
+        
+        Args:
+            temp_c: Temperature in Celsius
+            to_unit: Override unit ('C' or 'F'), or None to use config setting
+            
+        Returns:
+            tuple: (converted_value, unit_string, thresholds_tuple)
+                   thresholds_tuple = (red_threshold, yellow_threshold)
+        """
+        if to_unit is None:
+            to_unit = self.config_manager.get('dashboard.temperature_unit', 'C')
+        
+        if to_unit == 'F':
+            # Convert to Fahrenheit: F = C * 9/5 + 32
+            temp_f = temp_c * 9/5 + 32
+            # Thresholds: 45°C = 113°F, 35°C = 95°F
+            return (temp_f, '°F', (113, 95))
+        else:
+            # Keep in Celsius
+            return (temp_c, '°C', (45, 35))
         
         # Dark theme color palette
         # Usage: self.colors['key_name'] to reference colors throughout the application
@@ -1675,9 +1710,9 @@ class EnhancedDashboard(tk.Tk):
             current_container = tk.Frame(col2_frame, bg=bg_color)
             current_container.pack(anchor="center")
             
-            # Current value in 14pt bold
+            # Current value in 14pt bold (white/standard color)
             current_value = tk.Label(current_container, text=f"{ch3_current:.0f}",
-                                    bg=bg_color, fg=display_color,
+                                    bg=bg_color, fg=self.colors['fg_normal'],
                                     font=self.font_card_line3, padx=0, pady=0, anchor="s")
             current_value.pack(side="left", padx=0)
             
@@ -1693,13 +1728,16 @@ class EnhancedDashboard(tk.Tk):
         temp = node_data.get('Temperature')
         temp_label = None
         if temp is not None:
-            # Match table view: Red if >40°C or <0°C, Yellow if 30-40°C, Green if 0-30°C
-            if temp > 40 or temp < 0:
+            # Convert temperature to configured unit
+            temp_value, temp_unit_str, (red_threshold, yellow_threshold) = self.convert_temperature(temp)
+            
+            # Match table view: Red if >red_threshold or <0°C, Yellow if yellow_threshold-red_threshold, Green if 0-yellow_threshold
+            if temp > red_threshold or temp < 0:
                 temp_color = self.colors['fg_bad']  # Red for extreme temps
-            elif temp >= 30:
-                temp_color = self.colors['fg_warning']  # Orange for warm temps (30-40°C)
+            elif temp >= yellow_threshold:
+                temp_color = self.colors['fg_warning']  # Orange for warm temps
             else:
-                temp_color = self.colors['fg_good']  # Green for normal temps (0-30°C)
+                temp_color = self.colors['fg_good']  # Green for normal temps
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else temp_color
             
@@ -1708,16 +1746,16 @@ class EnhancedDashboard(tk.Tk):
             temp_container.pack(fill="both", expand=True, anchor="e")
             
             # Temperature value in 14pt bold
-            temp_value = tk.Label(temp_container, text=f"{temp:.1f}",
+            temp_value_label = tk.Label(temp_container, text=f"{temp_value:.1f}",
                                  bg=bg_color, fg=display_color,
                                  font=self.font_card_line3, padx=0, pady=0, anchor="s")
-            temp_value.pack(side="left", padx=0)
+            temp_value_label.pack(side="left", padx=0)
             
-            # "°C" unit in 10pt regular (light grey)
-            temp_unit = tk.Label(temp_container, text="°C",
+            # Unit in 10pt regular (light grey)
+            temp_unit_label = tk.Label(temp_container, text=temp_unit_str,
                                 bg=bg_color, fg=self.colors['fg_secondary'],
                                 font=self.font_card_label, padx=0, pady=0, anchor="s")
-            temp_unit.pack(side="left", padx=0)
+            temp_unit_label.pack(side="left", padx=0)
             
             temp_label = temp_container  # Store container reference
         else:
@@ -2165,15 +2203,18 @@ class EnhancedDashboard(tk.Tk):
                     # Keep unit grey
                     child.config(fg=self.colors['fg_secondary'])
                 else:
-                    # Update value color and text
-                    child.config(fg=display_color, text=f"{ch3_current:.0f}")
+                    # Update value to white (standard color) and text
+                    child.config(fg=self.colors['fg_normal'], text=f"{ch3_current:.0f}")
             
         temp = node_data.get('Temperature')
         if temp is not None and card_info['temp_label']:
-            # Match table view: Red if >40°C or <0°C, Orange if 30-40°C, Green if 0-30°C
-            if temp > 40 or temp < 0:
+            # Convert temperature to configured unit
+            temp_value, temp_unit_str, (red_threshold, yellow_threshold) = self.convert_temperature(temp)
+            
+            # Match table view: Red if >red_threshold or <0°C, Orange if yellow_threshold-red_threshold, Green if 0-yellow_threshold
+            if temp > red_threshold or temp < 0:
                 temp_color = self.colors['fg_bad']  # Red for extreme temps
-            elif temp >= 30:
+            elif temp >= yellow_threshold:
                 temp_color = self.colors['fg_warning']  # Orange for warm temps
             else:
                 temp_color = self.colors['fg_good']  # Green for normal temps
@@ -2183,12 +2224,12 @@ class EnhancedDashboard(tk.Tk):
             # Update all children in the container (value + unit)
             for child in card_info['temp_label'].winfo_children():
                 text = child.cget("text")
-                if "°C" in text:
-                    # Keep unit grey
-                    child.config(fg=self.colors['fg_secondary'])
+                if "°" in text:  # Check for degree symbol (works for both C and F)
+                    # Update unit (might have changed C↔F)
+                    child.config(fg=self.colors['fg_secondary'], text=temp_unit_str)
                 else:
                     # Update value color and text
-                    child.config(fg=display_color, text=f"{temp:.1f}")
+                    child.config(fg=display_color, text=f"{temp_value:.1f}")
             
         # Row 2: SNR, Channel Utilization, Humidity
         snr = node_data.get('SNR')

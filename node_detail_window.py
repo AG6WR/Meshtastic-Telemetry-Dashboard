@@ -501,9 +501,9 @@ class NodeDetailWindow:
     
     def _get_temp_color(self, temp):
         """Get color for temperature"""
-        if temp > 40 or temp < 0:
+        if temp > 45 or temp < 0:
             return self.colors['fg_bad']
-        elif temp > 30:
+        elif temp > 35:
             return self.colors['fg_warning']
         else:
             return self.colors['fg_good']

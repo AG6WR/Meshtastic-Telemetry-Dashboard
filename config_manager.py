@@ -84,6 +84,7 @@ class ConfigManager:
             "dashboard": {
                 "refresh_rate_ms": 5000,
                 "time_format": "DD:HH:MM:SS",
+                "temperature_unit": "C",
                 "stale_row_seconds": 300,
                 "recent_field_seconds": 300,
                 "stale_field_seconds": 3600,
