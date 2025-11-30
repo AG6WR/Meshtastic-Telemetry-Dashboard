@@ -1,6 +1,30 @@
 """
 Enhanced Dashboard GUI for Meshtastic Monitoring
 Features: DDd:HHh:MMm:SSs time format, configurable settings, alert indicators
+
+IMPORTANT BUG FIX NOTES (recurring issue):
+-------------------------
+CARD BLUE BACKGROUND BUG - Fixed multiple times, keep this note!
+
+Root Cause:
+- When cards are created during full rebuild (initial startup or layout change),
+  the code was checking if node_id is in changed_nodes and setting is_changed=True
+- At startup, self.last_node_data is empty, so ALL nodes appear "changed"
+- This caused all cards to be created with bg_color = self.colors['bg_selected'] (blue)
+  instead of bg_color = self.colors['bg_frame'] (dark grey)
+- Labels then showed blue background until first data update called update_node_card()
+
+The Fix:
+- In display_card_view(), during full rebuild (when existing_nodes != current_nodes),
+  ALWAYS create cards with is_changed=False
+- The blue flash should ONLY happen in update_node_card() when data actually changes,
+  NOT during initial card creation
+- Line ~1522: self.create_node_card(..., is_changed=False)  # Always False during rebuild
+
+This bug has recurred multiple times during development. The key insight:
+- Initial card creation = normal background (dark grey)
+- Data updates = blue flash via update_node_card()
+- Never flash during rebuild/initial display
 """
 
 import os
@@ -1508,13 +1532,13 @@ class EnhancedDashboard(tk.Tk):
             self.current_cards_per_row = cards_per_row
             
             # Create cards using grid layout for automatic reflow
+            # Don't flash cards during full rebuild - only flash on data updates
             for idx, (node_id, node_data) in enumerate(sorted_nodes):
                 row = idx // cards_per_row
                 col = idx % cards_per_row
                 
-                # Create card - mark as changed if in changed_nodes
-                is_changed = node_id in changed_nodes
-                self.create_node_card(self.card_scrollable_frame, node_id, node_data, row, col, card_width, is_changed)
+                # Create card with normal background (no flash) during rebuild
+                self.create_node_card(self.card_scrollable_frame, node_id, node_data, row, col, card_width, is_changed=False)
         else:
             # Update only changed cards
             for node_id in changed_nodes:
