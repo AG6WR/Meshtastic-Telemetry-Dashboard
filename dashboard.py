@@ -586,7 +586,7 @@ class SettingsDialog:
         self.dialog.destroy()
 
 # Version number - update manually with each release
-VERSION = "1.0.12"
+VERSION = "1.0.13"
 
 def get_version_info():
     """Get version information"""
@@ -1928,6 +1928,31 @@ class EnhancedDashboard(tk.Tk):
             'util_label': util_label,
             'humidity_label': humidity_label,
         }
+        
+        # Fix for initial card creation: explicitly set backgrounds on all labels
+        # This prevents tkinter's default blue/system background from showing
+        # through before the first update. Without this, labels briefly show
+        # the system default background (light blue on Windows) even though
+        # bg= was set in the constructor.
+        if not is_changed:
+            # Explicitly configure backgrounds on all labels and their children
+            for key in ['name_label', 'shortname_label', 'status_label', 'heard_label',
+                       'motion_label']:
+                widget = self.card_widgets[node_id].get(key)
+                if widget:
+                    widget.config(bg=bg_color)
+            
+            # Handle container labels (battery, current, temp, snr, util, humidity)
+            # which have child labels that also need backgrounds set
+            for key in ['battery_label', 'current_label', 'temp_label', 'snr_label',
+                       'util_label', 'humidity_label']:
+                widget = self.card_widgets[node_id].get(key)
+                if widget:
+                    widget.config(bg=bg_color)
+                    # Update all child labels within the container
+                    for child in widget.winfo_children():
+                        if isinstance(child, tk.Label):
+                            child.config(bg=bg_color)
         
         # If this card was created with blue background (is_changed), schedule restoration
         if is_changed:
