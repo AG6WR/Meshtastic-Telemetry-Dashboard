@@ -64,13 +64,17 @@ sudo apt update
 sudo apt install python3 python3-pip python3-tkinter git
 ```
 
-#### 2. Meshtastic Python CLI
+#### 2. Required Python Libraries
 ```bash
 # Install Meshtastic Python library
 pip install meshtastic
 
+# Install matplotlib for enhanced plotting
+pip install matplotlib>=3.7.0
+
 # Verify installation
 python -c "import meshtastic; print('Meshtastic installed successfully')"
+python -c "import matplotlib; print('Matplotlib installed successfully')"
 ```
 
 ## 🚀 Installation
@@ -195,7 +199,38 @@ Deploy multiple Raspberry Pi monitoring stations:
 - **Telemetry Data** - Temperature, voltage, SNR, and more
 - **Alert Configuration** - Per-node customizable alert settings
 - **Data Logging** - Automatic CSV logging with daily rotation
-- **Plotting** - Multi-parameter telemetry visualization
+- **Enhanced Plotting** - Professional telemetry visualization with matplotlib
+
+### Telemetry Plotting Features
+The dashboard includes professional matplotlib-based plotting with:
+- **Intelligent Time Axis** - Automatically formats time labels based on data range:
+  - < 24 hours: Shows times (00:00, 03:00, 06:00)
+  - 1-7 days: Shows dates with times (12/06 00:00, 12/07 00:00)
+  - > 7 days: Optimized formatting for longer periods
+- **Full Time Range Display** - X-axis shows complete requested time window, making data gaps obvious
+- **Major & Minor Gridlines** - Clear visual reference at midnight (major) and 6-hour intervals (minor)
+- **Interactive Data Display** - Hover over any data point to see exact values and timestamps
+- **Zoom & Pan Tools** - Interactive toolbar for detailed data exploration
+- **Export Capability** - Save plots as PNG, PDF, or other formats
+- **Dark Theme** - Matches dashboard aesthetics for 24/7 monitoring
+- **Multi-Node Overlay** - Compare data from multiple nodes on the same plot
+
+**Available Parameters:**
+- Temperature (°C)
+- SNR (dB)
+- Humidity (%)
+- Internal Battery Voltage (V)
+- External Battery Voltage (V)
+- Current (mA)
+- Channel Utilization (%)
+
+**Time Windows:**
+- Last 24 hours
+- Last 3 days
+- Last week (7 days)
+- Last 2 weeks (14 days)
+- Last month (30 days)
+- All available data
 
 ### Alert Management
 1. Click **"Node Alerts"** button

@@ -305,13 +305,16 @@ class TelemetryPlotter:
         """Load telemetry data for selected nodes and time period"""
         log_dir = Path(self.config_manager.get('data.log_directory', 'logs'))
         
-        # Calculate date range - 'all' means load all available data
-        end_date = datetime.now()
+        # Calculate date range - use full days (midnight to midnight)
+        # End at the END of today (23:59:59)
+        end_date = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+        
         if days == 'all':
             # Start from a very early date to capture all data
             start_date = datetime(2020, 1, 1)
         else:
-            start_date = end_date - timedelta(days=days)
+            # Start at the BEGINNING of the start day (00:00:00)
+            start_date = (datetime.now() - timedelta(days=days)).replace(hour=0, minute=0, second=0, microsecond=0)
         
         all_data = {}
         
@@ -434,7 +437,8 @@ class TelemetryPlotter:
         # Get parameter details
         info = param_info[config['parameter']]
         
-        # Plot each node's data
+        # Plot each node's data and store line references for hover annotations
+        plot_lines = []
         for node_id, node_entry in data.items():
             node_data = node_entry['data']
             node_info = node_entry['info']
@@ -448,7 +452,8 @@ class TelemetryPlotter:
             
             # Plot with node label
             label = f"{node_info['long_name']} ({node_info['short_name']})"
-            ax.plot(timestamps, values, 'o-', label=label, markersize=4, linewidth=1.5)
+            line, = ax.plot(timestamps, values, 'o-', label=label, markersize=4, linewidth=1.5, picker=5)
+            plot_lines.append((line, timestamps, values, label))
         
         # Configure axes
         ax.set_xlabel('Time', color='white', fontsize=12)
@@ -459,24 +464,86 @@ class TelemetryPlotter:
         # Set Y-axis range
         ax.set_ylim(info['min_val'], info['max_val'])
         
-        # Intelligent time axis formatting (5-10 tick marks)
-        locator = mdates.AutoDateLocator(minticks=5, maxticks=10)
-        formatter = mdates.ConciseDateFormatter(locator)
-        ax.xaxis.set_major_locator(locator)
+        # Use the REQUESTED time window (not actual data span) for consistent formatting
+        requested_days = config['days']
+        if requested_days == 'all':
+            # Calculate actual span for 'all' mode
+            all_times = []
+            for node_entry in data.values():
+                all_times.extend([point[0] for point in node_entry['data']])
+            if all_times:
+                requested_days = (max(all_times) - min(all_times)).days + 1
+            else:
+                requested_days = 7  # default
+        
+        # Format based on requested time window
+        if requested_days <= 1:  # 24 hours or less
+            # Major ticks every 3 hours at :00, minor every hour
+            major_locator = mdates.HourLocator(byhour=range(0, 24, 3))
+            minor_locator = mdates.HourLocator()
+            formatter = mdates.DateFormatter('%H:%M')
+        elif requested_days <= 3:  # 1-3 days
+            # Major ticks at midnight each day, minor every 6 hours
+            major_locator = mdates.DayLocator()
+            minor_locator = mdates.HourLocator(byhour=[0, 6, 12, 18])
+            formatter = mdates.DateFormatter('%m/%d\n%H:%M')
+        elif requested_days <= 7:  # 3-7 days
+            # Major ticks at midnight each day, minor every 6 hours
+            major_locator = mdates.DayLocator()
+            minor_locator = mdates.HourLocator(byhour=[0, 6, 12, 18])
+            formatter = mdates.DateFormatter('%m/%d\n%H:%M')
+        elif requested_days <= 14:  # 7-14 days
+            # Major ticks at midnight each day, minor every 12 hours
+            major_locator = mdates.DayLocator()
+            minor_locator = mdates.HourLocator(byhour=[0, 12])
+            formatter = mdates.DateFormatter('%m/%d')
+        elif requested_days <= 30:  # 14-30 days
+            # Major ticks every 2 days, minor daily
+            major_locator = mdates.DayLocator(interval=2)
+            minor_locator = mdates.DayLocator()
+            formatter = mdates.DateFormatter('%m/%d')
+        else:  # More than 30 days
+            # Major ticks weekly, minor every 2 days
+            major_locator = mdates.WeekdayLocator()
+            minor_locator = mdates.DayLocator(interval=2)
+            formatter = mdates.DateFormatter('%m/%d')
+        
+        ax.xaxis.set_major_locator(major_locator)
         ax.xaxis.set_major_formatter(formatter)
+        if minor_locator:
+            ax.xaxis.set_minor_locator(minor_locator)
+        
+        # Set x-axis limits to show the FULL requested time range (not just data range)
+        # This makes data gaps obvious
+        now = datetime.now()
+        if requested_days == 'all':
+            # For 'all', use actual data range
+            all_times = []
+            for node_entry in data.values():
+                all_times.extend([point[0] for point in node_entry['data']])
+            if all_times:
+                ax.set_xlim(mdates.date2num(min(all_times)), mdates.date2num(max(all_times)))
+        else:
+            # For specific time windows, show the full requested range
+            x_end = now.replace(hour=23, minute=59, second=59, microsecond=0)
+            x_start = (now - timedelta(days=requested_days)).replace(hour=0, minute=0, second=0, microsecond=0)
+            ax.set_xlim(mdates.date2num(x_start), mdates.date2num(x_end))
         
         # Rotate date labels for better readability
         fig.autofmt_xdate(rotation=45, ha='right')
         
-        # Style the axes
-        ax.tick_params(colors='white', labelsize=10)
+        # Style the axes with both major and minor ticks
+        ax.tick_params(axis='x', colors='white', labelsize=10, which='major', length=6)
+        ax.tick_params(axis='x', colors='white', which='minor', length=3)
+        ax.tick_params(axis='y', colors='white', labelsize=10)
         ax.spines['bottom'].set_color('white')
         ax.spines['left'].set_color('white')
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         
-        # Add professional gridlines
-        ax.grid(True, alpha=0.2, color='#666666', linestyle='--', linewidth=0.5)
+        # Add professional gridlines - major (solid) and minor (dotted, brighter)
+        ax.grid(True, which='major', alpha=0.35, color='#888888', linestyle='-', linewidth=0.8)
+        ax.grid(True, which='minor', alpha=0.35, color='#777777', linestyle=':', linewidth=0.7)
         
         # Legend with dark theme
         legend = ax.legend(loc='upper left', framealpha=0.9, facecolor='#2d2d2d',
@@ -487,10 +554,46 @@ class TelemetryPlotter:
         # Tight layout to prevent label cutoff
         fig.tight_layout()
         
+        # Add hover annotation for data point display
+        annot = ax.annotate("", xy=(0,0), xytext=(10,10), textcoords="offset points",
+                           bbox=dict(boxstyle="round,pad=0.5", fc="#2d2d2d", ec="white", alpha=0.95),
+                           arrowprops=dict(arrowstyle="->", color="white"),
+                           color='white', fontsize=10, visible=False)
+        
+        def update_annot(line, x_val, y_val, label):
+            """Update annotation with data point info"""
+            annot.xy = (x_val, y_val)
+            # Format time nicely
+            time_str = mdates.num2date(x_val).strftime('%Y-%m-%d %H:%M')
+            text = f"{label}\n{time_str}\n{info['name']}: {y_val:.2f} {info['unit']}"
+            annot.set_text(text)
+            annot.get_bbox_patch().set_facecolor('#2d2d2d')
+            annot.get_bbox_patch().set_alpha(0.95)
+        
+        def on_hover(event):
+            """Handle mouse hover events"""
+            if event.inaxes == ax:
+                for line, timestamps, values, label in plot_lines:
+                    cont, ind = line.contains(event)
+                    if cont:
+                        # Get the closest point
+                        idx = ind["ind"][0]
+                        x_val = mdates.date2num(timestamps[idx])
+                        y_val = values[idx]
+                        update_annot(line, x_val, y_val, label)
+                        annot.set_visible(True)
+                        canvas.draw_idle()
+                        return
+            annot.set_visible(False)
+            canvas.draw_idle()
+        
         # Embed matplotlib figure in tkinter window
         canvas = FigureCanvasTkAgg(fig, master=plot_window)
         canvas.draw()
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        
+        # Connect hover event
+        canvas.mpl_connect("motion_notify_event", on_hover)
         
         # Add navigation toolbar (zoom, pan, save)
         toolbar = NavigationToolbar2Tk(canvas, plot_window)
