@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple tkinter-based plotting for telemetry data
+Matplotlib-based plotting for telemetry data with intelligent time axis formatting
 """
 
 import tkinter as tk
@@ -11,10 +11,15 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import logging
 
+# Matplotlib imports for professional plotting
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.figure import Figure
+import matplotlib.dates as mdates
+
 logger = logging.getLogger(__name__)
 
 class TelemetryPlotter:
-    """Simple plotter for telemetry data using tkinter Canvas"""
+    """Professional plotter for telemetry data using matplotlib with intelligent time axis formatting"""
     
     def __init__(self, parent, config_manager):
         self.parent = parent
@@ -397,190 +402,98 @@ class TelemetryPlotter:
         return data, node_info
     
     def create_plot_window(self, data, config):
-        """Create the plot window with telemetry data"""
+        """Create matplotlib plot window with intelligent time axis formatting"""
         # Create window
         plot_window = tk.Toplevel(self.parent)
         
-        # Parameter info
+        # Parameter info for axis labels and ranges
         param_info = {
-            'temperature': {'name': 'Temperature', 'unit': '°C', 'min_val': 0, 'max_val': 50, 'auto_scale': False},
-            'snr': {'name': 'SNR', 'unit': 'dB', 'min_val': -15, 'max_val': 15, 'auto_scale': False},
-            'humidity': {'name': 'Humidity', 'unit': '%', 'min_val': 0, 'max_val': 100, 'auto_scale': False},
-            'internal_voltage': {'name': 'Internal Battery Voltage', 'unit': 'V', 'min_val': 3.0, 'max_val': 4.5, 'auto_scale': False},
-            'external_voltage': {'name': 'External Battery Voltage', 'unit': 'V', 'min_val': 10, 'max_val': 15, 'auto_scale': False},
-            'current': {'name': 'Current', 'unit': 'mA', 'min_val': 0, 'max_val': 200, 'auto_scale': False},
-            'channel_utilization': {'name': 'Channel Utilization', 'unit': '%', 'min_val': 0, 'max_val': 50, 'auto_scale': False}
+            'temperature': {'name': 'Temperature', 'unit': '°C', 'min_val': 0, 'max_val': 50},
+            'snr': {'name': 'SNR', 'unit': 'dB', 'min_val': -15, 'max_val': 15},
+            'humidity': {'name': 'Humidity', 'unit': '%', 'min_val': 0, 'max_val': 100},
+            'internal_voltage': {'name': 'Internal Battery Voltage', 'unit': 'V', 'min_val': 3.0, 'max_val': 4.5},
+            'external_voltage': {'name': 'External Battery Voltage', 'unit': 'V', 'min_val': 10, 'max_val': 15},
+            'current': {'name': 'Current', 'unit': 'mA', 'min_val': 0, 'max_val': 200},
+            'channel_utilization': {'name': 'Channel Utilization', 'unit': '%', 'min_val': 0, 'max_val': 50}
         }
         
-        # Dynamic title based on time window
+        # Window title
         time_desc = {
-            1: "24 Hours",
-            3: "3 Days", 
-            7: "7 Days",
-            14: "2 Weeks",
-            30: "30 Days"
+            1: "24 Hours", 3: "3 Days", 7: "7 Days", 14: "2 Weeks", 30: "30 Days"
         }
-        
         param_name = param_info[config['parameter']]['name']
-        days_text = time_desc.get(config['days'], f"{config['days']} Days")
-        title = f"{param_name} Plot - Last {days_text}"
-        plot_window.title(title)
-        plot_window.geometry("900x600")
+        days_text = time_desc.get(config['days'], "All Available" if config['days'] == 'all' else f"{config['days']} Days")
+        plot_window.title(f"{param_name} Plot - Last {days_text}")
+        plot_window.geometry("1000x700")
         plot_window.configure(bg='#1e1e1e')
         
-        # Create canvas
-        canvas = tk.Canvas(plot_window, bg='#2d2d2d', highlightthickness=0)
-        canvas.pack(fill="both", expand=True, padx=10, pady=10)
+        # Create matplotlib figure with dark theme
+        fig = Figure(figsize=(10, 7), facecolor='#1e1e1e')
+        ax = fig.add_subplot(111, facecolor='#2d2d2d')
         
-        # Plot after window is visible
-        plot_window.after(100, lambda: self.draw_plot(canvas, data, config, param_info[config['parameter']]))
-    
-    def draw_plot(self, canvas, data, config, param_info):
-        """Draw the telemetry plot on canvas"""
-        canvas.update_idletasks()
-        width = canvas.winfo_width()
-        height = canvas.winfo_height()
+        # Get parameter details
+        info = param_info[config['parameter']]
         
-        if width <= 1 or height <= 1:
-            return
-            
-        # Margins
-        margin_left = 80
-        margin_right = 250  # Extra space for legend outside plot area
-        margin_top = 40
-        margin_bottom = 60
-        
-        plot_width = width - margin_left - margin_right
-        plot_height = height - margin_top - margin_bottom
-        
-        if plot_width <= 0 or plot_height <= 0:
-            return
-            
-        # Clear canvas
-        canvas.delete("all")
-        
-        # Find overall time range
-        all_times = []
-        for node_entry in data.values():
-            node_data = node_entry['data']
-            all_times.extend([point[0] for point in node_data])
-            
-        if not all_times:
-            canvas.create_text(width//2, height//2, text="No data to plot", fill="white", font=("Arial", 14))
-            return
-            
-        min_time = min(all_times)
-        max_time = max(all_times)
-        time_range = (max_time - min_time).total_seconds()
-        
-        # Y-axis: dynamic range based on parameter
-        min_val = param_info['min_val']
-        max_val = param_info['max_val']
-        unit = param_info['unit']
-        
-        # Auto-scaling for certain parameters
-        if param_info.get('auto_scale', False):
-            # Find actual data range
-            all_values = []
-            for node_entry in data.values():
-                node_data = node_entry['data']
-                all_values.extend([point[1] for point in node_data])
-            
-            if all_values:
-                data_min = min(all_values)
-                data_max = max(all_values)
-                
-                # Apply minimum range requirement
-                min_range = param_info.get('min_range', 1)
-                if (data_max - data_min) < min_range:
-                    center = (data_max + data_min) / 2
-                    min_val = max(0, center - min_range / 2)
-                    max_val = min_val + min_range
-                else:
-                    # Add 5% padding
-                    padding = (data_max - data_min) * 0.05
-                    min_val = max(0, data_min - padding)
-                    max_val = data_max + padding
-        
-        # Draw axes
-        # Y-axis
-        canvas.create_line(margin_left, margin_top, margin_left, height - margin_bottom, fill="white", width=2)
-        # X-axis  
-        canvas.create_line(margin_left, height - margin_bottom, width - margin_right, height - margin_bottom, fill="white", width=2)
-        
-        # Y-axis labels
-        num_ticks = 6
-        step = (max_val - min_val) / (num_ticks - 1)
-        for i in range(num_ticks):
-            val = min_val + i * step
-            y = height - margin_bottom - (val - min_val) / (max_val - min_val) * plot_height
-            canvas.create_line(margin_left - 5, y, margin_left + 5, y, fill="white")
-            canvas.create_text(margin_left - 15, y, text=f"{val:.1f}{unit}", fill="white", anchor="e", font=("Arial", 10))
-        
-        # X-axis labels (show dates)
-        num_labels = 7  # Show 7 date labels
-        for i in range(num_labels + 1):
-            label_time = min_time + timedelta(seconds=time_range * i / num_labels)
-            x = margin_left + (i / num_labels) * plot_width
-            canvas.create_line(x, height - margin_bottom - 5, x, height - margin_bottom + 5, fill="white")
-            canvas.create_text(x, height - margin_bottom + 20, text=label_time.strftime("%m/%d"), 
-                             fill="white", anchor="center", font=("Arial", 10))
-        
-        # Plot title
-        time_desc = {
-            1: "24 Hours",
-            3: "3 Days", 
-            7: "7 Days",
-            14: "2 Weeks",
-            30: "30 Days"
-        }
-        days_text = time_desc.get(config['days'], f"{config['days']} Days")
-        title_text = f"{param_info['name']} vs Time (Last {days_text})"
-        canvas.create_text(width//2, 20, text=title_text, 
-                         fill="white", font=("Arial", 16, "bold"))
-        
-        # Plot data for each node
-        color_idx = 0
-        legend_y = margin_top + 20
-        
+        # Plot each node's data
         for node_id, node_entry in data.items():
             node_data = node_entry['data']
             node_info = node_entry['info']
             
             if not node_data:
                 continue
-                
-            color = self.colors[color_idx % len(self.colors)]
-            color_idx += 1
             
-            # Draw data points and lines
-            points = []
-            for timestamp, value in node_data:
-                # Skip points outside the Y-axis range
-                if value < min_val or value > max_val:
-                    continue
-                
-                # Convert to canvas coordinates
-                time_offset = (timestamp - min_time).total_seconds()
-                x = margin_left + (time_offset / time_range) * plot_width
-                y = height - margin_bottom - (value - min_val) / (max_val - min_val) * plot_height
-                
-                points.append((x, y))
-                
-                # Draw point
-                canvas.create_oval(x-2, y-2, x+2, y+2, fill=color, outline=color)
+            # Extract timestamps and values
+            timestamps = [point[0] for point in node_data]
+            values = [point[1] for point in node_data]
             
-            # Skip connecting lines - plot points only
-            
-            # Legend - positioned outside plot area (right side)
-            legend_x = margin_left + plot_width + 20  # Start 20px to the right of plot area
-            canvas.create_line(legend_x, legend_y, legend_x + 20, legend_y, fill=color, width=3)
-            
-            # Format legend text: "Long Name (short)"
-            long_name = node_info['long_name']
-            short_name = node_info['short_name']
-            legend_text = f"{long_name} ({short_name})"
-            
-            canvas.create_text(legend_x + 25, legend_y, text=legend_text, 
-                             fill="white", anchor="w", font=("Arial", 10))
-            legend_y += 20
+            # Plot with node label
+            label = f"{node_info['long_name']} ({node_info['short_name']})"
+            ax.plot(timestamps, values, 'o-', label=label, markersize=4, linewidth=1.5)
+        
+        # Configure axes
+        ax.set_xlabel('Time', color='white', fontsize=12)
+        ax.set_ylabel(f"{info['name']} ({info['unit']})", color='white', fontsize=12)
+        ax.set_title(f"{info['name']} vs Time (Last {days_text})",
+                     color='white', fontsize=14, fontweight='bold', pad=20)
+        
+        # Set Y-axis range
+        ax.set_ylim(info['min_val'], info['max_val'])
+        
+        # Intelligent time axis formatting (5-10 tick marks)
+        locator = mdates.AutoDateLocator(minticks=5, maxticks=10)
+        formatter = mdates.ConciseDateFormatter(locator)
+        ax.xaxis.set_major_locator(locator)
+        ax.xaxis.set_major_formatter(formatter)
+        
+        # Rotate date labels for better readability
+        fig.autofmt_xdate(rotation=45, ha='right')
+        
+        # Style the axes
+        ax.tick_params(colors='white', labelsize=10)
+        ax.spines['bottom'].set_color('white')
+        ax.spines['left'].set_color('white')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        
+        # Add professional gridlines
+        ax.grid(True, alpha=0.2, color='#666666', linestyle='--', linewidth=0.5)
+        
+        # Legend with dark theme
+        legend = ax.legend(loc='upper left', framealpha=0.9, facecolor='#2d2d2d',
+                          edgecolor='white', fontsize=10)
+        for text in legend.get_texts():
+            text.set_color('white')
+        
+        # Tight layout to prevent label cutoff
+        fig.tight_layout()
+        
+        # Embed matplotlib figure in tkinter window
+        canvas = FigureCanvasTkAgg(fig, master=plot_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        
+        # Add navigation toolbar (zoom, pan, save)
+        toolbar = NavigationToolbar2Tk(canvas, plot_window)
+        toolbar.config(background='#2d2d2d')
+        toolbar._message_label.config(background='#2d2d2d', foreground='white')
+        toolbar.update()
