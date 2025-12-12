@@ -99,6 +99,8 @@ class NodeDetailWindow:
         logger.info(f"NodeDetailWindow device telemetry created")
         self._create_motion_section()
         logger.info(f"NodeDetailWindow motion section created")
+        self._create_messages_section()
+        logger.info(f"NodeDetailWindow messages section created")
         
         # Force update to ensure widgets are rendered
         logger.info(f"NodeDetailWindow forcing widget update...")
@@ -397,6 +399,68 @@ class NodeDetailWindow:
         motion_dt = datetime.fromtimestamp(last_motion)
         motion_str = motion_dt.strftime('%Y-%m-%d %H:%M:%S')
         self._add_info_row(content_frame, "Last Motion:", motion_str, font_label, font_value)
+    
+    def _create_messages_section(self):
+        """Create messages section showing last 5 messages"""
+        if not self.data_collector:
+            return
+        
+        # Get messages for this node
+        messages = self.data_collector.get_node_messages(self.node_id, limit=5)
+        if not messages:
+            return
+        
+        section_frame = tk.Frame(self.scrollable_frame, bg=self.colors['bg_main'], padx=15, pady=6)
+        section_frame.pack(fill="x", padx=10, pady=(0, 5))
+        
+        # Section title
+        title_font = tkfont.Font(family="Segoe UI", size=10, weight="bold")
+        title_label = tk.Label(section_frame, text="Recent Messages",
+                              bg=self.colors['bg_main'],
+                              fg=self.colors['fg_normal'],
+                              font=title_font)
+        title_label.pack(anchor="w", pady=(0, 4))
+        
+        content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
+        content_frame.pack(fill="x")
+        
+        font_msg = tkfont.Font(family="Consolas", size=10)
+        font_header = tkfont.Font(family="Consolas", size=9)
+        
+        # Display messages in reverse chronological order
+        for msg in reversed(messages):
+            msg_frame = tk.Frame(content_frame, bg=self.colors['bg_frame'], pady=4)
+            msg_frame.pack(fill="x")
+            
+            # Get node names from data collector
+            from_id = msg.get('from')
+            nodes_data = self.data_collector.get_nodes_data()
+            from_node = nodes_data.get(from_id, {})
+            from_name = from_node.get('Node LongName', from_id)
+            
+            # Header: From and timestamp
+            timestamp = msg.get('timestamp', 0)
+            dt = datetime.fromtimestamp(timestamp)
+            time_str = dt.strftime('%m-%d %H:%M')
+            
+            header_text = f"From {from_name} at {time_str}"
+            header_label = tk.Label(msg_frame, text=header_text,
+                                   bg=self.colors['bg_frame'],
+                                   fg=self.colors['fg_secondary'],
+                                   font=font_header,
+                                   anchor="w")
+            header_label.pack(fill="x")
+            
+            # Message text
+            text = msg.get('text', '')
+            text_label = tk.Label(msg_frame, text=text,
+                                 bg=self.colors['bg_frame'],
+                                 fg=self.colors['fg_normal'],
+                                 font=font_msg,
+                                 anchor="w",
+                                 wraplength=350,
+                                 justify="left")
+            text_label.pack(fill="x", padx=(10, 0))
     
     def _forget_node(self):
         """Forget (remove) this node from the system"""

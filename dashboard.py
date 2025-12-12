@@ -43,6 +43,7 @@ from config_manager import ConfigManager
 from data_collector import DataCollector
 from plotter import TelemetryPlotter
 from node_detail_window import NodeDetailWindow
+from message_dialog import MessageDialog
 
 logger = logging.getLogger(__name__)
 
@@ -638,6 +639,10 @@ class EnhancedDashboard(tk.Tk):
         self.view_mode = "cards"  # "table" or "cards" - default to cards view
         self.current_cards_per_row = 0  # Track current column count for resize detection
         
+        # Message tracking
+        self.active_message_notifications = {}  # {node_id: notification_frame}
+        self.message_timers = {}  # {node_id: timer_id}
+        
         # Setup logging
         logging.basicConfig(level=logging.INFO)
         
@@ -925,6 +930,9 @@ class EnhancedDashboard(tk.Tk):
             
             # Register callback for data changes (event-driven updates)
             self.data_collector.set_data_change_callback(self.on_data_changed)
+            
+            # Register callback for message reception
+            self.data_collector.on_message_received = self._on_message_received
             
             # Start in separate thread to avoid blocking GUI
             threading.Thread(target=self.data_collector.start, daemon=True).start()
@@ -1608,9 +1616,20 @@ class EnhancedDashboard(tk.Tk):
                              font=self.font_card_header)
         name_label.pack(side="left")
         
-        # Right side - Status only (no dynamic timer)
+        # Right side - Status and message indicator
         right_header = tk.Frame(header_frame, bg=bg_color)
         right_header.pack(side="right")
+        
+        # Message indicator (always create it, show/hide based on message time)
+        msg_indicator = tk.Label(right_header, text="📧 ",
+                                bg=bg_color, fg=self.colors['fg_normal'],
+                                font=self.font_card_header)
+        
+        last_message_time = node_data.get('Last Message Time')
+        if last_message_time:
+            time_since_message = current_time - last_message_time
+            if time_since_message <= 900:  # 15 minutes = 900 seconds
+                msg_indicator.pack(side="left", anchor="e")
         
         # Status (colored, bold - 14pt)
         status_label = tk.Label(right_header, text=status,
@@ -1943,6 +1962,7 @@ class EnhancedDashboard(tk.Tk):
             'name_label': name_label,
             'shortname_label': shortname_label,
             'status_label': status_label,
+            'msg_indicator': msg_indicator,
             'heard_label': heard_label,
             'motion_label': motion_label,
             'battery_label': battery_label,
@@ -2138,6 +2158,20 @@ class EnhancedDashboard(tk.Tk):
         }
         
         card_info['status_label'].config(text=status, fg=status_colors.get(status, self.colors['fg_normal']))
+        
+        # Update message indicator (show if message received in last 15 minutes)
+        last_message_time = node_data.get('Last Message Time')
+        show_msg_indicator = False
+        if last_message_time:
+            time_since_message = current_time - last_message_time
+            if time_since_message <= 900:  # 15 minutes = 900 seconds
+                show_msg_indicator = True
+        
+        if 'msg_indicator' in card_info and card_info['msg_indicator']:
+            if show_msg_indicator:
+                card_info['msg_indicator'].pack(side="left", anchor="e")
+            else:
+                card_info['msg_indicator'].pack_forget()
         
         # Update Last Heard / Motion Detected in lastheard_frame
         # Show "Last heard:" for offline nodes OR "Motion detected" for online nodes with recent motion
@@ -2393,6 +2427,9 @@ class EnhancedDashboard(tk.Tk):
         menu.add_command(label=f"Plot Telemetry", 
                         command=lambda: self.show_plot_for_node(node_id))
         menu.add_separator()
+        menu.add_command(label=f"Send Message To '{node_name}'...", 
+                        command=lambda: self._send_message_to_node(node_id))
+        menu.add_separator()
         menu.add_command(label=f"Forget Node '{node_name}'", 
                         command=lambda: self._forget_node_from_card(node_id),
                         foreground=self.colors['fg_bad'])  # Red text for destructive action
@@ -2565,6 +2602,90 @@ class EnhancedDashboard(tk.Tk):
         
         # Force a refresh to update the display
         self.force_refresh()
+    
+    def _send_message_to_node(self, node_id: str):
+        """Open dialog to send a message to a node"""
+        nodes_data = self.data_collector.get_nodes_data() if self.data_collector else {}
+        node_data = nodes_data.get(node_id, {})
+        node_name = node_data.get('Node LongName', node_id)
+        
+        def send_callback(dest_id: str, message: str, send_bell: bool):
+            """Callback when user confirms message send"""
+            # Add bell character if requested
+            if send_bell:
+                message = '\a' + message
+            
+            # Send the message
+            success = self.data_collector.connection_manager.send_message(dest_id, message)
+            
+            if success:
+                logger.info(f"Message sent to {node_name} ({dest_id}): {repr(message)}")
+            else:
+                logger.error(f"Failed to send message to {node_name} ({dest_id})")
+                messagebox.showerror("Send Failed", f"Failed to send message to {node_name}")
+        
+        # Open the message dialog
+        MessageDialog(self, node_id, node_name, send_callback)
+    
+    def _on_message_received(self, message_data: Dict[str, Any]):
+        """Handle received message notification"""
+        from_id = message_data.get('from')
+        to_id = message_data.get('to')
+        text = message_data.get('text', '')
+        
+        # Get node names
+        nodes_data = self.data_collector.get_nodes_data() if self.data_collector else {}
+        from_data = nodes_data.get(from_id, {})
+        to_data = nodes_data.get(to_id, {})
+        
+        from_name = from_data.get('Node LongName', from_id)
+        to_name = to_data.get('Node LongName', to_id)
+        
+        # Show notification (15 seconds)
+        self._show_message_notification(from_id, from_name, to_name, text)
+        
+        logger.info(f"Received message from {from_name} to {to_name}: {repr(text)}")
+    
+    def _show_message_notification(self, from_id: str, from_name: str, to_name: str, text: str):
+        """Display message notification banner for 15 seconds"""
+        # Remove existing notification for this node if any
+        self._remove_message_notification(from_id)
+        
+        # Create notification frame at the top of the window
+        notification_frame = tk.Frame(self, bg='#FFA500', relief="raised", borderwidth=2)
+        notification_frame.pack(side="top", fill="x", padx=8, pady=(8, 0))
+        
+        # Create message label
+        message_label = tk.Label(
+            notification_frame,
+            text=f"📨 Message From {from_name} To {to_name}: {text}",
+            font=self.font_bold,
+            bg='#FFA500',
+            fg='#000000',
+            padx=10,
+            pady=5
+        )
+        message_label.pack(fill="x")
+        
+        # Store the notification
+        self.active_message_notifications[from_id] = notification_frame
+        
+        # Schedule removal after 15 seconds
+        timer_id = self.after(15000, lambda: self._remove_message_notification(from_id))
+        self.message_timers[from_id] = timer_id
+    
+    def _remove_message_notification(self, from_id: str):
+        """Remove message notification for a node"""
+        # Cancel any pending timer
+        if from_id in self.message_timers:
+            self.after_cancel(self.message_timers[from_id])
+            del self.message_timers[from_id]
+        
+        # Destroy the notification frame
+        if from_id in self.active_message_notifications:
+            frame = self.active_message_notifications[from_id]
+            frame.destroy()
+            del self.active_message_notifications[from_id]
     
     def on_closing(self):
         """Handle application closing"""

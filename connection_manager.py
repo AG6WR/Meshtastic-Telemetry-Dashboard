@@ -179,7 +179,36 @@ class ConnectionManager:
             if self.on_connected_callback:
                 self.on_connected_callback(self.current_interface_info)
         else:
-            raise Exception("Failed to verify Serial connection")
+            raise Exception("Failed to verify serial connection")
+    
+    def send_message(self, destination_id: str, text: str) -> bool:
+        """
+        Send a text message to a node
+        
+        Args:
+            destination_id: Target node ID (e.g., "!a20a0de0")
+            text: Message text to send
+            
+        Returns:
+            bool: True if sent successfully, False otherwise
+        """
+        if not self.interface or not self.is_connected:
+            logger.error("Cannot send message: not connected")
+            return False
+        
+        try:
+            logger.info(f"Sending message to {destination_id}: {repr(text)}")
+            self.interface.sendText(
+                text=text,
+                destinationId=destination_id,
+                wantAck=True,
+                channelIndex=0  # Use primary channel
+            )
+            logger.info(f"Message sent successfully to {destination_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error sending message to {destination_id}: {e}")
+            return False
     
     def _verify_connection(self) -> bool:
         """Verify that the connection is working"""

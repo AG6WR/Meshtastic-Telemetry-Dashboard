@@ -44,12 +44,18 @@ class DataCollector:
         self.node_info_cache = {}
         self.last_motion_by_node = {}
         
+        # Message tracking
+        self.messages_by_node = {}  # {node_id: [message_dicts]}
+        self.message_notification_timeout = 15  # seconds for notification display
+        self.message_indicator_timeout = 900  # 15 minutes for indicator
+        
         # Processing thread
         self.processing_thread = None
         self.stop_event = Event()
         
         # Data change callback
         self.on_data_changed = None
+        self.on_message_received = None  # Callback for new messages
         
         # Telemetry field mapping
         self.FIELDS = [
@@ -104,11 +110,16 @@ class DataCollector:
                 logger.error(f"Error in data change callback: {e}")
     
     def start(self):
-        """Start the data collection system"""
+        """Start data collection system"""
         logger.info("Starting data collection system...")
         
         # Load existing data
-        self._load_existing_data()
+        self._load_data()
+        
+        # Subscribe to text messages
+        from pubsub import pub
+        pub.subscribe(self._on_text_message_received, "meshtastic.receive.text")
+        logger.info("Subscribed to text message events")
         
         # Start connection manager
         self.connection_manager.start()
@@ -723,6 +734,55 @@ class DataCollector:
         """Get current nodes data (thread-safe)"""
         with self.data_lock:
             return self.nodes_data.copy()
+    
+    def get_node_messages(self, node_id: str, limit: int = 10) -> list:
+        """Get recent messages for a node"""
+        with self.data_lock:
+            messages = self.messages_by_node.get(node_id, [])
+            return messages[-limit:] if messages else []
+    
+    def _on_text_message_received(self, packet, interface=None):
+        """Handle received text messages"""
+        try:
+            # Extract message info
+            from_node = packet.get('fromId', 'Unknown')
+            to_node = packet.get('toId', 'Unknown')
+            decoded = packet.get('decoded', {})
+            text = decoded.get('text', '')
+            timestamp = time.time()
+            
+            logger.info(f"TEXT MESSAGE | From: {from_node} | To: {to_node} | Text: {repr(text)}")
+            
+            # Store message (keyed by sender)
+            with self.data_lock:
+                if from_node not in self.messages_by_node:
+                    self.messages_by_node[from_node] = []
+                
+                message_data = {
+                    'from': from_node,
+                    'to': to_node,
+                    'text': text,
+                    'timestamp': timestamp,
+                    'rxSnr': packet.get('rxSnr'),
+                    'hopLimit': packet.get('hopLimit')
+                }
+                
+                self.messages_by_node[from_node].append(message_data)
+                
+                # Keep only last 10 messages per node
+                if len(self.messages_by_node[from_node]) > 10:
+                    self.messages_by_node[from_node] = self.messages_by_node[from_node][-10:]
+                
+                # Update node data with last message time
+                if from_node in self.nodes_data:
+                    self.nodes_data[from_node]['Last Message Time'] = timestamp
+            
+            # Notify dashboard
+            if self.on_message_received:
+                self.on_message_received(message_data)
+                
+        except Exception as e:
+            logger.error(f"Error processing text message: {e}")
     
     def get_connection_status(self) -> Dict[str, Any]:
         """Get connection manager status"""
