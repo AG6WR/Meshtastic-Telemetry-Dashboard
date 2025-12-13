@@ -11,6 +11,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, Any, Tuple, Optional
 from threading import Thread, Event, Lock
+from pubsub import pub
 
 from config_manager import ConfigManager
 from connection_manager import ConnectionManager
@@ -120,7 +121,6 @@ class DataCollector:
         self._load_data()
         
         # Subscribe to text messages
-        from pubsub import pub
         pub.subscribe(self._on_text_message_received, "meshtastic.receive.text")
         logger.info("Subscribed to text message events")
         

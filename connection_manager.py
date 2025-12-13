@@ -360,7 +360,9 @@ class ConnectionManager:
             return "Unknown Node"
         except Exception as e:
             logger.error(f"Error getting node name for {node_id}: {e}")
-            return "Unknown Node"    def _preload_node_info(self):
+            return "Unknown Node"
+    
+    def _preload_node_info(self):
         """Preload node information from interface database (like original script)"""
         try:
             if not self.interface:
