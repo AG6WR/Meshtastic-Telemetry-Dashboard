@@ -710,7 +710,7 @@ class DataCollector:
         # Prevent forgetting the local node
         local_node_id = self.config_manager.get('meshtastic.local_node_id')
         if node_id == local_node_id:
-            logger.error(f\"BLOCKED: Attempted to forget local node {node_id} - operation rejected for safety\")
+            logger.error(f"BLOCKED: Attempted to forget local node {node_id} - operation rejected for safety")
             return False
         
         try:
