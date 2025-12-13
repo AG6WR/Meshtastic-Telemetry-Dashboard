@@ -210,10 +210,11 @@ class NodeAlertConfigDialog:
                                   text="Enable All",
                                   command=self.enable_all_alerts,
                                   bg='#28a745', fg='white',
-                                  font=("Arial", 9))
+                                  font=("Arial", 9),
+                                  width=12, height=2)
         enable_all_btn.pack(side='left')
         
-        # Main action buttons on right
+        # Main action buttons on right - enlarged for touch input
         action_frame = tk.Frame(button_frame, bg='#2d2d2d')
         action_frame.pack(side='right')
         
@@ -222,7 +223,7 @@ class NodeAlertConfigDialog:
                               command=self.cancel,
                               bg='#6c757d', fg='white',
                               font=("Arial", 10),
-                              width=10)
+                              width=12, height=2)
         cancel_btn.pack(side='right', padx=(10, 0))
         
         save_btn = tk.Button(action_frame,
@@ -230,7 +231,7 @@ class NodeAlertConfigDialog:
                             command=self.save_settings,
                             bg='#007bff', fg='white',
                             font=("Arial", 10, "bold"),
-                            width=10)
+                            width=12, height=2)
         save_btn.pack(side='right')
     
     def load_settings(self):

@@ -99,14 +99,14 @@ class MessageDialog:
                                     font=("Courier New", 9))
         bell_check.pack(side="left")
         
-        # Buttons
+        # Buttons - enlarged for touch input
         button_frame = tk.Frame(self.dialog)
         button_frame.pack(fill="x", padx=10, pady=10)
         
         tk.Button(button_frame, text="Send", command=self._send_message,
-                 width=10, font=("Courier New", 10, "bold")).pack(side="right", padx=5)
+                 width=12, height=2, font=("Courier New", 10, "bold")).pack(side="right", padx=5)
         tk.Button(button_frame, text="Cancel", command=self._cancel,
-                 width=10, font=("Courier New", 10)).pack(side="right")
+                 width=12, height=2, font=("Courier New", 10)).pack(side="right")
         
         # Bind Enter key (Ctrl+Enter to send)
         self.dialog.bind('<Control-Return>', lambda e: self._send_message())

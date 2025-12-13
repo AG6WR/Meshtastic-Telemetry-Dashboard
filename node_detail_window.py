@@ -69,7 +69,8 @@ class NodeDetailWindow:
         # Create scrollable canvas for content
         logger.info(f"NodeDetailWindow creating canvas and scrollbar...")
         canvas = tk.Canvas(self.window, bg=self.colors['bg_main'], highlightthickness=0)
-        scrollbar = tk.Scrollbar(self.window, orient="vertical", command=canvas.yview)
+        # Vertical scrollbar - widened for touch input (24px)
+        scrollbar = tk.Scrollbar(self.window, orient="vertical", command=canvas.yview, width=24)
         self.scrollable_frame = tk.Frame(canvas, bg=self.colors['bg_main'])
         
         self.scrollable_frame.bind(
@@ -119,9 +120,12 @@ class NodeDetailWindow:
         # - Create and pack in one statement
         # - Use actual method references, not conditionals
         
+        # Button config - enlarged for touch input
         btn_config = {
             'bg': self.colors['button_bg'],
-            'fg': self.colors['button_fg']
+            'fg': self.colors['button_fg'],
+            'width': 10,
+            'height': 2
         }
         
         # Create buttons with command set directly like working dashboard buttons
@@ -137,6 +141,7 @@ class NodeDetailWindow:
         # FORGET NODE BUTTON (right side, before Close)
         forget_config = btn_config.copy()
         forget_config['fg'] = self.colors['fg_bad']  # Crimson to indicate destructive action
+        forget_config['width'] = 13
         tk.Button(button_frame, text="Forget Node", command=self._forget_node, **forget_config).pack(side="right", padx=(5, 0))
         
         # CLOSE BUTTON  

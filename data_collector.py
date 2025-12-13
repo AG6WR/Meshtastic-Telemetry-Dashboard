@@ -49,6 +49,9 @@ class DataCollector:
         self.message_notification_timeout = 15  # seconds for notification display
         self.message_indicator_timeout = 900  # 15 minutes for indicator
         
+        # Subscribe to local node detection
+        pub.subscribe(self._on_local_node_detected, "meshtastic.local_node.detected")
+        
         # Processing thread
         self.processing_thread = None
         self.stop_event = Event()
@@ -131,9 +134,22 @@ class DataCollector:
         
         logger.info("Data collection system started")
     
+    def _on_local_node_detected(self, node_id, node_name):
+        """Handle local node detection event - store in config"""
+        logger.info(f"Storing local node info: {node_id} ({node_name})")
+        self.config_manager.set('meshtastic.local_node_id', node_id)
+        self.config_manager.set('meshtastic.local_node_name', node_name)
+        self.config_manager.save_config()
+    
     def stop(self):
         """Stop the data collection system"""
         logger.info("Stopping data collection system...")
+        
+        # Unsubscribe from events
+        try:
+            pub.unsubscribe(self._on_local_node_detected, "meshtastic.local_node.detected")
+        except:
+            pass
         
         self.stop_event.set()
         
@@ -689,8 +705,14 @@ class DataCollector:
             delete_logs: If True, also delete CSV log directory for this node
             
         Returns:
-            True if node was removed, False if node didn't exist
+            True if node was removed, False if node didn't exist or is local node
         """
+        # Prevent forgetting the local node
+        local_node_id = self.config_manager.get('meshtastic.local_node_id')
+        if node_id == local_node_id:
+            logger.error(f\"BLOCKED: Attempted to forget local node {node_id} - operation rejected for safety\")
+            return False
+        
         try:
             with self.data_lock:
                 # Remove from nodes_data

@@ -7,7 +7,9 @@
     },
     "backup_interfaces": [],
     "connection_timeout": 30,
-    "retry_interval": 60
+    "retry_interval": 60,
+    "local_node_id": null,
+    "local_node_name": null
   },
   "dashboard": {
     "refresh_rate_ms": 5000,

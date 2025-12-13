@@ -275,6 +275,27 @@ class ConnectionManager:
     def _on_connection_established(self, interface):
         """Handle connection established event"""
         logger.info("Meshtastic connection established event received")
+        
+        # Detect local node - REQUIRED for dashboard operation
+        local_node_id = self.get_local_node_id()
+        if not local_node_id:
+            logger.error("CRITICAL: Failed to detect local node ID from interface")
+            pub.sendMessage(
+                "meshtastic.connection.critical_error",
+                error="Cannot detect local node. Check interface connection and verify the device is properly connected."
+            )
+            return
+        
+        # Get node name from interface database
+        node_name = self._get_node_name(local_node_id)
+        logger.info(f"Local node detected: {local_node_id} ({node_name})")
+        
+        # Publish local node info for storage in config
+        pub.sendMessage(
+            "meshtastic.local_node.detected",
+            node_id=local_node_id,
+            node_name=node_name
+        )
     
     def _on_connection_lost(self, interface):
         """Handle connection lost event"""
@@ -317,7 +338,29 @@ class ConnectionManager:
             logger.error(f"Error getting local node ID: {e}")
             return None
     
-    def _preload_node_info(self):
+    def _get_node_name(self, node_id: str) -> str:
+        """Get node name from interface database"""
+        try:
+            if not self.interface:
+                return "Unknown"
+            
+            nodes_dict = getattr(self.interface, "nodes", {}) or {}
+            
+            # Try to find node in database
+            for key, info in nodes_dict.items():
+                check_id = self._normalize_node_id(key)
+                if check_id == node_id:
+                    if isinstance(info, dict):
+                        user = info.get("user", {})
+                        long_name = user.get("longName")
+                        if long_name:
+                            return long_name
+                    break
+            
+            return "Unknown Node"
+        except Exception as e:
+            logger.error(f"Error getting node name for {node_id}: {e}")
+            return "Unknown Node"    def _preload_node_info(self):
         """Preload node information from interface database (like original script)"""
         try:
             if not self.interface:

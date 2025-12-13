@@ -38,6 +38,7 @@ import time
 import subprocess
 import logging
 from typing import Dict, Any, Optional
+from pubsub import pub
 
 from config_manager import ConfigManager
 from data_collector import DataCollector
@@ -105,14 +106,18 @@ class SettingsDialog:
         notebook.add(logging_frame, text="Logging")
         self.create_logging_tab(logging_frame)
         
-        # Buttons
+        # Buttons - enlarged for touch input
         button_frame = tk.Frame(self.dialog)
         button_frame.pack(fill="x", padx=10, pady=(0, 10))
         
-        tk.Button(button_frame, text="Test Email", command=self.test_email).pack(side="left", padx=(0, 5))
-        tk.Button(button_frame, text="Cancel", command=self.cancel).pack(side="right")
-        tk.Button(button_frame, text="Apply", command=self.apply).pack(side="right", padx=(0, 5))
-        tk.Button(button_frame, text="OK", command=self.ok).pack(side="right", padx=(0, 5))
+        tk.Button(button_frame, text="Test Email", command=self.test_email,
+                 width=12, height=2).pack(side="left", padx=(0, 5))
+        tk.Button(button_frame, text="Cancel", command=self.cancel,
+                 width=10, height=2).pack(side="right")
+        tk.Button(button_frame, text="Apply", command=self.apply,
+                 width=10, height=2).pack(side="right", padx=(0, 5))
+        tk.Button(button_frame, text="OK", command=self.ok,
+                 width=10, height=2).pack(side="right", padx=(0, 5))
     
     def create_connection_tab(self, parent):
         """Create connection settings tab"""
@@ -643,6 +648,9 @@ class EnhancedDashboard(tk.Tk):
         self.active_message_notifications = {}  # {node_id: notification_frame}
         self.message_timers = {}  # {node_id: timer_id}
         
+        # Subscribe to critical connection errors
+        pub.subscribe(self._on_critical_error, "meshtastic.connection.critical_error")
+        
         # Setup logging
         logging.basicConfig(level=logging.INFO)
         
@@ -669,18 +677,17 @@ class EnhancedDashboard(tk.Tk):
         # Window settings
         self.title("Enhanced Meshtastic Monitor")
         
-        # Get saved geometry, but reset if it's too wide (from old default)
-        geometry = self.config_manager.get('dashboard.window_geometry', '960x800')
-        # Parse width to check if it's from old defaults
-        try:
-            width = int(geometry.split('x')[0].split('+')[0])
-            if width > 980 or width < 940:  # Old geometry or too narrow
-                geometry = '960x800'
-                self.config_manager.set('dashboard.window_geometry', geometry)
-        except (ValueError, IndexError):
-            geometry = '960x800'
-        
+        # Set geometry for 1280x720 touchscreen display
+        # Default to fullscreen for Pi deployment
+        geometry = self.config_manager.get('dashboard.window_geometry', '1280x720')
         self.geometry(geometry)
+        
+        # Enable fullscreen mode by default (hides Pi OS menubar)
+        # F11 toggles fullscreen on/off
+        self.is_fullscreen = True
+        self.attributes('-fullscreen', True)
+        self.bind('<F11>', self._toggle_fullscreen)
+        self.bind('<Escape>', lambda e: self.attributes('-fullscreen', False) if self.is_fullscreen else None)
         
         # Dark theme color palette
         # Usage: self.colors['key_name'] to reference colors throughout the application
@@ -757,29 +764,37 @@ class EnhancedDashboard(tk.Tk):
                                    bg=self.colors['bg_main'])
         self.conn_status.pack(side="left")
         
-        # Control buttons
+        # Control buttons - enlarged for touch input (48x48px minimum)
         controls_frame = tk.Frame(self, bg=self.colors['bg_main'])
         controls_frame.pack(fill="x", padx=8, pady=(0, 6))
         
         tk.Button(controls_frame, text="Settings", command=self.open_settings,
-                 bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
+                 bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                 width=10, height=2).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Refresh", command=self.force_refresh,
-                 bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
+                 bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                 width=10, height=2).pack(side="left", padx=(0, 5))
         # Button shows action (where you'll go) - starts as "Table" since default is cards
         self.view_btn = tk.Button(controls_frame, text="Table", command=self.toggle_view,
-                 bg=self.colors['button_bg'], fg=self.colors['button_fg'])
+                 bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                 width=10, height=2)
         self.view_btn.pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Plot", command=self.show_plot,
-                 bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
+                 bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                 width=10, height=2).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Node Alerts", command=self.open_node_alerts,
-                 bg=self.colors['fg_warning'], fg='white').pack(side="left", padx=(0, 5))
+                 bg=self.colors['fg_warning'], fg='white',
+                 width=12, height=2).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Debug Log", command=self.open_debug_log,
-                 bg=self.colors['button_bg'], fg=self.colors['button_fg']).pack(side="left", padx=(0, 5))
+                 bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                 width=11, height=2).pack(side="left", padx=(0, 5))
         self.btn_logs = tk.Button(controls_frame, text="Open Logs", command=self.open_logs_folder, state="disabled",
-                                 bg=self.colors['button_bg'], fg=self.colors['button_fg'])
+                                 bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                                 width=11, height=2)
         self.btn_logs.pack(side="left", padx=(0, 5))
         self.btn_csv = tk.Button(controls_frame, text="Today's CSV", command=self.open_today_csv, state="disabled",
-                                bg=self.colors['button_bg'], fg=self.colors['button_fg'])
+                                bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                                width=12, height=2)
         self.btn_csv.pack(side="left")
         
         # Table container with horizontal scrollbar (initially hidden since default is cards)
@@ -790,8 +805,8 @@ class EnhancedDashboard(tk.Tk):
         self.table_canvas = tk.Canvas(self.table_container, bg=self.colors['bg_frame'], highlightthickness=0)
         self.table_canvas.pack(side="top", fill="both", expand=True)
         
-        # Horizontal scrollbar
-        self.h_scrollbar = tk.Scrollbar(self.table_container, orient="horizontal", command=self.table_canvas.xview)
+        # Horizontal scrollbar - widened for touch input (24px)
+        self.h_scrollbar = tk.Scrollbar(self.table_container, orient="horizontal", command=self.table_canvas.xview, width=24)
         self.h_scrollbar.pack(side="bottom", fill="x")
         self.table_canvas.configure(xscrollcommand=self.h_scrollbar.set)
         
@@ -813,6 +828,12 @@ class EnhancedDashboard(tk.Tk):
         
         # Protocol for window close
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
+    
+    def _toggle_fullscreen(self, event=None):
+        """Toggle fullscreen mode (F11 key)"""
+        self.is_fullscreen = not self.is_fullscreen
+        self.attributes('-fullscreen', self.is_fullscreen)
+        logger.info(f"Fullscreen mode: {'ON' if self.is_fullscreen else 'OFF'}")
     
     def convert_temperature(self, temp_c, to_unit=None):
         """Convert temperature from Celsius to the configured unit
@@ -881,7 +902,8 @@ class EnhancedDashboard(tk.Tk):
         
         # Create scrollable canvas for cards
         self.card_canvas = tk.Canvas(self.card_container, bg=self.colors['bg_main'], highlightthickness=0)
-        self.card_scrollbar = tk.Scrollbar(self.card_container, orient="vertical", command=self.card_canvas.yview)
+        # Vertical scrollbar - widened for touch input (24px)
+        self.card_scrollbar = tk.Scrollbar(self.card_container, orient="vertical", command=self.card_canvas.yview, width=24)
         self.card_scrollable_frame = tk.Frame(self.card_canvas, bg=self.colors['bg_main'])
         
         self.card_scrollable_frame.bind(
@@ -1496,12 +1518,20 @@ class EnhancedDashboard(tk.Tk):
             if (last_heard is not None and last_heard > 0) or has_data:
                 filtered_nodes[node_id] = node_data
         
-        # Sort nodes like in table view
+        # Sort nodes like in table view, but put local node first
         current_time = time.time()
-        sorted_nodes = sorted(filtered_nodes.items(), key=lambda x: (
-            self.get_node_sort_key(x[1], current_time),
-            x[1].get('Node LongName', 'Unknown')
-        ))
+        local_node_id = self.config_manager.get('meshtastic.local_node_id')
+        
+        def sort_key(item):
+            node_id, node_data = item
+            # Local node always first (sort key -1)
+            if node_id == local_node_id:
+                return (-1, '')
+            # Then by online/offline status and name
+            return (self.get_node_sort_key(node_data, current_time),
+                    node_data.get('Node LongName', 'Unknown'))
+        
+        sorted_nodes = sorted(filtered_nodes.items(), key=sort_key)
         
         # Check which nodes have changed data
         changed_nodes = set()
@@ -1539,22 +1569,45 @@ class EnhancedDashboard(tk.Tk):
             # Store current column count for resize detection
             self.current_cards_per_row = cards_per_row
             
-            # Create cards using grid layout for automatic reflow
+            # Create cards using grid layout with local node awareness
+            # Local node card is 2x width and spans 2 columns
             # Don't flash cards during full rebuild - only flash on data updates
-            for idx, (node_id, node_data) in enumerate(sorted_nodes):
-                row = idx // cards_per_row
-                col = idx % cards_per_row
+            row = 0
+            col = 0
+            for node_id, node_data in sorted_nodes:
+                is_local = (node_id == local_node_id)
+                node_card_width = 560 if is_local else card_width
+                col_span = 2 if is_local else 1
                 
                 # Create card with normal background (no flash) during rebuild
-                self.create_node_card(self.card_scrollable_frame, node_id, node_data, row, col, card_width, is_changed=False)
+                self.create_node_card(self.card_scrollable_frame, node_id, node_data, 
+                                    row, col, node_card_width, is_changed=False, 
+                                    is_local=is_local)
+                
+                # Update column position
+                col += col_span
+                if col >= cards_per_row:
+                    col = 0
+                    row += 1
         else:
             # Update only changed cards
             for node_id in changed_nodes:
                 if node_id in self.card_widgets and node_id in filtered_nodes:
                     self.update_node_card(node_id, filtered_nodes[node_id], current_time, is_changed=True)
     
-    def create_node_card(self, parent, node_id: str, node_data: Dict[str, Any], row: int, col: int, card_width: int, is_changed: bool = False):
-        """Create a compact card for a single node"""
+    def create_node_card(self, parent, node_id: str, node_data: Dict[str, Any], row: int, col: int, card_width: int, is_changed: bool = False, is_local: bool = False):
+        """Create a compact card for a single node
+        
+        Args:
+            parent: Parent widget
+            node_id: Node ID
+            node_data: Node data dictionary
+            row: Grid row position
+            col: Grid column position
+            card_width: Width of card (560px for local, 280px for others)
+            is_changed: Whether to show blue flash
+            is_local: Whether this is the local node (gets special styling)
+        """
         # Status colors
         status_colors = {
             'Online': self.colors['fg_good'],
@@ -1578,10 +1631,25 @@ class EnhancedDashboard(tk.Tk):
         telemetry_diff = current_time - last_telemetry if last_telemetry else float('inf')
         telemetry_stale = telemetry_diff > 960  # 16 minutes = 960 seconds
         
-        # Main card frame - start with flash color if changed
-        bg_color = self.colors['bg_selected'] if is_changed else self.colors['bg_frame']  # Flash with very dark blue (#1a237e)
-        card_frame = tk.Frame(parent, bg=bg_color, relief='raised', bd=2, width=card_width)
-        card_frame.grid(row=row, column=col, padx=4, pady=3, sticky="nsew")
+        # Main card frame - start with flash color if changed, or local node color if local
+        if is_local and not is_changed:
+            bg_color = self.colors['bg_local_node']  # Dark green tint for local node
+        elif is_changed:
+            bg_color = self.colors['bg_selected']  # Flash with very dark blue
+        else:
+            bg_color = self.colors['bg_frame']  # Normal dark grey
+        
+        # Add green border for local node
+        border_config = {}
+        if is_local:
+            border_config = {
+                'highlightbackground': '#00AA00',
+                'highlightthickness': 3
+            }
+        
+        col_span = 2 if is_local else 1
+        card_frame = tk.Frame(parent, bg=bg_color, relief='raised', bd=2, width=card_width, **border_config)
+        card_frame.grid(row=row, column=col, columnspan=col_span, padx=4, pady=3, sticky="nsew")
         card_frame.grid_propagate(True)
         
         # Header row - Name and Status only (short name moved to line 2)
@@ -1616,9 +1684,44 @@ class EnhancedDashboard(tk.Tk):
                              font=self.font_card_header)
         name_label.pack(side="left")
         
-        # Right side - Status and message indicator
+        # Local node badge
+        if is_local:
+            local_badge = tk.Label(left_header, text=" 📍",
+                                  bg=bg_color, fg='#00AA00',
+                                  font=self.font_card_header)
+            local_badge.pack(side="left")
+        
+        # Right side - Menu button, message indicator, and status
         right_header = tk.Frame(header_frame, bg=bg_color)
         right_header.pack(side="right")
+        
+        # Menu button (⋮ vertical ellipsis) - 48x48px touch target
+        def show_card_menu():
+            menu = tk.Menu(self, tearoff=0,
+                          bg=self.colors['bg_frame'],
+                          fg=self.colors['fg_normal'],
+                          activebackground=self.colors['bg_selected'],
+                          activeforeground=self.colors['fg_normal'])
+            menu.add_command(label="View Details", command=lambda: self.show_node_detail(node_id))
+            menu.add_command(label="Show Logs", command=lambda: self.open_logs_folder(node_id))
+            menu.add_command(label="Open CSV", command=lambda: self.open_today_csv(node_id))
+            menu.add_command(label="Plot Telemetry", command=lambda: self.show_plot_for_node(node_id))
+            menu.add_command(label=f"Send Message To '{display_name}'...", command=lambda: self._send_message_to_node(node_id))
+            # Only add Forget Node option if this is NOT the local node
+            if not is_local:
+                menu.add_command(label=f"Forget Node '{display_name}'", command=lambda: self._forget_node_from_card(node_id))
+            
+            # Post menu near the button
+            menu.post(menu_button.winfo_rootx(), menu_button.winfo_rooty() + menu_button.winfo_height())
+        
+        menu_button = tk.Button(right_header, text="⋮",
+                               bg=bg_color, fg=self.colors['fg_normal'],
+                               font=self.font_card_header,
+                               width=2, height=1,
+                               relief='flat',
+                               cursor='hand2',
+                               command=show_card_menu)
+        menu_button.pack(side="left", padx=(0, 4))
         
         # Message indicator (always create it, show/hide based on message time)
         msg_indicator = tk.Label(right_header, text="📧 ",
@@ -1927,18 +2030,13 @@ class EnhancedDashboard(tk.Tk):
             
             humidity_label = humidity_container
         
-        # Click handler for showing node detail window
+        # Click handler for showing node detail window (left-click only)
         def on_card_click(event):
             self.show_node_detail(node_id)
         
-        # Right-click handler for context menu
-        def on_card_right_click(event):
-            self._show_card_context_menu(event, node_id)
-        
-        # Bind click to card frame and all children recursively
+        # Bind left-click to card frame and all children recursively
         def bind_click_recursive(widget):
             widget.bind("<Button-1>", on_card_click)
-            widget.bind("<Button-3>", on_card_right_click)  # Right-click
             for child in widget.winfo_children():
                 bind_click_recursive(child)
         
@@ -1962,6 +2060,7 @@ class EnhancedDashboard(tk.Tk):
             'name_label': name_label,
             'shortname_label': shortname_label,
             'status_label': status_label,
+            'menu_button': menu_button,
             'msg_indicator': msg_indicator,
             'heard_label': heard_label,
             'motion_label': motion_label,
@@ -1980,8 +2079,8 @@ class EnhancedDashboard(tk.Tk):
         # bg= was set in the constructor.
         if not is_changed:
             # Explicitly configure backgrounds on all labels and their children
-            for key in ['name_label', 'shortname_label', 'status_label', 'heard_label',
-                       'motion_label']:
+            for key in ['name_label', 'shortname_label', 'status_label', 'menu_button',
+                       'heard_label', 'motion_label']:
                 widget = self.card_widgets[node_id].get(key)
                 if widget:
                     widget.config(bg=bg_color)
@@ -2077,7 +2176,7 @@ class EnhancedDashboard(tk.Tk):
                     card_info[key].config(bg=flash_color)
             
             # Apply flash to all labels
-            for key in ['name_label', 'shortname_label', 'status_label', 'heard_label',
+            for key in ['name_label', 'shortname_label', 'status_label', 'menu_button', 'heard_label',
                        'battery_label', 'temp_label', 'snr_label', 'util_label',
                        'motion_label', 'current_label', 'humidity_label']:
                 if key in card_info and card_info[key]:
@@ -2098,7 +2197,7 @@ class EnhancedDashboard(tk.Tk):
                     if key in card_info and card_info[key]:
                         card_info[key].config(bg=normal_bg)
                 
-                for key in ['name_label', 'shortname_label', 'status_label', 'heard_label',
+                for key in ['name_label', 'shortname_label', 'status_label', 'menu_button', 'heard_label',
                            'battery_label', 'temp_label', 'snr_label', 'util_label',
                            'motion_label', 'current_label', 'humidity_label']:
                     if key in card_info and card_info[key]:
@@ -2690,6 +2789,12 @@ class EnhancedDashboard(tk.Tk):
     def on_closing(self):
         """Handle application closing"""
         try:
+            # Unsubscribe from events
+            try:
+                pub.unsubscribe(self._on_critical_error, "meshtastic.connection.critical_error")
+            except:
+                pass
+            
             # Save window geometry
             self.config_manager.set('dashboard.window_geometry', self.geometry())
             self.config_manager.save_config()
@@ -2702,6 +2807,17 @@ class EnhancedDashboard(tk.Tk):
             logger.error(f"Error during shutdown: {e}")
         
         self.destroy()
+    
+    def _on_critical_error(self, error):
+        """Handle critical connection errors - exit dashboard"""
+        logger.error(f"Critical error received: {error}")
+        messagebox.showerror(
+            "Connection Error",
+            f"Cannot start dashboard:\n\n{error}\n\n"
+            f"Please check your Meshtastic interface connection and restart the application."
+        )
+        # Exit application
+        self.after(100, self.on_closing)
 
 def main():
     """Main entry point"""
