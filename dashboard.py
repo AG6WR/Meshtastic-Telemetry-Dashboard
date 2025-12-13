@@ -1301,7 +1301,7 @@ class EnhancedDashboard(tk.Tk):
                             if battery_text.startswith('Bat:'):
                                 text = battery_text.replace('Bat:', '').replace('%', '')
                                 fg = battery_color
-                            elif battery_text == "No battery":
+                            elif battery_text == "no external battery sensor":
                                 text = "—"
                                 fg = self.colors['fg_secondary']
                             else:
@@ -1845,7 +1845,7 @@ class EnhancedDashboard(tk.Tk):
         # Battery Percentage in column 1 - prefer Ch3 Voltage (external) converted to %, or Battery Level (internal %)
         battery_label = None
         battery_text, battery_color = self.get_battery_percentage_display(node_data)
-        if battery_text != "No battery":
+        if battery_text != "no external battery sensor":
             # Extract percentage value from "Bat:XX%"
             pct_value = battery_text.replace("Bat:", "")
             # Use grey if stale, otherwise use color-coded value
@@ -1885,12 +1885,23 @@ class EnhancedDashboard(tk.Tk):
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else current_color
             
+            # Determine charging/discharging state
+            if ch3_current > 0:
+                prefix = "+"
+                suffix = " (charging)"
+            elif ch3_current < 0:
+                prefix = "-"
+                suffix = " (discharging)"
+            else:
+                prefix = ""
+                suffix = ""
+            
             # Create container for mixed font display (centered)
             current_container = tk.Frame(col2_frame, bg=bg_color)
             current_container.pack(anchor="center")
             
-            # Current value in 14pt bold (white/standard color)
-            current_value = tk.Label(current_container, text=f"{ch3_current:.0f}",
+            # Current value in 14pt bold with +/- prefix (white/standard color)
+            current_value = tk.Label(current_container, text=f"{prefix}{abs(ch3_current):.0f}",
                                     bg=bg_color, fg=self.colors['fg_normal'],
                                     font=self.font_card_line3, padx=0, pady=0, anchor="s")
             current_value.pack(side="left", padx=0)
@@ -1900,6 +1911,13 @@ class EnhancedDashboard(tk.Tk):
                                    bg=bg_color, fg=self.colors['fg_secondary'],
                                    font=self.font_card_label, padx=0, pady=0, anchor="s")
             current_unit.pack(side="left", padx=0)
+            
+            # Charging/discharging suffix in 10pt regular (light grey)
+            if suffix:
+                current_suffix = tk.Label(current_container, text=suffix,
+                                         bg=bg_color, fg=self.colors['fg_secondary'],
+                                         font=self.font_card_label, padx=0, pady=0, anchor="s")
+                current_suffix.pack(side="left", padx=0)
             
             current_label = current_container  # Store container reference
         
@@ -2159,7 +2177,7 @@ class EnhancedDashboard(tk.Tk):
                     # Update all child frames
                     for key in ['header_frame', 'left_header', 'right_header', 
                                'lastheard_frame',
-                               'metrics1_frame', 'metrics2_frame', 'metrics3_frame',
+                               'metrics1_frame', 'metrics2_frame',
                                'col1_frame', 'col2_frame', 'col3_frame',
                                'row2_col1_frame', 'row2_col2_frame']:
                         if key in card_info and card_info[key]:
@@ -2389,7 +2407,7 @@ class EnhancedDashboard(tk.Tk):
         
         # Update telemetry fields - Row 1: Battery %, Ch3 Current, Temperature
         battery_text, battery_color = self.get_battery_percentage_display(node_data)
-        if battery_text != "No battery" and card_info['battery_label']:
+        if battery_text != "no external battery sensor" and card_info['battery_label']:
             # Extract percentage value
             pct_value = battery_text.replace("Bat:", "")
             # Use grey if stale, otherwise use color-coded value
@@ -2404,7 +2422,7 @@ class EnhancedDashboard(tk.Tk):
                 else:
                     # Update value color and text
                     child.config(fg=display_color, text=pct_value)
-        elif battery_text == "No battery":
+        elif battery_text == "no external battery sensor":
             logger.debug(f"Card update for {node_id}: No battery data (Ch3 Voltage={node_data.get('Ch3 Voltage')}, Battery Level={node_data.get('Battery Level')})")
         elif not card_info['battery_label']:
             logger.warning(f"Card update for {node_id}: battery_label widget missing!")
@@ -2421,15 +2439,41 @@ class EnhancedDashboard(tk.Tk):
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else current_color
             
-            # Update all children in the container (value + unit)
-            for child in card_info['current_label'].winfo_children():
+            # Determine charging/discharging state
+            if ch3_current > 0:
+                prefix = "+"
+                suffix = " (charging)"
+            elif ch3_current < 0:
+                prefix = "-"
+                suffix = " (discharging)"
+            else:
+                prefix = ""
+                suffix = ""
+            
+            # Update all children in the container (value + unit + suffix)
+            children = list(card_info['current_label'].winfo_children())
+            for i, child in enumerate(children):
                 text = child.cget("text")
                 if "mA" in text:
                     # Keep unit grey
                     child.config(fg=self.colors['fg_secondary'])
+                elif "charging" in text or "discharging" in text:
+                    # Update or remove suffix
+                    if suffix:
+                        child.config(fg=self.colors['fg_secondary'], text=suffix)
+                    else:
+                        child.destroy()
                 else:
-                    # Update value to white (standard color) and text
-                    child.config(fg=self.colors['fg_normal'], text=f"{ch3_current:.0f}")
+                    # Update value to white (standard color) with +/- prefix
+                    child.config(fg=self.colors['fg_normal'], text=f"{prefix}{abs(ch3_current):.0f}")
+            
+            # Add suffix if it doesn't exist and we need one
+            if suffix and not any("charging" in child.cget("text") or "discharging" in child.cget("text") for child in children):
+                current_suffix = tk.Label(card_info['current_label'], text=suffix,
+                                         bg=card_info['current_label'].cget('bg'), 
+                                         fg=self.colors['fg_secondary'],
+                                         font=self.font_card_label, padx=0, pady=0, anchor="s")
+                current_suffix.pack(side="left", padx=0)
             
         temp = node_data.get('Temperature')
         if temp is not None and card_info['temp_label']:
@@ -2692,7 +2736,7 @@ class EnhancedDashboard(tk.Tk):
             return f"Bat:{internal_battery}%", color
         
         # No battery data available
-        return "No battery", self.colors['fg_secondary']
+        return "no external battery sensor", self.colors['fg_secondary']
     
     def get_signal_bar_colors(self, snr: float):
         """Return list of colors for each of the 4 signal bars based on SNR
