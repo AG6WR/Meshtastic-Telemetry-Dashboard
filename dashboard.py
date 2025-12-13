@@ -45,6 +45,7 @@ from data_collector import DataCollector
 from plotter import TelemetryPlotter
 from node_detail_window import NodeDetailWindow
 from message_dialog import MessageDialog
+from card_field_registry import CardFieldRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -616,7 +617,7 @@ class SettingsDialog:
         self.dialog.destroy()
 
 # Version number - update manually with each release
-VERSION = "1.0.14"
+VERSION = "1.1.0"
 
 def get_version_info():
     """Get version information"""
@@ -632,6 +633,7 @@ class EnhancedDashboard(tk.Tk):
         self.config_manager = ConfigManager()
         self.data_collector = None
         self.plotter = TelemetryPlotter(self, self.config_manager)
+        self.field_registry = CardFieldRegistry(self)  # Field update registry
         
         # UI State
         self.nodes = {}
@@ -677,9 +679,9 @@ class EnhancedDashboard(tk.Tk):
         # Window settings
         self.title("Enhanced Meshtastic Monitor")
         
-        # Set geometry for 1280x720 touchscreen display
+        # Set geometry for 1400x720 touchscreen display
         # Default to fullscreen for Pi deployment
-        geometry = self.config_manager.get('dashboard.window_geometry', '1280x720')
+        geometry = self.config_manager.get('dashboard.window_geometry', '1400x720')
         self.geometry(geometry)
         
         # Enable fullscreen mode by default (hides Pi OS menubar)
@@ -694,6 +696,7 @@ class EnhancedDashboard(tk.Tk):
         self.colors = {
             'bg_main': '#1e1e1e',        # Main window background
             'bg_frame': '#2d2d2d',       # Card/frame background (normal state)
+            'bg_local_node': '#1e2d1e',  # Local node card background (dark green tint)
             'bg_stale': '#3d2d2d',       # Table rows with stale data (dark red tint)
             'bg_selected': '#1a237e',    # Selected table rows and flash effect (very dark blue)
             'fg_normal': '#ffffff',      # Primary text color (white)
@@ -718,7 +721,8 @@ class EnhancedDashboard(tk.Tk):
         self.font_card_header = tkfont.Font(family=base_family, size=14, weight="bold")  # Card header 14pt
         self.font_card_line2 = tkfont.Font(family=base_family, size=10)  # Card line 2 (Motion/Last Heard) 10pt - matches line 4
         self.font_card_line3 = tkfont.Font(family=base_family, size=14, weight="bold")  # Card line 3 (V/I/T) 14pt
-        self.font_card_label = tkfont.Font(family=base_family, size=10)  # Card labels 10pt regular
+        self.font_card_label = tkfont.Font(family=base_family, size=8)  # Card labels 8pt small (for "ICP Batt:", "Ch:", etc.)
+        self.font_card_value = tkfont.Font(family=base_family, size=11, weight="bold")  # Card values 11pt bold (for data values)
         self.font_italic = tkfont.Font(family=base_family, size=11, slant="italic")
         self.font_title = tkfont.Font(family=base_family, size=18, weight="bold")
         
@@ -797,10 +801,13 @@ class EnhancedDashboard(tk.Tk):
                                 width=12, height=2)
         self.btn_csv.pack(side="left", padx=(0, 5))
         
-        # Exit Fullscreen button (right side) for touch-screen interface
-        tk.Button(controls_frame, text="Exit Fullscreen", command=self._exit_fullscreen,
+        # Fullscreen toggle button (right side) for touch-screen interface
+        # Text shows the action it will perform (where you'll go)
+        self.fullscreen_button = tk.Button(controls_frame, text="", command=self._toggle_fullscreen_button,
                  bg=self.colors['fg_bad'], fg='white',
-                 width=14, height=2).pack(side="right")
+                 width=14, height=2)
+        self.fullscreen_button.pack(side="right")
+        self._update_fullscreen_button_text()  # Set initial text based on state
         
         # Table container with horizontal scrollbar (initially hidden since default is cards)
         self.table_container = tk.Frame(self, bg=self.colors['bg_frame'])
@@ -838,13 +845,23 @@ class EnhancedDashboard(tk.Tk):
         """Toggle fullscreen mode (F11 key)"""
         self.is_fullscreen = not self.is_fullscreen
         self.attributes('-fullscreen', self.is_fullscreen)
+        self._update_fullscreen_button_text()  # Update button text to reflect new state
         logger.info(f"Fullscreen mode: {'ON' if self.is_fullscreen else 'OFF'}")
     
-    def _exit_fullscreen(self):
-        """Exit fullscreen mode (for touch-screen interface)"""
-        self.is_fullscreen = False
-        self.attributes('-fullscreen', False)
-        logger.info("Exited fullscreen mode via button")
+    def _toggle_fullscreen_button(self):
+        """Toggle fullscreen mode (for button clicks)"""
+        self.is_fullscreen = not self.is_fullscreen
+        self.attributes('-fullscreen', self.is_fullscreen)
+        self._update_fullscreen_button_text()  # Update button text to reflect new state
+        logger.info(f"Fullscreen mode: {'ON' if self.is_fullscreen else 'OFF'} (via button)")
+    
+    def _update_fullscreen_button_text(self):
+        """Update fullscreen button text based on current state
+        Button shows the action it will perform (where you'll go)"""
+        if self.is_fullscreen:
+            self.fullscreen_button.config(text="Exit Fullscreen")
+        else:
+            self.fullscreen_button.config(text="Fullscreen")
     
     def convert_temperature(self, temp_c, to_unit=None):
         """Convert temperature from Celsius to the configured unit
@@ -868,6 +885,71 @@ class EnhancedDashboard(tk.Tk):
         else:
             # Keep in Celsius
             return (temp_c, '°C', (45, 35))
+    
+    # =========================================================================
+    # Field Registry Helper Methods
+    # These methods are called by card_field_registry.py for formatting/coloring
+    # =========================================================================
+    
+    def format_temperature(self, temp_c):
+        """Format temperature value with unit conversion"""
+        temp_value, temp_unit_str, _ = self.convert_temperature(temp_c)
+        return f"{temp_value:.0f}{temp_unit_str}"
+    
+    def get_temperature_color(self, temp_c):
+        """Get color based on temperature thresholds"""
+        _, _, (red_threshold, yellow_threshold) = self.convert_temperature(temp_c)
+        if temp_c > red_threshold or temp_c < 0:
+            return self.colors['fg_bad']
+        elif temp_c >= yellow_threshold:
+            return self.colors['fg_warning']
+        else:
+            return self.colors['fg_good']
+    
+    def format_humidity(self, humidity):
+        """Format humidity value"""
+        return f"{humidity:.0f}%"
+    
+    def get_humidity_color(self, humidity):
+        """Get color based on humidity thresholds"""
+        if humidity > 80 or humidity < 20:
+            return self.colors['fg_warning']
+        else:
+            return self.colors['fg_good']
+    
+    def format_pressure(self, pressure):
+        """Format pressure value"""
+        return f"{pressure:.1f} hPa"
+    
+    def get_pressure_color(self, pressure):
+        """Get color based on pressure (always normal for now)"""
+        return self.colors['fg_normal']
+    
+    def format_channel_util(self, util):
+        """Format channel utilization percentage"""
+        return f"Ch: {util:.1f}%"
+    
+    def get_channel_util_color(self, util):
+        """Get color based on channel utilization thresholds"""
+        if util > 25:
+            return self.colors['fg_bad']
+        elif util > 10:
+            return self.colors['fg_warning']
+        else:
+            return self.colors['fg_good']
+    
+    def format_air_util(self, util):
+        """Format air utilization percentage"""
+        return f"Air: {util:.1f}%"
+    
+    def get_air_util_color(self, util):
+        """Get color based on air utilization thresholds"""
+        if util > 10:
+            return self.colors['fg_bad']
+        elif util > 5:
+            return self.colors['fg_warning']
+        else:
+            return self.colors['fg_good']
     
     def setup_table(self):
         """Setup the data table"""
@@ -947,9 +1029,9 @@ class EnhancedDashboard(tk.Tk):
             return
         
         # Calculate columns dynamically based on window width
-        # Card width is ~290px (280 + padding), minimum 1 column
+        # Card width is 368px + 8px padding (4px each side) = 376px per card
         window_width = self.winfo_width()
-        card_width_with_padding = 290
+        card_width_with_padding = 376
         new_cards_per_row = max(1, window_width // card_width_with_padding)
         
         # Only rebuild if column count actually changed
@@ -1574,35 +1656,31 @@ class EnhancedDashboard(tk.Tk):
                 widget.destroy()
             self.card_widgets.clear()
             
-            # Calculate grid layout - cards are now 460px wide (20% wider than original 380px)
-            # Local node cards are 920px wide (2 x 460px)
-            # Window width calculation: 1280 - 24 (scrollbar) - 20 (padding) = 1236 available
-            # 1236 / 460 = 2.68, so 2 cards per row with room for padding
+            # Calculate grid layout - cards are 368px wide (20% reduction from 460px)
+            # Window width calculation: 1400 - 24 (scrollbar) - 20 (padding) = 1356 available
+            # 1356 / 376 = 3.6, so 3 cards per row (376 = 368 card + 8px padding)
             window_width = self.winfo_width()
-            card_width = 460  # Increased from 380px (20% wider)
-            card_width_with_padding = 480  # Card + padding
+            card_width = 368  # Current card width (20% reduction)
+            card_width_with_padding = 376  # Card + padding (4px each side)
             cards_per_row = max(1, window_width // card_width_with_padding)
             
             # Store current column count for resize detection
             self.current_cards_per_row = cards_per_row
             
-            # Create cards using grid layout with local node awareness
-            # Local node card is 2x width and spans 2 columns
+            # Create cards using grid layout with local node in upper left
             # Don't flash cards during full rebuild - only flash on data updates
             row = 0
             col = 0
             for node_id, node_data in sorted_nodes:
                 is_local = (node_id == local_node_id)
-                node_card_width = 920 if is_local else card_width  # Local spans 2 columns (460*2)
-                col_span = 2 if is_local else 1
                 
                 # Create card with normal background (no flash) during rebuild
                 self.create_node_card(self.card_scrollable_frame, node_id, node_data, 
-                                    row, col, node_card_width, is_changed=False, 
+                                    row, col, card_width, is_changed=False, 
                                     is_local=is_local)
                 
                 # Update column position
-                col += col_span
+                col += 1
                 if col >= cards_per_row:
                     col = 0
                     row += 1
@@ -1621,9 +1699,9 @@ class EnhancedDashboard(tk.Tk):
             node_data: Node data dictionary
             row: Grid row position
             col: Grid column position
-            card_width: Width of card (920px for local, 460px for others)
+            card_width: Width of card (460px standard)
             is_changed: Whether to show blue flash
-            is_local: Whether this is the local node (gets special styling)
+            is_local: Whether this is the local node (gets green background and border)
         """
         # Status colors
         status_colors = {
@@ -1664,9 +1742,8 @@ class EnhancedDashboard(tk.Tk):
                 'highlightthickness': 3
             }
         
-        col_span = 2 if is_local else 1
         card_frame = tk.Frame(parent, bg=bg_color, relief='raised', bd=2, width=card_width, **border_config)
-        card_frame.grid(row=row, column=col, columnspan=col_span, padx=4, pady=3, sticky="nsew")
+        card_frame.grid(row=row, column=col, padx=4, pady=3, sticky="nsew")
         card_frame.grid_propagate(True)
         
         # Header row - Name and Status only (short name moved to line 2)
@@ -1738,24 +1815,16 @@ class EnhancedDashboard(tk.Tk):
             # Track this as active menu
             self.active_menu = menu
             
-            # Post menu near the button
-            menu.post(menu_button.winfo_rootx(), menu_button.winfo_rooty() + menu_button.winfo_height())
+            # Post menu at event coordinates (card was clicked)
+            if event:
+                menu.post(event.x_root, event.y_root)
             
             # Stop event propagation to prevent card click
             if event:
                 return "break"
         
-        menu_button = tk.Button(right_header, text="⋮",
-                               bg=bg_color, fg=self.colors['fg_normal'],
-                               font=self.font_card_header,
-                               width=2, height=1,
-                               relief='flat',
-                               cursor='hand2',
-                               command=show_card_menu)
-        menu_button.pack(side="left", padx=(0, 4))
-        
-        # Bind click to menu button to stop propagation
-        menu_button.bind("<Button-1>", lambda e: show_card_menu(e))
+        # Menu button removed - entire card is now clickable to show context menu
+        menu_button = None  # Keep variable for compatibility
         
         # Message indicator (always create it, show/hide based on message time)
         msg_indicator = tk.Label(right_header, text="📧 ",
@@ -1788,11 +1857,9 @@ class EnhancedDashboard(tk.Tk):
         motion_label = None
         last_motion = node_data.get('Last Motion')
         
-        # Pack short name first (from right) so it doesn't conflict with left content
-        shortname_label = tk.Label(lastheard_frame, text=f"({short_name})",
-                                   bg=bg_color, fg=self.colors['fg_secondary'],
-                                   font=self.font_card_line2)
-        shortname_label.pack(anchor="e", side="right")
+        # Line 2 reserved for temporary status messages only (motion, last heard, messages)
+        # Short name removed from here (was on right side)
+        shortname_label = None
         
         if status == "Offline" and last_heard:
             # For offline nodes, show static last heard timestamp
@@ -1827,30 +1894,33 @@ class EnhancedDashboard(tk.Tk):
         stale_color = self.colors['fg_secondary']  # Grey for stale data
         
         # =============================================================================
-        # ROW 1: BATTERY INFORMATION (External + Internal)
-        # Format: "ICP Batt: 12.9V (80%), +2.5A (charging)   Node Batt: 4.2V (100%)"
-        # Left side: Ch3 Voltage + %, Ch3 Current with charge indicator
-        # Right side: Internal Battery Voltage + %
+        # ROW 1: BATTERY INFORMATION (3-column layout)
+        # Format: "ICP:12.9V (80%)   +2.5mA ↑   Node:4.2V (100%)"
+        # Column 1 (left): ICP voltage + %
+        # Column 2 (center): Current with charge indicator
+        # Column 3 (right): Node battery voltage + %
         # =============================================================================
         metrics1_frame = tk.Frame(card_frame, bg=bg_color)
         metrics1_frame.pack(fill="x", padx=6, pady=1)
         
-        # Row 1: Battery info spans full width (460px card)
-        # Left side: External battery (Ch3 Voltage, %, Current, charging status)  
-        # Right side: Internal battery (Voltage, %)
+        # Create three columns for row 1 - matching row 2/3 widths
+        row1_col1_frame = tk.Frame(metrics1_frame, bg=bg_color, width=100, height=18)
+        row1_col1_frame.pack(side="left")
+        row1_col1_frame.pack_propagate(False)
         
-        # External battery info (left ~60% of row)
-        ext_batt_frame = tk.Frame(metrics1_frame, bg=bg_color)
-        ext_batt_frame.pack(side="left", fill="x", expand=True)
+        row1_col2_frame = tk.Frame(metrics1_frame, bg=bg_color, width=105, height=18)
+        row1_col2_frame.pack(side="left", padx=(6, 0))
+        row1_col2_frame.pack_propagate(False)
         
-        ext_batt_label = None
+        row1_col3_frame = tk.Frame(metrics1_frame, bg=bg_color, width=100, height=18)
+        row1_col3_frame.pack(side="left", padx=(6, 0))
+        row1_col3_frame.pack_propagate(False)
+        
+        # Column 1: ICP battery percentage only (left-aligned)
         ch3_voltage = node_data.get('Ch3 Voltage')
-        ch3_current = node_data.get('Ch3 Current')
-        
+        ext_batt_label = None
         if ch3_voltage is not None:
-            # Calculate battery percentage from voltage
             battery_pct = self.data_collector.voltage_to_percentage(ch3_voltage) if self.data_collector else None
-            
             if battery_pct is not None:
                 # Color coding for percentage
                 if battery_pct > 50:
@@ -1861,48 +1931,63 @@ class EnhancedDashboard(tk.Tk):
                     pct_color = self.colors['fg_bad']
                 display_pct_color = stale_color if is_stale else pct_color
                 
-                # Create container for external battery display
-                ext_container = tk.Frame(ext_batt_frame, bg=bg_color)
+                # Create container for ICP battery display
+                ext_container = tk.Frame(row1_col1_frame, bg=bg_color)
                 ext_container.pack(anchor="w")
                 
-                # "ICP Batt:" label
-                tk.Label(ext_container, text="ICP Batt: ", bg=bg_color,
+                # "ICP Batt:" label (8pt small)
+                tk.Label(ext_container, text="ICP Batt:", bg=bg_color,
                         fg=self.colors['fg_secondary'], font=self.font_card_label).pack(side="left")
                 
-                # Voltage value
-                tk.Label(ext_container, text=f"{ch3_voltage:.1f}V", bg=bg_color,
-                        fg=self.colors['fg_normal'], font=self.font_card_label).pack(side="left")
-                
-                # Percentage in parentheses
-                tk.Label(ext_container, text=f" ({battery_pct}%), ", bg=bg_color,
-                        fg=display_pct_color, font=self.font_card_label).pack(side="left")
-                
-                # Current with charging indicator
-                if ch3_current is not None:
-                    if ch3_current > 0:
-                        current_text = f"+{ch3_current:.1f}A (charging)"
-                        current_color = self.colors['fg_good']
-                    elif ch3_current < 0:
-                        current_text = f"{ch3_current:.1f}A (discharging)"
-                        current_color = self.colors['fg_warning']
-                    else:
-                        current_text = f"{ch3_current:.1f}A"
-                        current_color = self.colors['fg_normal']
-                    
-                    display_current_color = stale_color if is_stale else current_color
-                    tk.Label(ext_container, text=current_text, bg=bg_color,
-                            fg=display_current_color, font=self.font_card_label).pack(side="left")
+                # Percentage value (11pt bold)
+                tk.Label(ext_container, text=f"{battery_pct}%", bg=bg_color,
+                        fg=display_pct_color, font=self.font_card_value).pack(side="left")
                 
                 ext_batt_label = ext_container
         
-        # Internal battery info (right ~40% of row)
-        int_batt_frame = tk.Frame(metrics1_frame, bg=bg_color)
-        int_batt_frame.pack(side="right")
+        # Column 2: Ch3 Current with charge/discharge indicator (centered)
+        ch3_current = node_data.get('Ch3 Current')
+        current_label = None
+        if ch3_current is not None:
+            # Convert mA and determine charge state
+            if ch3_current > 0:
+                current_text = f"+{ch3_current:.0f}mA"
+                arrow = "↑"  # Charging
+                current_color = self.colors['fg_good']
+            elif ch3_current < 0:
+                current_text = f"{ch3_current:.0f}mA"
+                arrow = "↓"  # Discharging
+                current_color = self.colors['fg_warning']
+            else:
+                current_text = f"{ch3_current:.0f}mA"
+                arrow = ""
+                current_color = self.colors['fg_normal']
+            
+            display_current_color = stale_color if is_stale else current_color
+            
+            # Create container for current display (centered)
+            current_container = tk.Frame(row1_col2_frame, bg=bg_color)
+            current_container.pack(fill="x", expand=True)
+            
+            # Inner container for centering
+            current_inner = tk.Frame(current_container, bg=bg_color)
+            current_inner.pack(anchor="center")
+            
+            # Current value (11pt bold)
+            tk.Label(current_inner, text=current_text, bg=bg_color,
+                    fg=display_current_color, font=self.font_card_value).pack(side="left")
+            
+            # Arrow indicator (11pt bold)
+            if arrow:
+                tk.Label(current_inner, text=f" {arrow}", bg=bg_color,
+                        fg=display_current_color, font=self.font_card_value).pack(side="left")
+            
+            current_label = current_container
         
-        int_batt_label = None
+        # Column 3: Node battery percentage only (right-aligned)
         int_voltage = node_data.get('Internal Battery Voltage')
         battery_level = node_data.get('Battery Level')
-        
+        int_batt_label = None
         if int_voltage is not None and battery_level is not None:
             # Color coding for percentage
             if battery_level > 50:
@@ -1913,27 +1998,23 @@ class EnhancedDashboard(tk.Tk):
                 pct_color = self.colors['fg_bad']
             display_pct_color = stale_color if is_stale else pct_color
             
-            # Create container for internal battery display
-            int_container = tk.Frame(int_batt_frame, bg=bg_color)
-            int_container.pack(anchor="e")
+            # Create container for Node battery display
+            int_container = tk.Frame(row1_col3_frame, bg=bg_color)
+            int_container.pack(fill="x", expand=True)
             
-            # "Node Batt:" label
-            tk.Label(int_container, text="Node Batt: ", bg=bg_color,
-                    fg=self.colors['fg_secondary'], font=self.font_card_label).pack(side="left")
+            # Pack right-to-left for right alignment
+            # Percentage value (11pt bold)
+            tk.Label(int_container, text=f"{battery_level:.0f}%", bg=bg_color,
+                    fg=display_pct_color, font=self.font_card_value).pack(side="right")
             
-            # Voltage value
-            tk.Label(int_container, text=f"{int_voltage:.1f}V", bg=bg_color,
-                    fg=self.colors['fg_normal'], font=self.font_card_label).pack(side="left")
-            
-            # Percentage in parentheses
-            tk.Label(int_container, text=f" ({battery_level:.0f}%)", bg=bg_color,
-                    fg=display_pct_color, font=self.font_card_label).pack(side="left")
+            # "Node Batt:" label (8pt small)
+            tk.Label(int_container, text="Node Batt:", bg=bg_color,
+                    fg=self.colors['fg_secondary'], font=self.font_card_label).pack(side="right")
             
             int_batt_label = int_container
         
         # Store labels for row 1
         battery_label = ext_batt_label  # For backward compat with flash code
-        current_label = ext_batt_label  # Merged into ext_batt
         temp_label = None  # Temperature moved to row 3
         int_battery_label = int_batt_label  # New widget for internal battery
         
@@ -1941,17 +2022,18 @@ class EnhancedDashboard(tk.Tk):
         metrics2_frame = tk.Frame(card_frame, bg=bg_color)
         metrics2_frame.pack(fill="x", padx=6, pady=1)
         
-        # Create three columns for row 2 - SNR reduced 10% (100→90), giving more room to Ch Util
-        # Height reduced from 25 to 18 to match 10pt font size
-        row2_col1_frame = tk.Frame(metrics2_frame, bg=bg_color, width=90, height=18)
+        # Create three columns for row 2 - uniform 3-column layout
+        # Column widths: col1=100px, col2=105px, col3=100px (total ~305px + padding = ~323px)
+        # Height 18px to match 8pt/11pt font sizes
+        row2_col1_frame = tk.Frame(metrics2_frame, bg=bg_color, width=100, height=18)
         row2_col1_frame.pack(side="left")
         row2_col1_frame.pack_propagate(False)
         
-        row2_col2_frame = tk.Frame(metrics2_frame, bg=bg_color, width=86, height=18)
+        row2_col2_frame = tk.Frame(metrics2_frame, bg=bg_color, width=105, height=18)
         row2_col2_frame.pack(side="left", padx=(6, 0))
         row2_col2_frame.pack_propagate(False)
         
-        row2_col3_frame = tk.Frame(metrics2_frame, bg=bg_color, width=88, height=18)
+        row2_col3_frame = tk.Frame(metrics2_frame, bg=bg_color, width=100, height=18)
         row2_col3_frame.pack(side="left", padx=(6, 0))
         row2_col3_frame.pack_propagate(False)
         
@@ -1998,24 +2080,28 @@ class EnhancedDashboard(tk.Tk):
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else util_color
             
-            # Create container for mixed font display
+            # Create container for mixed font display (centered)
             util_container = tk.Frame(row2_col2_frame, bg=bg_color)
-            util_container.pack(fill="both", expand=True, anchor="center")
+            util_container.pack(fill="x", expand=True)
             
-            # "Ch:" label in 10pt regular (light grey)
-            ch_label = tk.Label(util_container, text="Ch:",
+            # Create inner container for actual centering of content
+            util_inner = tk.Frame(util_container, bg=bg_color)
+            util_inner.pack(anchor="center")
+            
+            # "Ch:" label (8pt small, light grey)
+            ch_label = tk.Label(util_inner, text="Ch:",
                                bg=bg_color, fg=self.colors['fg_secondary'],
                                font=self.font_card_label, padx=0, pady=0)
             ch_label.pack(side="left", padx=0)
             
-            # Value in 10pt regular
-            ch_value = tk.Label(util_container, text=f"{channel_util:.1f}",
+            # Value (11pt bold)
+            ch_value = tk.Label(util_inner, text=f"{channel_util:.1f}",
                                bg=bg_color, fg=display_color,
-                               font=self.font_card_label, padx=0, pady=0)
+                               font=self.font_card_value, padx=0, pady=0)
             ch_value.pack(side="left", padx=0)
             
-            # "%" unit in 10pt regular (light grey)
-            ch_unit = tk.Label(util_container, text="%",
+            # "%" unit (8pt small, light grey)
+            ch_unit = tk.Label(util_inner, text="%",
                               bg=bg_color, fg=self.colors['fg_secondary'],
                               font=self.font_card_label, padx=0, pady=0)
             ch_unit.pack(side="left", padx=0)
@@ -2040,25 +2126,26 @@ class EnhancedDashboard(tk.Tk):
             
             # Create container for mixed font display (right-aligned)
             air_container = tk.Frame(row2_col3_frame, bg=bg_color)
-            air_container.pack(fill="both", expand=True, anchor="e")
+            air_container.pack(fill="x", expand=True)
             
-            # "Air:" label in 10pt regular (light grey)
-            air_label = tk.Label(air_container, text="Air:",
-                                bg=bg_color, fg=self.colors['fg_secondary'],
-                                font=self.font_card_label, padx=0, pady=0)
-            air_label.pack(side="left", padx=0)
-            
-            # Value in 10pt regular
-            air_value = tk.Label(air_container, text=f"{air_util:.1f}",
-                                bg=bg_color, fg=display_color,
-                                font=self.font_card_label, padx=0, pady=0)
-            air_value.pack(side="left", padx=0)
-            
-            # "%" unit in 10pt regular (light grey)
+            # Pack labels right-to-left for right alignment
+            # "%" unit (8pt small, light grey)
             air_unit = tk.Label(air_container, text="%",
                                bg=bg_color, fg=self.colors['fg_secondary'],
                                font=self.font_card_label, padx=0, pady=0)
-            air_unit.pack(side="left", padx=0)
+            air_unit.pack(side="right", padx=0)
+            
+            # Value (11pt bold)
+            air_value = tk.Label(air_container, text=f"{air_util:.1f}",
+                                bg=bg_color, fg=display_color,
+                                font=self.font_card_value, padx=0, pady=0)
+            air_value.pack(side="right", padx=0)
+            
+            # "Air:" label (8pt small, light grey)
+            air_label = tk.Label(air_container, text="Air:",
+                                bg=bg_color, fg=self.colors['fg_secondary'],
+                                font=self.font_card_label, padx=0, pady=0)
+            air_label.pack(side="right", padx=0)
             
             air_util_label = air_container
         
@@ -2069,16 +2156,17 @@ class EnhancedDashboard(tk.Tk):
         metrics3_frame = tk.Frame(card_frame, bg=bg_color)
         metrics3_frame.pack(fill="x", padx=6, pady=1)
         
-        # Create three columns for row 3 - evenly spaced
-        row3_col1_frame = tk.Frame(metrics3_frame, bg=bg_color, width=153, height=18)
+        # Create three columns for row 3 - uniform 3-column layout
+        # Column widths: col1=100px, col2=105px, col3=100px (total ~305px + padding = ~323px)
+        row3_col1_frame = tk.Frame(metrics3_frame, bg=bg_color, width=100, height=18)
         row3_col1_frame.pack(side="left")
         row3_col1_frame.pack_propagate(False)
         
-        row3_col2_frame = tk.Frame(metrics3_frame, bg=bg_color, width=153, height=18)
+        row3_col2_frame = tk.Frame(metrics3_frame, bg=bg_color, width=105, height=18)
         row3_col2_frame.pack(side="left", padx=(6, 0))
         row3_col2_frame.pack_propagate(False)
         
-        row3_col3_frame = tk.Frame(metrics3_frame, bg=bg_color, width=153, height=18)
+        row3_col3_frame = tk.Frame(metrics3_frame, bg=bg_color, width=100, height=18)
         row3_col3_frame.pack(side="left", padx=(6, 0))
         row3_col3_frame.pack_propagate(False)
         
@@ -2103,11 +2191,17 @@ class EnhancedDashboard(tk.Tk):
             temp_container = tk.Frame(row3_col1_frame, bg=bg_color)
             temp_container.pack(anchor="w")
             
-            # Temperature value and unit in 10pt regular
-            temp_value_label = tk.Label(temp_container, text=f"{temp_value:.0f}{temp_unit_str}",
+            # Temperature value (11pt bold)
+            temp_value_label = tk.Label(temp_container, text=f"{temp_value:.0f}",
                                        bg=bg_color, fg=display_color,
-                                       font=self.font_card_label, padx=0, pady=0)
+                                       font=self.font_card_value, padx=0, pady=0)
             temp_value_label.pack(side="left", padx=0)
+            
+            # Unit (8pt small, light grey)
+            temp_unit_label = tk.Label(temp_container, text=temp_unit_str,
+                                      bg=bg_color, fg=self.colors['fg_secondary'],
+                                      font=self.font_card_label, padx=0, pady=0)
+            temp_unit_label.pack(side="left", padx=0)
             
             temp_label = temp_container  # Store container reference
         
@@ -2127,11 +2221,17 @@ class EnhancedDashboard(tk.Tk):
             humidity_container = tk.Frame(row3_col2_frame, bg=bg_color)
             humidity_container.pack(anchor="center")
             
-            # Humidity value in 10pt regular
-            hum_value = tk.Label(humidity_container, text=f"{humidity:.0f}% hum",
-                                bg=bg_color, fg=display_color,
+            # "Humidity:" label (8pt small, grey)
+            hum_label = tk.Label(humidity_container, text="Humidity:",
+                                bg=bg_color, fg=self.colors['fg_secondary'],
                                 font=self.font_card_label, padx=0, pady=0)
-            hum_value.pack(side="left", padx=0)
+            hum_label.pack(side="left", padx=0)
+            
+            # Humidity value (11pt bold for number)
+            hum_num = tk.Label(humidity_container, text=f"{humidity:.0f}%",
+                              bg=bg_color, fg=display_color,
+                              font=self.font_card_value, padx=0, pady=0)
+            hum_num.pack(side="left", padx=0)
             
             humidity_label = humidity_container
         
@@ -2141,38 +2241,35 @@ class EnhancedDashboard(tk.Tk):
         if pressure is not None:
             # Create container for pressure display (right-aligned)
             pressure_container = tk.Frame(row3_col3_frame, bg=bg_color)
-            pressure_container.pack(anchor="e")
+            pressure_container.pack(fill="x", expand=True)
             
-            # Pressure value in 10pt regular (grey color, no special thresholds)
-            press_value = tk.Label(pressure_container, text=f"{pressure:.1f} hPa",
+            # Pack right-to-left for right alignment
+            # "hPa" unit (8pt small, grey)
+            press_unit = tk.Label(pressure_container, text=" hPa",
+                                 bg=bg_color, fg=self.colors['fg_secondary'],
+                                 font=self.font_card_label, padx=0, pady=0)
+            press_unit.pack(side="right", padx=0)
+            
+            # Pressure value (11pt bold, grey - no color thresholds)
+            press_value = tk.Label(pressure_container, text=f"{pressure:.1f}",
                                   bg=bg_color, fg=stale_color if is_stale else self.colors['fg_secondary'],
-                                  font=self.font_card_label, padx=0, pady=0)
-            press_value.pack(side="left", padx=0)
+                                  font=self.font_card_value, padx=0, pady=0)
+            press_value.pack(side="right", padx=0)
             
             pressure_label = pressure_container
         
         # Humidity moved from row 2 to row 3
         humidity_label = None
         
-        # Click handler for showing node detail window (left-click only)
+        # Click handler for showing context menu (left-click only)
         def on_card_click(event):
-            # Dismiss any active menu
-            if self.active_menu:
-                try:
-                    self.active_menu.unpost()
-                    self.active_menu = None
-                except:
-                    pass
-            self.show_node_detail(node_id)
+            show_card_menu(event)
         
         # Bind left-click to card frame and all children recursively
-        # Skip menu_button to prevent double-triggering
         def bind_click_recursive(widget):
-            # Don't bind to menu button - it has its own handler
-            if widget != menu_button:
-                widget.bind("<Button-1>", on_card_click)
-                for child in widget.winfo_children():
-                    bind_click_recursive(child)
+            widget.bind("<Button-1>", on_card_click)
+            for child in widget.winfo_children():
+                bind_click_recursive(child)
         
         bind_click_recursive(card_frame)
         
@@ -2246,7 +2343,9 @@ class EnhancedDashboard(tk.Tk):
                 # Update the card's background directly instead of full redisplay
                 if node_id in self.card_widgets:
                     card_info = self.card_widgets[node_id]
-                    normal_bg = self.colors['bg_frame']
+                    # Use local node color if this is the local node, otherwise normal bg
+                    local_node_id = self.config_manager.get('meshtastic.local_node_id')
+                    normal_bg = self.colors['bg_local_node'] if (node_id == local_node_id) else self.colors['bg_frame']
                     
                     # Update card frame background
                     card_info['frame'].config(bg=normal_bg)
@@ -2282,8 +2381,230 @@ class EnhancedDashboard(tk.Tk):
             # Schedule flash restoration after 2 seconds (2000ms)
             self.flash_timers[node_id] = self.after(2000, restore_normal)
     
+    # =========================================================================
+    # Registry-based Field Update Methods
+    # =========================================================================
+    
+    def _update_simple_field(self, node_id: str, field_name: str, value: Any, is_stale: bool):
+        """Update a simple field using registry metadata
+        
+        Args:
+            node_id: Node ID for widget lookup
+            field_name: Field name in registry (e.g., 'Temperature')
+            value: New value to display
+            is_stale: Whether data is stale (>16 min old)
+        """
+        if node_id not in self.card_widgets:
+            return
+        
+        field_def = self.field_registry.get_field_definition(field_name)
+        if not field_def or field_def['widget_type'] != 'simple':
+            return
+        
+        widget_key = field_def['widget_key']
+        container = self.card_widgets[node_id].get(widget_key)
+        
+        if not container or not container.winfo_exists():
+            return
+        
+        # Format value
+        formatted_text = self.field_registry.format_field(self, field_name, value)
+        
+        # Get color
+        color = self.field_registry.get_field_color(self, field_name, value, is_stale)
+        
+        # Container is a Frame with one Label child (simple fields)
+        # Update the first child label
+        children = container.winfo_children()
+        if children and isinstance(children[0], tk.Label):
+            children[0].config(text=formatted_text, fg=color)
+    
+    def update_snr_composite(self, node_id: str, node_data: Dict[str, Any], is_stale: bool):
+        """Update SNR bar colors without recreating widget
+        
+        Args:
+            node_id: Node ID for widget lookup
+            node_data: Node data dict
+            is_stale: Whether data is stale
+        """
+        if node_id not in self.card_widgets:
+            return
+        
+        snr = node_data.get('SNR')
+        if snr is None:
+            return
+        
+        widget = self.card_widgets[node_id].get('snr_label')
+        if not widget or not widget.winfo_exists():
+            return
+        
+        # Get bar colors based on SNR value
+        bar_colors = self.get_signal_bar_colors(snr)
+        
+        # Override with stale color if needed
+        if is_stale:
+            bar_colors = [self.colors['fg_secondary']] * 4
+        
+        # Update child label colors (skip first child which is "SNR: " label)
+        children = widget.winfo_children()
+        if len(children) >= 5:  # icon + 4 bars
+            for i, color in enumerate(bar_colors):
+                children[i + 1].config(fg=color)  # +1 to skip "SNR: " label
+    
+    def update_external_battery_composite(self, node_id: str, node_data: Dict[str, Any], is_stale: bool):
+        """Update external battery display (composite widget)
+        
+        Args:
+            node_id: Node ID for widget lookup
+            node_data: Node data dict
+            is_stale: Whether data is stale
+        """
+        if node_id not in self.card_widgets:
+            return
+        
+        container = self.card_widgets[node_id].get('battery_label')
+        if not container or not container.winfo_exists():
+            return
+        
+        ch3_voltage = node_data.get('Ch3 Voltage')
+        battery_level = node_data.get('Battery Level')
+        ch3_current = node_data.get('Ch3 Current')
+        
+        if ch3_voltage is None:
+            return
+        
+        # External battery has complex nested structure with 8 child labels
+        # For now, skip updating to avoid complexity - battery updates less frequently
+        # TODO: Implement proper external battery update if needed
+        pass
+    
+    def update_internal_battery_composite(self, node_id: str, node_data: Dict[str, Any], is_stale: bool):
+        """Update internal battery display (composite widget)
+        
+        Args:
+            node_id: Node ID for widget lookup
+            node_data: Node data dict
+            is_stale: Whether data is stale
+        """
+        if node_id not in self.card_widgets:
+            return
+        
+        container = self.card_widgets[node_id].get('int_battery_label')
+        if not container or not container.winfo_exists():
+            return
+        
+        int_voltage = node_data.get('Internal Battery Voltage')
+        battery_level = node_data.get('Battery Level')
+        
+        if int_voltage is None or battery_level is None:
+            return
+        
+        # Color coding for percentage
+        if battery_level > 50:
+            pct_color = self.colors['fg_good']
+        elif battery_level >= 25:
+            pct_color = self.colors['fg_warning']
+        else:
+            pct_color = self.colors['fg_bad']
+        display_pct_color = self.colors['fg_secondary'] if is_stale else pct_color
+        
+        # Update children labels (label + voltage + percentage)
+        children = container.winfo_children()
+        if len(children) >= 3:
+            # Children[0] = "Node: " (stays grey)
+            # Children[1] = voltage value
+            # Children[2] = percentage (color-coded)
+            children[1].config(text=f"{int_voltage:.1f}V")
+            children[2].config(text=f" ({battery_level:.0f}%)", fg=display_pct_color)
+    
+    def update_channel_util_composite(self, node_id: str, node_data: Dict[str, Any], is_stale: bool):
+        """Update channel utilization display (3-part composite: Ch: value %)
+        
+        Args:
+            node_id: Node ID for widget lookup
+            node_data: Node data dict
+            is_stale: Whether data is stale
+        """
+        if node_id not in self.card_widgets:
+            return
+        
+        widget = self.card_widgets[node_id].get('util_label')
+        if not widget or not widget.winfo_exists():
+            return
+        
+        channel_util = node_data.get('Channel Utilization')
+        if channel_util is None:
+            return
+        
+        # Color based on utilization thresholds
+        if channel_util > 25:
+            util_color = self.colors['fg_bad']
+        elif channel_util > 10:
+            util_color = self.colors['fg_warning']
+        else:
+            util_color = self.colors['fg_good']
+        
+        display_color = self.colors['fg_secondary'] if is_stale else util_color
+        
+        # Update children (label "Ch:" + value + unit "%")
+        children = widget.winfo_children()
+        if len(children) >= 3:
+            # Children[0] = "Ch:", Children[1] = value, Children[2] = "%"
+            children[0].config(fg=self.colors['fg_secondary'])  # Label always grey
+            children[1].config(text=f"{channel_util:.1f}", fg=display_color)  # Value colored
+            children[2].config(fg=self.colors['fg_secondary'])  # Unit always grey
+    
+    def update_air_util_composite(self, node_id: str, node_data: Dict[str, Any], is_stale: bool):
+        """Update air utilization display (3-part composite: Air: value %)
+        
+        Args:
+            node_id: Node ID for widget lookup
+            node_data: Node data dict
+            is_stale: Whether data is stale
+        """
+        if node_id not in self.card_widgets:
+            return
+        
+        widget = self.card_widgets[node_id].get('air_util_label')
+        if not widget or not widget.winfo_exists():
+            return
+        
+        air_util = node_data.get('Air Utilization (TX)')
+        if air_util is None:
+            return
+        
+        # Color based on utilization thresholds
+        if air_util > 10:
+            util_color = self.colors['fg_bad']
+        elif air_util > 5:
+            util_color = self.colors['fg_warning']
+        else:
+            util_color = self.colors['fg_good']
+        
+        display_color = self.colors['fg_secondary'] if is_stale else util_color
+        
+        # Update children (label "Air:" + value + unit "%")
+        children = widget.winfo_children()
+        if len(children) >= 3:
+            # Children[0] = "Air:", Children[1] = value, Children[2] = "%"
+            children[0].config(fg=self.colors['fg_secondary'])  # Label always grey
+            children[1].config(text=f"{air_util:.1f}", fg=display_color)  # Value colored
+            children[2].config(fg=self.colors['fg_secondary'])  # Unit always grey
+    
     def update_node_card(self, node_id: str, node_data: Dict[str, Any], current_time: float, is_changed: bool = False):
-        """Update existing card without recreating it (prevents flickering)"""
+        """Update existing card without recreating it (prevents flickering)
+        
+        Updates card content for new 3-row layout:
+        - Row 1: External battery (Ch3 Voltage, %, Current) + Internal battery (Voltage, %)
+        - Row 2: SNR, Air Util, Ch Util
+        - Row 3: Temperature, Humidity, Pressure
+        
+        TODO: REFACTOR THIS FUNCTION - See CARD_REGISTRY_DESIGN.md
+        This function is tightly coupled to card layout. After 3-row card redesign,
+        it needs complete rewrite using field registry pattern for maintainability.
+        Design doc: CARD_REGISTRY_DESIGN.md (WIP - don't merge to main docs yet)
+        Tracking: AI_CONTEXT.md "WORK IN PROGRESS" section
+        """
         if node_id not in self.card_widgets:
             return
             
@@ -2304,47 +2625,74 @@ class EnhancedDashboard(tk.Tk):
             
             flash_color = self.colors['bg_selected']  # Very dark blue (#1a237e)
             
-            # Apply flash to card frame and all child frames
+            # Apply flash to card frame and all child frames (3-row layout)
             card_frame.config(bg=flash_color)
             for key in ['header_frame', 'left_header', 'right_header', 
                        'lastheard_frame',
-                       'metrics1_frame', 'metrics2_frame',
-                       'col1_frame', 'col2_frame', 'col3_frame',
-                       'row2_col1_frame', 'row2_col2_frame', 'row2_col3_frame']:
+                       'metrics1_frame', 'metrics2_frame', 'metrics3_frame',
+                       'row2_col1_frame', 'row2_col2_frame', 'row2_col3_frame',
+                       'row3_col1_frame', 'row3_col2_frame', 'row3_col3_frame']:
                 if key in card_info and card_info[key]:
                     card_info[key].config(bg=flash_color)
             
             # Apply flash to all labels
             for key in ['name_label', 'shortname_label', 'status_label', 'menu_button', 'heard_label',
-                       'battery_label', 'temp_label', 'snr_label', 'util_label',
-                       'motion_label', 'current_label', 'humidity_label']:
+                       'battery_label', 'int_battery_label', 'temp_label', 'snr_label', 'util_label',
+                       'air_util_label', 'motion_label', 'current_label', 'humidity_label', 'pressure_label']:
                 if key in card_info and card_info[key]:
                     card_info[key].config(bg=flash_color)
-                    # Flash children of container labels (battery, current, temp, snr, util, humidity)
-                    for child in card_info[key].winfo_children():
-                        if isinstance(child, tk.Label):
-                            child.config(bg=flash_color)
+                    # Flash children of container labels
+                    try:
+                        for child in card_info[key].winfo_children():
+                            if isinstance(child, (tk.Label, tk.Frame)):
+                                child.config(bg=flash_color)
+                                # Flash grandchildren too (for nested containers)
+                                for grandchild in child.winfo_children():
+                                    if isinstance(grandchild, tk.Label):
+                                        grandchild.config(bg=flash_color)
+                    except:
+                        pass
             
             def restore_colors():
                 """Restore all to normal background"""
-                card_frame.config(bg=normal_bg)
+                # Check if card_frame still exists before restoring
+                if not card_frame.winfo_exists():
+                    return
+                
+                try:
+                    card_frame.config(bg=normal_bg)
+                except tk.TclError:
+                    return
+                
                 for key in ['header_frame', 'left_header', 'right_header', 
                            'lastheard_frame',
-                           'metrics1_frame', 'metrics2_frame',
-                           'col1_frame', 'col2_frame', 'col3_frame',
-                           'row2_col1_frame', 'row2_col2_frame', 'row2_col3_frame']:
+                           'metrics1_frame', 'metrics2_frame', 'metrics3_frame',
+                           'row2_col1_frame', 'row2_col2_frame', 'row2_col3_frame',
+                           'row3_col1_frame', 'row3_col2_frame', 'row3_col3_frame']:
                     if key in card_info and card_info[key]:
-                        card_info[key].config(bg=normal_bg)
+                        try:
+                            if card_info[key].winfo_exists():
+                                card_info[key].config(bg=normal_bg)
+                        except tk.TclError:
+                            pass
                 
                 for key in ['name_label', 'shortname_label', 'status_label', 'menu_button', 'heard_label',
-                           'battery_label', 'temp_label', 'snr_label', 'util_label',
-                           'motion_label', 'current_label', 'humidity_label']:
+                           'battery_label', 'int_battery_label', 'temp_label', 'snr_label', 'util_label',
+                           'air_util_label', 'motion_label', 'current_label', 'humidity_label', 'pressure_label']:
                     if key in card_info and card_info[key]:
-                        card_info[key].config(bg=normal_bg)
-                        # Restore children of container labels (battery, current, temp, snr, util, humidity)
-                        for child in card_info[key].winfo_children():
-                            if isinstance(child, tk.Label):
-                                child.config(bg=normal_bg)
+                        try:
+                            if card_info[key].winfo_exists():
+                                card_info[key].config(bg=normal_bg)
+                                # Restore children of container labels
+                                for child in card_info[key].winfo_children():
+                                    if isinstance(child, (tk.Label, tk.Frame)):
+                                        child.config(bg=normal_bg)
+                                        # Restore grandchildren too
+                                        for grandchild in child.winfo_children():
+                                            if isinstance(grandchild, tk.Label):
+                                                grandchild.config(bg=normal_bg)
+                        except tk.TclError:
+                            pass
                 
                 # Clear timer reference
                 if node_id in self.flash_timers:
@@ -2355,7 +2703,6 @@ class EnhancedDashboard(tk.Tk):
             self.flash_timers[node_id] = timer_id
         
         # Update node name if it changed (e.g., from "Unknown Node" to actual name)
-        # If name is unknown in node_data, look it up from data_collector's cache
         long_name = node_data.get('Node LongName', 'Unknown')
         short_name = node_data.get('Node ShortName', node_id[-4:])
         
@@ -2369,26 +2716,24 @@ class EnhancedDashboard(tk.Tk):
                     long_name = cached_long
                 if cached_short and cached_short != 'Unknown':
                     short_name = cached_short
-            else:
-                logger.warning(f"UPDATE {node_id}: Unknown but no cache entry")
         
         display_name = long_name.replace("AG6WR-", "") if long_name.startswith("AG6WR-") else long_name
         card_info['name_label'].config(text=display_name)
-        card_info['shortname_label'].config(text=f"({short_name})")
+        # Short name removed from card (reserved for status messages only)
+        # if card_info.get('shortname_label'):
+        #     card_info['shortname_label'].config(text=f"({short_name})")
         
         # Update status based on any packet received
         last_heard = node_data.get('Last Heard', 0)
         time_diff = current_time - last_heard if last_heard else float('inf')
-        status = "Online" if time_diff <= 960 else "Offline"  # 16 minutes threshold (accommodates 15-min telemetry intervals)
-        
-        # Debug logging for node 30c0
-        if '30c0' in node_id.lower():
-            logger.info(f"Node {node_id} STATUS DEBUG: last_heard={last_heard}, current_time={current_time}, time_diff={time_diff:.1f}s, status={status}")
+        status = "Online" if time_diff <= 960 else "Offline"  # 16 minutes threshold
         
         # Determine if telemetry data is stale (no telemetry in 16 minutes)
         last_telemetry = node_data.get('Last Telemetry Time', 0)
         telemetry_diff = current_time - last_telemetry if last_telemetry else float('inf')
-        telemetry_stale = telemetry_diff > 960  # 16 minutes = 960 seconds
+        telemetry_stale = telemetry_diff > 960
+        is_stale = telemetry_stale
+        stale_color = self.colors['fg_secondary']  # Grey for stale data
         
         status_colors = {
             'Online': self.colors['fg_good'],
@@ -2397,241 +2742,73 @@ class EnhancedDashboard(tk.Tk):
         
         card_info['status_label'].config(text=status, fg=status_colors.get(status, self.colors['fg_normal']))
         
-        # Update message indicator (show if message received in last 15 minutes)
+        # Update message indicator
         last_message_time = node_data.get('Last Message Time')
-        show_msg_indicator = False
-        if last_message_time:
+        if last_message_time and 'msg_indicator' in card_info and card_info['msg_indicator']:
             time_since_message = current_time - last_message_time
-            if time_since_message <= 900:  # 15 minutes = 900 seconds
-                show_msg_indicator = True
-        
-        if 'msg_indicator' in card_info and card_info['msg_indicator']:
-            if show_msg_indicator:
+            if time_since_message <= 900:  # 15 minutes
                 card_info['msg_indicator'].pack(side="left", anchor="e")
             else:
                 card_info['msg_indicator'].pack_forget()
         
-        # Update Last Heard / Motion Detected in lastheard_frame
-        # Show "Last heard:" for offline nodes OR "Motion detected" for online nodes with recent motion
+        # Update Last Heard / Motion Detected
         last_motion = node_data.get('Last Motion')
-        motion_display_duration = self.config_manager.get('dashboard.motion_display_seconds', 900)  # Default 15 minutes
+        motion_display_duration = self.config_manager.get('dashboard.motion_display_seconds', 900)
         
         if status == "Offline" and last_heard:
-            # Offline - show Last Heard timestamp
             heard_dt = datetime.fromtimestamp(last_heard)
             heard_text = f"Last: {heard_dt.strftime('%m-%d %H:%M')}"
             
-            # Hide motion label if it exists - log transition from motion to last heard
-            if card_info['motion_label'] and card_info['motion_label'].winfo_ismapped():
-                logger.info(f"Node {node_id}: Transition from 'Motion detected' to 'Last heard' (node went offline)")
             if card_info['motion_label']:
                 card_info['motion_label'].pack_forget()
             
             if card_info['heard_label']:
-                # Update existing label and make it visible
                 card_info['heard_label'].config(text=heard_text, fg=self.colors['fg_bad'], bg=normal_bg)
                 card_info['heard_label'].pack(anchor="w", side="left")
             else:
-                # Create label if it doesn't exist - use same font as motion detected (10pt)
                 heard_label = tk.Label(card_info['lastheard_frame'], text=heard_text,
-                                      bg=normal_bg, 
-                                      fg=self.colors['fg_bad'],
+                                      bg=normal_bg, fg=self.colors['fg_bad'],
                                       font=self.font_card_line2)
                 heard_label.pack(anchor="w", side="left")
                 card_info['heard_label'] = heard_label
         elif status == "Online" and last_motion and (current_time - last_motion) <= motion_display_duration:
-            # Online with recent motion - show Motion Detected
-            time_since_motion = current_time - last_motion
-            logger.info(f"Node {node_id}: UPDATE - SHOWING 'Motion detected' - time_since={time_since_motion:.1f}s <= threshold={motion_display_duration}s")
             motion_text = "Motion detected"
             
-            # Hide heard label if it exists - log transition from last heard to motion
-            if card_info['heard_label'] and card_info['heard_label'].winfo_ismapped():
-                logger.info(f"Node {node_id}: Transition from 'Last heard' to 'Motion detected'")
             if card_info['heard_label']:
                 card_info['heard_label'].pack_forget()
             
             if card_info['motion_label']:
-                # Update existing label and make it visible
                 card_info['motion_label'].config(text=motion_text, fg=self.colors['fg_good'], bg=normal_bg)
                 card_info['motion_label'].pack(anchor="w", side="left")
             else:
-                # Create motion label in lastheard_frame - use same font as heard label (10pt)
                 motion_label = tk.Label(card_info['lastheard_frame'], text=motion_text,
-                                       bg=normal_bg, 
-                                       fg=self.colors['fg_good'],
+                                       bg=normal_bg, fg=self.colors['fg_good'],
                                        font=self.font_card_line2)
                 motion_label.pack(anchor="w", side="left")
                 card_info['motion_label'] = motion_label
         else:
-            # Online but no recent motion, or offline with no last heard - hide both labels
-            # Log when motion indicator clears
-            if card_info['motion_label'] and card_info['motion_label'].winfo_ismapped():
-                time_since_motion = current_time - last_motion if last_motion else None
-                if time_since_motion:
-                    logger.info(f"Node {node_id}: UPDATE - HIDING motion (expired) - time_since={time_since_motion:.1f}s > threshold={motion_display_duration}s")
-                else:
-                    logger.info(f"Node {node_id}: UPDATE - HIDING motion (no motion data)")
-            
             if card_info['heard_label']:
                 card_info['heard_label'].pack_forget()
             if card_info['motion_label']:
                 card_info['motion_label'].pack_forget()
         
-        # Determine if data is stale (use grey for stale telemetry)
-        # Data is stale if we haven't received telemetry recently, even if node is online
-        is_stale = telemetry_stale
-        stale_color = self.colors['fg_secondary']  # Grey for stale data
+        # =============================================================================
+        # FIELD UPDATES - Registry-driven approach
+        # =============================================================================
         
-        # Update telemetry fields - Row 1: Battery %, Ch3 Current, Temperature
-        battery_text, battery_color = self.get_battery_percentage_display(node_data)
-        if battery_text != "no external battery sensor" and card_info['battery_label']:
-            # Extract percentage value
-            pct_value = battery_text.replace("Bat:", "")
-            # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else battery_color
-            
-            # Update all children in the container (label + value)
-            for child in card_info['battery_label'].winfo_children():
-                text = child.cget("text")
-                if "Batt:" in text:
-                    # Keep label grey
-                    child.config(fg=self.colors['fg_secondary'])
-                else:
-                    # Update value color and text
-                    child.config(fg=display_color, text=pct_value)
-        elif battery_text == "no external battery sensor":
-            logger.debug(f"Card update for {node_id}: No battery data (Ch3 Voltage={node_data.get('Ch3 Voltage')}, Battery Level={node_data.get('Battery Level')})")
-        elif not card_info['battery_label']:
-            logger.warning(f"Card update for {node_id}: battery_label widget missing!")
+        # Update simple fields using registry
+        simple_fields = self.field_registry.get_all_simple_fields()
+        for field_name in simple_fields:
+            value = node_data.get(field_name)
+            if value is not None:
+                self._update_simple_field(node_id, field_name, value, is_stale)
         
-        ch3_current = node_data.get('Ch3 Current')
-        if ch3_current is not None and card_info['current_label']:
-            # Color coding: Green for normal (0-100mA), Yellow for moderate (100-500mA), Red for high (>500mA)
-            if abs(ch3_current) > 500:
-                current_color = self.colors['fg_bad']  # Red for high current
-            elif abs(ch3_current) > 100:
-                current_color = self.colors['fg_warning']  # Orange for moderate current
-            else:
-                current_color = self.colors['fg_good']  # Green for low current
-            # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else current_color
-            
-            # Determine charging/discharging state
-            if ch3_current > 0:
-                prefix = "+"
-                suffix = " (charging)"
-            elif ch3_current < 0:
-                prefix = "-"
-                suffix = " (discharging)"
-            else:
-                prefix = ""
-                suffix = ""
-            
-            # Update all children in the container (value + unit + suffix)
-            children = list(card_info['current_label'].winfo_children())
-            for i, child in enumerate(children):
-                text = child.cget("text")
-                if "mA" in text:
-                    # Keep unit grey
-                    child.config(fg=self.colors['fg_secondary'])
-                elif "charging" in text or "discharging" in text:
-                    # Update or remove suffix
-                    if suffix:
-                        child.config(fg=self.colors['fg_secondary'], text=suffix)
-                    else:
-                        child.destroy()
-                else:
-                    # Update value to white (standard color) with +/- prefix
-                    child.config(fg=self.colors['fg_normal'], text=f"{prefix}{abs(ch3_current):.0f}")
-            
-            # Add suffix if it doesn't exist and we need one
-            if suffix and not any("charging" in child.cget("text") or "discharging" in child.cget("text") for child in children):
-                current_suffix = tk.Label(card_info['current_label'], text=suffix,
-                                         bg=card_info['current_label'].cget('bg'), 
-                                         fg=self.colors['fg_secondary'],
-                                         font=self.font_card_label, padx=0, pady=0, anchor="s")
-                current_suffix.pack(side="left", padx=0)
-            
-        temp = node_data.get('Temperature')
-        if temp is not None and card_info['temp_label']:
-            # Convert temperature to configured unit
-            temp_value, temp_unit_str, (red_threshold, yellow_threshold) = self.convert_temperature(temp)
-            
-            # Match table view: Red if >red_threshold or <0°C, Orange if yellow_threshold-red_threshold, Green if 0-yellow_threshold
-            if temp > red_threshold or temp < 0:
-                temp_color = self.colors['fg_bad']  # Red for extreme temps
-            elif temp >= yellow_threshold:
-                temp_color = self.colors['fg_warning']  # Orange for warm temps
-            else:
-                temp_color = self.colors['fg_good']  # Green for normal temps
-            # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else temp_color
-            
-            # Update all children in the container (value + unit)
-            for child in card_info['temp_label'].winfo_children():
-                text = child.cget("text")
-                if "°" in text:  # Check for degree symbol (works for both C and F)
-                    # Update unit (might have changed C↔F)
-                    child.config(fg=self.colors['fg_secondary'], text=temp_unit_str)
-                else:
-                    # Update value color and text
-                    child.config(fg=display_color, text=f"{temp_value:.1f}")
-            
-        # Row 2: SNR, Channel Utilization, Humidity
-        snr = node_data.get('SNR')
-        if snr is not None and card_info['snr_label']:
-            # SNR label is a container with multiple labels
-            # Update bar colors without destroying (like other telemetry fields)
-            snr_container = card_info['snr_label']
-            
-            # Get new bar colors based on SNR level
-            bar_colors = self.get_signal_bar_colors(snr)
-            
-            # Update the foreground colors of existing bar widgets
-            # Children are: icon_label (SNR:), then 4 bar labels
-            children = snr_container.winfo_children()
-            if len(children) >= 5:  # icon + 4 bars
-                # Update each bar's foreground color
-                for i, color in enumerate(bar_colors):
-                    bar_widget = children[i + 1]  # Skip first child (icon label)
-                    bar_widget.config(fg=color)
-        
-        channel_util = node_data.get('Channel Utilization')
-        if channel_util is not None and card_info['util_label']:
-            util_color = self.colors['fg_bad'] if channel_util > 80 else self.colors['fg_warning'] if channel_util > 50 else self.colors['fg_good']
-            # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else util_color
-            
-            # Update all children in the container (label + value + unit)
-            for child in card_info['util_label'].winfo_children():
-                text = child.cget("text")
-                if text in ["Ch:", "%"]:
-                    # Keep labels/units grey
-                    child.config(fg=self.colors['fg_secondary'])
-                else:
-                    # Update value color and text
-                    child.config(fg=display_color, text=f"{channel_util:.1f}")
-        
-        humidity = node_data.get('Humidity')
-        if humidity is not None and card_info['humidity_label']:
-            # Color coding: Green for normal (20-60%), Yellow for dry/humid (<20% or >60%)
-            if humidity < 20 or humidity > 60:
-                humidity_color = self.colors['fg_warning']  # Yellow for dry or humid
-            else:
-                humidity_color = self.colors['fg_good']  # Green for normal (20-60%)
-            # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else humidity_color
-            
-            # Update all children in the container (label + value + unit)
-            for child in card_info['humidity_label'].winfo_children():
-                text = child.cget("text")
-                if text in ["Hum:", "%"]:
-                    # Keep labels/units grey
-                    child.config(fg=self.colors['fg_secondary'])
-                else:
-                    # Update value color and text
-                    child.config(fg=display_color, text=f"{humidity:.0f}")
+        # Update composite fields using custom handlers
+        self.update_snr_composite(node_id, node_data, is_stale)
+        self.update_external_battery_composite(node_id, node_data, is_stale)
+        self.update_internal_battery_composite(node_id, node_data, is_stale)
+        self.update_channel_util_composite(node_id, node_data, is_stale)
+        self.update_air_util_composite(node_id, node_data, is_stale)
     
     def show_node_detail(self, node_id: str):
         """Show detailed information window for a node"""

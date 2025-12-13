@@ -128,24 +128,31 @@ class NodeDetailWindow:
             'height': 2
         }
         
-        # Create buttons with command set directly like working dashboard buttons
+        # ROW 1: Action buttons (Logs, CSV, Plot)
+        row1_frame = tk.Frame(button_frame, bg=self.colors['bg_frame'])
+        row1_frame.pack(fill="x", pady=(0, 5))
+        
         if self.on_logs:
-            tk.Button(button_frame, text="Logs", command=self.on_logs, **btn_config).pack(side="left", padx=(0, 5))
+            tk.Button(row1_frame, text="Logs", command=self.on_logs, **btn_config).pack(side="left", padx=(0, 5))
         
         if self.on_csv:
-            tk.Button(button_frame, text="CSV", command=self.on_csv, **btn_config).pack(side="left", padx=(0, 5))
+            tk.Button(row1_frame, text="CSV", command=self.on_csv, **btn_config).pack(side="left", padx=(0, 5))
         
         if self.on_plot:
-            tk.Button(button_frame, text="Plot", command=self.on_plot, **btn_config).pack(side="left", padx=(0, 5))
+            tk.Button(row1_frame, text="Plot", command=self.on_plot, **btn_config).pack(side="left", padx=(0, 5))
         
-        # FORGET NODE BUTTON (right side, before Close)
+        # ROW 2: Close and Forget Node buttons
+        row2_frame = tk.Frame(button_frame, bg=self.colors['bg_frame'])
+        row2_frame.pack(fill="x")
+        
+        # CLOSE BUTTON (left side)
+        tk.Button(row2_frame, text="Close", command=self.window.destroy, **btn_config).pack(side="left", padx=(0, 5))
+        
+        # FORGET NODE BUTTON (left side, after Close)
         forget_config = btn_config.copy()
         forget_config['fg'] = self.colors['fg_bad']  # Crimson to indicate destructive action
         forget_config['width'] = 13
-        tk.Button(button_frame, text="Forget Node", command=self._forget_node, **forget_config).pack(side="right", padx=(5, 0))
-        
-        # CLOSE BUTTON  
-        tk.Button(button_frame, text="Close", command=self.window.destroy, **btn_config).pack(side="right")
+        tk.Button(row2_frame, text="Forget Node", command=self._forget_node, **forget_config).pack(side="left")
     
     def _create_header(self):
         """Create header with node name and ID"""

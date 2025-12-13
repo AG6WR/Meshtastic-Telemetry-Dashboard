@@ -1,10 +1,60 @@
 # AI ChatBot Persistence - Active Design Work
 
+## ⚠️ CRITICAL RULES FOR AI ASSISTANT
+
+**ALWAYS ASK BEFORE MAKING CHANGES** - The user has repeatedly emphasized this:
+- **DO NOT** make assumptions about what the user wants changed
+- **DO NOT** "fix" things that aren't broken or weren't requested
+- **ASK FIRST** before reverting, modifying, or "improving" existing code
+- **Example**: User asked to make local node card standard size, NOT to change card width from 460px back to 280px
+- **When in doubt**: Describe what you plan to change and ask for confirmation
+
+This applies especially to:
+- Size/dimension changes (card width, heights, spacing)
+- Color scheme modifications
+- Layout restructuring
+- "Improvements" or "optimizations" not explicitly requested
+
+**Remember:** The user knows their requirements better than the AI does. Always confirm before acting.
+
+---
+
 ## Current Session Context
 **Date Started:** 2025-11-17  
-**Current Version:** v1.0.9  
-**Active Branch:** main  
-**Last Updated:** 2025-11-24
+**Current Version:** v1.0.14  
+**Active Branch:** feature/messaging  
+**Last Updated:** 2025-12-13
+
+---
+
+## 🚧 WORK IN PROGRESS: Card Field Registry Refactoring
+
+### Status: Design Complete, Implementation Pending
+
+**Design Document:** `CARD_REGISTRY_DESIGN.md` (do not merge to main docs yet)
+
+**Problem:** `update_node_card()` is tightly coupled to card layout - any layout change requires rewriting ~300 lines
+
+**Solution:** Metadata-driven field registry system with declarative update rules
+
+**Key Files:**
+- `CARD_REGISTRY_DESIGN.md` - Full architecture design (IN DEVELOPMENT marker)
+- `dashboard.py` line 2285 - TODO comment points to registry design
+- This file - WIP tracker (remove this section after implementation complete)
+
+**Next Steps:**
+1. Create `card_field_registry.py` module
+2. Implement simple field handlers (Temperature, Humidity, Pressure, etc.)
+3. Implement composite widget handlers (Battery, SNR)
+4. Refactor `update_node_card()` to use registry
+5. Test all field updates with live data
+6. **AFTER SUCCESSFUL TESTING:**
+   - Merge CARD_REGISTRY_DESIGN.md key sections into DESIGN.md
+   - Update this file with final architecture
+   - Remove WIP markers
+   - Remove TODO comment from dashboard.py
+
+**DO NOT FORGET:** This tracking section ensures design work gets integrated into main documentation!
 
 ---
 

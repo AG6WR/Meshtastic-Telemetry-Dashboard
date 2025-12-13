@@ -1,0 +1,24 @@
+# This file contains the new 3-row card layout
+# To be inserted starting after: "stale_color = self.colors['fg_secondary']  # Grey for stale data"
+
+I'm creating this as a planning document because the replacement is too large for a single operation.
+
+ROW 1 DESIGN: Battery Information
+- Left half: "ICP Batt: 12.9V (80%), +2.5A (charging)"
+  - Show Ch3 Voltage with percentage
+  - Show Ch3 Current with charging/discharging indicator
+- Right half: "Node Batt: 4.2V (100%)"
+  - Show Internal Battery Voltage with percentage
+
+ROW 2 DESIGN: Network/System Metrics
+- Column 1: SNR (with colored bars, preserved from current)
+- Column 2: Air Util TX
+- Column 3: Ch Util
+
+ROW 3 DESIGN: Environmental Conditions
+- Column 1: Temperature  
+- Column 2: Humidity
+- Column 3: Pressure
+
+Card Width: 460px (was 380px)
+Row widths need to be divided appropriately for readability
