@@ -118,7 +118,7 @@ class DataCollector:
         logger.info("Starting data collection system...")
         
         # Load existing data
-        self._load_data()
+        self._load_existing_data()
         
         # Subscribe to text messages
         pub.subscribe(self._on_text_message_received, "meshtastic.receive.text")
