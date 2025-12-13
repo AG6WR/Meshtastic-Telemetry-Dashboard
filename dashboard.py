@@ -795,7 +795,12 @@ class EnhancedDashboard(tk.Tk):
         self.btn_csv = tk.Button(controls_frame, text="Today's CSV", command=self.open_today_csv, state="disabled",
                                 bg=self.colors['button_bg'], fg=self.colors['button_fg'],
                                 width=12, height=2)
-        self.btn_csv.pack(side="left")
+        self.btn_csv.pack(side="left", padx=(0, 5))
+        
+        # Exit Fullscreen button (right side) for touch-screen interface
+        tk.Button(controls_frame, text="Exit Fullscreen", command=self._exit_fullscreen,
+                 bg=self.colors['fg_bad'], fg='white',
+                 width=14, height=2).pack(side="right")
         
         # Table container with horizontal scrollbar (initially hidden since default is cards)
         self.table_container = tk.Frame(self, bg=self.colors['bg_frame'])
@@ -834,6 +839,12 @@ class EnhancedDashboard(tk.Tk):
         self.is_fullscreen = not self.is_fullscreen
         self.attributes('-fullscreen', self.is_fullscreen)
         logger.info(f"Fullscreen mode: {'ON' if self.is_fullscreen else 'OFF'}")
+    
+    def _exit_fullscreen(self):
+        """Exit fullscreen mode (for touch-screen interface)"""
+        self.is_fullscreen = False
+        self.attributes('-fullscreen', False)
+        logger.info("Exited fullscreen mode via button")
     
     def convert_temperature(self, temp_c, to_unit=None):
         """Convert temperature from Celsius to the configured unit
@@ -899,6 +910,9 @@ class EnhancedDashboard(tk.Tk):
         """Setup the scrollable card container"""
         # Main card container (not packed initially)
         self.card_container = tk.Frame(self, bg=self.colors['bg_main'])
+        
+        # Track active menu for dismissal
+        self.active_menu = None
         
         # Create scrollable canvas for cards
         self.card_canvas = tk.Canvas(self.card_container, bg=self.colors['bg_main'], highlightthickness=0)
@@ -1560,10 +1574,12 @@ class EnhancedDashboard(tk.Tk):
                 widget.destroy()
             self.card_widgets.clear()
             
-            # Calculate grid layout - unlimited columns based on window width
+            # Calculate grid layout - 3 columns for 1280px width with 24px scrollbar
+            # 1280 - 24 (scrollbar) - 20 (padding) = 1236 available
+            # 1236 / 3 = 412 per card space, minus 12px padding = 400px per card
             window_width = self.winfo_width()
-            card_width = 280
-            card_width_with_padding = 290  # Card + padding
+            card_width = 380
+            card_width_with_padding = 400  # Card + padding
             cards_per_row = max(1, window_width // card_width_with_padding)
             
             # Store current column count for resize detection
@@ -1576,7 +1592,7 @@ class EnhancedDashboard(tk.Tk):
             col = 0
             for node_id, node_data in sorted_nodes:
                 is_local = (node_id == local_node_id)
-                node_card_width = 560 if is_local else card_width
+                node_card_width = 780 if is_local else card_width  # Local spans 2 columns (380*2 + padding)
                 col_span = 2 if is_local else 1
                 
                 # Create card with normal background (no flash) during rebuild
@@ -1696,7 +1712,14 @@ class EnhancedDashboard(tk.Tk):
         right_header.pack(side="right")
         
         # Menu button (⋮ vertical ellipsis) - 48x48px touch target
-        def show_card_menu():
+        def show_card_menu(event=None):
+            # Dismiss any active menu first
+            if self.active_menu:
+                try:
+                    self.active_menu.unpost()
+                except:
+                    pass
+            
             menu = tk.Menu(self, tearoff=0,
                           bg=self.colors['bg_frame'],
                           fg=self.colors['fg_normal'],
@@ -1711,8 +1734,15 @@ class EnhancedDashboard(tk.Tk):
             if not is_local:
                 menu.add_command(label=f"Forget Node '{display_name}'", command=lambda: self._forget_node_from_card(node_id))
             
+            # Track this as active menu
+            self.active_menu = menu
+            
             # Post menu near the button
             menu.post(menu_button.winfo_rootx(), menu_button.winfo_rooty() + menu_button.winfo_height())
+            
+            # Stop event propagation to prevent card click
+            if event:
+                return "break"
         
         menu_button = tk.Button(right_header, text="⋮",
                                bg=bg_color, fg=self.colors['fg_normal'],
@@ -1722,6 +1752,9 @@ class EnhancedDashboard(tk.Tk):
                                cursor='hand2',
                                command=show_card_menu)
         menu_button.pack(side="left", padx=(0, 4))
+        
+        # Bind click to menu button to stop propagation
+        menu_button.bind("<Button-1>", lambda e: show_card_menu(e))
         
         # Message indicator (always create it, show/hide based on message time)
         msg_indicator = tk.Label(right_header, text="📧 ",
@@ -2032,13 +2065,23 @@ class EnhancedDashboard(tk.Tk):
         
         # Click handler for showing node detail window (left-click only)
         def on_card_click(event):
+            # Dismiss any active menu
+            if self.active_menu:
+                try:
+                    self.active_menu.unpost()
+                    self.active_menu = None
+                except:
+                    pass
             self.show_node_detail(node_id)
         
         # Bind left-click to card frame and all children recursively
+        # Skip menu_button to prevent double-triggering
         def bind_click_recursive(widget):
-            widget.bind("<Button-1>", on_card_click)
-            for child in widget.winfo_children():
-                bind_click_recursive(child)
+            # Don't bind to menu button - it has its own handler
+            if widget != menu_button:
+                widget.bind("<Button-1>", on_card_click)
+                for child in widget.winfo_children():
+                    bind_click_recursive(child)
         
         bind_click_recursive(card_frame)
         
