@@ -1574,12 +1574,13 @@ class EnhancedDashboard(tk.Tk):
                 widget.destroy()
             self.card_widgets.clear()
             
-            # Calculate grid layout - 3 columns for 1280px width with 24px scrollbar
-            # 1280 - 24 (scrollbar) - 20 (padding) = 1236 available
-            # 1236 / 3 = 412 per card space, minus 12px padding = 400px per card
+            # Calculate grid layout - cards are now 460px wide (20% wider than original 380px)
+            # Local node cards are 920px wide (2 x 460px)
+            # Window width calculation: 1280 - 24 (scrollbar) - 20 (padding) = 1236 available
+            # 1236 / 460 = 2.68, so 2 cards per row with room for padding
             window_width = self.winfo_width()
-            card_width = 380
-            card_width_with_padding = 400  # Card + padding
+            card_width = 460  # Increased from 380px (20% wider)
+            card_width_with_padding = 480  # Card + padding
             cards_per_row = max(1, window_width // card_width_with_padding)
             
             # Store current column count for resize detection
@@ -1592,7 +1593,7 @@ class EnhancedDashboard(tk.Tk):
             col = 0
             for node_id, node_data in sorted_nodes:
                 is_local = (node_id == local_node_id)
-                node_card_width = 780 if is_local else card_width  # Local spans 2 columns (380*2 + padding)
+                node_card_width = 920 if is_local else card_width  # Local spans 2 columns (460*2)
                 col_span = 2 if is_local else 1
                 
                 # Create card with normal background (no flash) during rebuild
@@ -1620,7 +1621,7 @@ class EnhancedDashboard(tk.Tk):
             node_data: Node data dictionary
             row: Grid row position
             col: Grid column position
-            card_width: Width of card (560px for local, 280px for others)
+            card_width: Width of card (920px for local, 460px for others)
             is_changed: Whether to show blue flash
             is_local: Whether this is the local node (gets special styling)
         """
@@ -1825,138 +1826,116 @@ class EnhancedDashboard(tk.Tk):
         is_stale = telemetry_stale
         stale_color = self.colors['fg_secondary']  # Grey for stale data
         
-        # Metrics row 1 - Ch3 Voltage, Ch3 Current, Temperature
+        # =============================================================================
+        # ROW 1: BATTERY INFORMATION (External + Internal)
+        # Format: "ICP Batt: 12.9V (80%), +2.5A (charging)   Node Batt: 4.2V (100%)"
+        # Left side: Ch3 Voltage + %, Ch3 Current with charge indicator
+        # Right side: Internal Battery Voltage + %
+        # =============================================================================
         metrics1_frame = tk.Frame(card_frame, bg=bg_color)
         metrics1_frame.pack(fill="x", padx=6, pady=1)
         
-        # Three columns for row 1
-        col1_frame = tk.Frame(metrics1_frame, bg=bg_color, width=88, height=25)
-        col1_frame.pack(side="left")
-        col1_frame.pack_propagate(False)
+        # Row 1: Battery info spans full width (460px card)
+        # Left side: External battery (Ch3 Voltage, %, Current, charging status)  
+        # Right side: Internal battery (Voltage, %)
         
-        col2_frame = tk.Frame(metrics1_frame, bg=bg_color, width=88, height=25)
-        col2_frame.pack(side="left", padx=(6, 0))
-        col2_frame.pack_propagate(False)
+        # External battery info (left ~60% of row)
+        ext_batt_frame = tk.Frame(metrics1_frame, bg=bg_color)
+        ext_batt_frame.pack(side="left", fill="x", expand=True)
         
-        col3_frame = tk.Frame(metrics1_frame, bg=bg_color, width=88, height=25)
-        col3_frame.pack(side="left", padx=(6, 0))
-        col3_frame.pack_propagate(False)
-        
-        # Battery Percentage in column 1 - prefer Ch3 Voltage (external) converted to %, or Battery Level (internal %)
-        battery_label = None
-        battery_text, battery_color = self.get_battery_percentage_display(node_data)
-        if battery_text != "no external battery sensor":
-            # Extract percentage value from "Bat:XX%"
-            pct_value = battery_text.replace("Bat:", "")
-            # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else battery_color
-            
-            # Create container for mixed font display
-            battery_container = tk.Frame(col1_frame, bg=bg_color)
-            battery_container.pack(fill="both", expand=True, anchor="w")
-            
-            # "Batt:" label in 10pt regular (light grey)
-            batt_label_text = tk.Label(battery_container, text="Batt:",
-                                      bg=bg_color, fg=self.colors['fg_secondary'],
-                                      font=self.font_card_label, padx=0, pady=0, anchor="s")
-            batt_label_text.pack(side="left", padx=0)
-            
-            # Percentage value in 14pt bold
-            batt_value_text = tk.Label(battery_container, text=pct_value,
-                                      bg=bg_color, fg=display_color,
-                                      font=self.font_card_line3, padx=0, pady=0, anchor="s")
-            batt_value_text.pack(side="left", padx=0)
-            
-            battery_label = battery_container  # Store container reference
-        else:
-            logger.debug(f"Card creation for {node_id}: No battery data (Ch3 Voltage={node_data.get('Ch3 Voltage')}, Battery Level={node_data.get('Battery Level')})")
-        
-        # Ch3 Current in column 2
+        ext_batt_label = None
+        ch3_voltage = node_data.get('Ch3 Voltage')
         ch3_current = node_data.get('Ch3 Current')
-        current_label = None
-        if ch3_current is not None:
-            # Color coding: Green for normal (0-100mA), Yellow for moderate (100-500mA), Red for high (>500mA)
-            if abs(ch3_current) > 500:
-                current_color = self.colors['fg_bad']  # Red for high current
-            elif abs(ch3_current) > 100:
-                current_color = self.colors['fg_warning']  # Orange for moderate current
-            else:
-                current_color = self.colors['fg_good']  # Green for low current
-            # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else current_color
-            
-            # Determine charging/discharging state
-            if ch3_current > 0:
-                prefix = "+"
-                suffix = " (charging)"
-            elif ch3_current < 0:
-                prefix = "-"
-                suffix = " (discharging)"
-            else:
-                prefix = ""
-                suffix = ""
-            
-            # Create container for mixed font display (centered)
-            current_container = tk.Frame(col2_frame, bg=bg_color)
-            current_container.pack(anchor="center")
-            
-            # Current value in 14pt bold with +/- prefix (white/standard color)
-            current_value = tk.Label(current_container, text=f"{prefix}{abs(ch3_current):.0f}",
-                                    bg=bg_color, fg=self.colors['fg_normal'],
-                                    font=self.font_card_line3, padx=0, pady=0, anchor="s")
-            current_value.pack(side="left", padx=0)
-            
-            # "mA" unit in 10pt regular (light grey)
-            current_unit = tk.Label(current_container, text="mA",
-                                   bg=bg_color, fg=self.colors['fg_secondary'],
-                                   font=self.font_card_label, padx=0, pady=0, anchor="s")
-            current_unit.pack(side="left", padx=0)
-            
-            # Charging/discharging suffix in 10pt regular (light grey)
-            if suffix:
-                current_suffix = tk.Label(current_container, text=suffix,
-                                         bg=bg_color, fg=self.colors['fg_secondary'],
-                                         font=self.font_card_label, padx=0, pady=0, anchor="s")
-                current_suffix.pack(side="left", padx=0)
-            
-            current_label = current_container  # Store container reference
         
-        # Temperature in column 3
-        temp = node_data.get('Temperature')
-        temp_label = None
-        if temp is not None:
-            # Convert temperature to configured unit
-            temp_value, temp_unit_str, (red_threshold, yellow_threshold) = self.convert_temperature(temp)
+        if ch3_voltage is not None:
+            # Calculate battery percentage from voltage
+            battery_pct = self.data_collector.voltage_to_percentage(ch3_voltage) if self.data_collector else None
             
-            # Match table view: Red if >red_threshold or <0°C, Yellow if yellow_threshold-red_threshold, Green if 0-yellow_threshold
-            if temp > red_threshold or temp < 0:
-                temp_color = self.colors['fg_bad']  # Red for extreme temps
-            elif temp >= yellow_threshold:
-                temp_color = self.colors['fg_warning']  # Orange for warm temps
+            if battery_pct is not None:
+                # Color coding for percentage
+                if battery_pct > 50:
+                    pct_color = self.colors['fg_good']
+                elif battery_pct >= 25:
+                    pct_color = self.colors['fg_warning']
+                else:
+                    pct_color = self.colors['fg_bad']
+                display_pct_color = stale_color if is_stale else pct_color
+                
+                # Create container for external battery display
+                ext_container = tk.Frame(ext_batt_frame, bg=bg_color)
+                ext_container.pack(anchor="w")
+                
+                # "ICP Batt:" label
+                tk.Label(ext_container, text="ICP Batt: ", bg=bg_color,
+                        fg=self.colors['fg_secondary'], font=self.font_card_label).pack(side="left")
+                
+                # Voltage value
+                tk.Label(ext_container, text=f"{ch3_voltage:.1f}V", bg=bg_color,
+                        fg=self.colors['fg_normal'], font=self.font_card_label).pack(side="left")
+                
+                # Percentage in parentheses
+                tk.Label(ext_container, text=f" ({battery_pct}%), ", bg=bg_color,
+                        fg=display_pct_color, font=self.font_card_label).pack(side="left")
+                
+                # Current with charging indicator
+                if ch3_current is not None:
+                    if ch3_current > 0:
+                        current_text = f"+{ch3_current:.1f}A (charging)"
+                        current_color = self.colors['fg_good']
+                    elif ch3_current < 0:
+                        current_text = f"{ch3_current:.1f}A (discharging)"
+                        current_color = self.colors['fg_warning']
+                    else:
+                        current_text = f"{ch3_current:.1f}A"
+                        current_color = self.colors['fg_normal']
+                    
+                    display_current_color = stale_color if is_stale else current_color
+                    tk.Label(ext_container, text=current_text, bg=bg_color,
+                            fg=display_current_color, font=self.font_card_label).pack(side="left")
+                
+                ext_batt_label = ext_container
+        
+        # Internal battery info (right ~40% of row)
+        int_batt_frame = tk.Frame(metrics1_frame, bg=bg_color)
+        int_batt_frame.pack(side="right")
+        
+        int_batt_label = None
+        int_voltage = node_data.get('Internal Battery Voltage')
+        battery_level = node_data.get('Battery Level')
+        
+        if int_voltage is not None and battery_level is not None:
+            # Color coding for percentage
+            if battery_level > 50:
+                pct_color = self.colors['fg_good']
+            elif battery_level >= 25:
+                pct_color = self.colors['fg_warning']
             else:
-                temp_color = self.colors['fg_good']  # Green for normal temps
-            # Use grey if stale, otherwise use color-coded value
-            display_color = stale_color if is_stale else temp_color
+                pct_color = self.colors['fg_bad']
+            display_pct_color = stale_color if is_stale else pct_color
             
-            # Create container for mixed font display
-            temp_container = tk.Frame(col3_frame, bg=bg_color)
-            temp_container.pack(fill="both", expand=True, anchor="e")
+            # Create container for internal battery display
+            int_container = tk.Frame(int_batt_frame, bg=bg_color)
+            int_container.pack(anchor="e")
             
-            # Temperature value in 14pt bold
-            temp_value_label = tk.Label(temp_container, text=f"{temp_value:.1f}",
-                                 bg=bg_color, fg=display_color,
-                                 font=self.font_card_line3, padx=0, pady=0, anchor="s")
-            temp_value_label.pack(side="left", padx=0)
+            # "Node Batt:" label
+            tk.Label(int_container, text="Node Batt: ", bg=bg_color,
+                    fg=self.colors['fg_secondary'], font=self.font_card_label).pack(side="left")
             
-            # Unit in 10pt regular (light grey)
-            temp_unit_label = tk.Label(temp_container, text=temp_unit_str,
-                                bg=bg_color, fg=self.colors['fg_secondary'],
-                                font=self.font_card_label, padx=0, pady=0, anchor="s")
-            temp_unit_label.pack(side="left", padx=0)
+            # Voltage value
+            tk.Label(int_container, text=f"{int_voltage:.1f}V", bg=bg_color,
+                    fg=self.colors['fg_normal'], font=self.font_card_label).pack(side="left")
             
-            temp_label = temp_container  # Store container reference
-        else:
-            logger.debug(f"Card creation for {node_id}: No temperature data (Temperature={node_data.get('Temperature')})")
+            # Percentage in parentheses
+            tk.Label(int_container, text=f" ({battery_level:.0f}%)", bg=bg_color,
+                    fg=display_pct_color, font=self.font_card_label).pack(side="left")
+            
+            int_batt_label = int_container
+        
+        # Store labels for row 1
+        battery_label = ext_batt_label  # For backward compat with flash code
+        current_label = ext_batt_label  # Merged into ext_batt
+        temp_label = None  # Temperature moved to row 3
+        int_battery_label = int_batt_label  # New widget for internal battery
         
         # Metrics row 2 - SNR, Channel Utilization, Humidity
         metrics2_frame = tk.Frame(card_frame, bg=bg_color)
@@ -2045,7 +2024,94 @@ class EnhancedDashboard(tk.Tk):
         else:
             logger.debug(f"Card creation for {node_id}: No channel util data (Channel Utilization={node_data.get('Channel Utilization')})")
         
-        # Humidity in third column
+        # Air Utilization (TX) in third column
+        air_util = node_data.get('Air Utilization (TX)')
+        air_util_label = None
+        if air_util is not None:
+            # Color coding: Green for low, Yellow for moderate, Red for high
+            if air_util > 80:
+                air_color = self.colors['fg_bad']
+            elif air_util > 50:
+                air_color = self.colors['fg_warning']
+            else:
+                air_color = self.colors['fg_good']
+            # Use grey if stale, otherwise use color-coded value
+            display_color = stale_color if is_stale else air_color
+            
+            # Create container for mixed font display (right-aligned)
+            air_container = tk.Frame(row2_col3_frame, bg=bg_color)
+            air_container.pack(fill="both", expand=True, anchor="e")
+            
+            # "Air:" label in 10pt regular (light grey)
+            air_label = tk.Label(air_container, text="Air:",
+                                bg=bg_color, fg=self.colors['fg_secondary'],
+                                font=self.font_card_label, padx=0, pady=0)
+            air_label.pack(side="left", padx=0)
+            
+            # Value in 10pt regular
+            air_value = tk.Label(air_container, text=f"{air_util:.1f}",
+                                bg=bg_color, fg=display_color,
+                                font=self.font_card_label, padx=0, pady=0)
+            air_value.pack(side="left", padx=0)
+            
+            # "%" unit in 10pt regular (light grey)
+            air_unit = tk.Label(air_container, text="%",
+                               bg=bg_color, fg=self.colors['fg_secondary'],
+                               font=self.font_card_label, padx=0, pady=0)
+            air_unit.pack(side="left", padx=0)
+            
+            air_util_label = air_container
+        
+        # =============================================================================
+        # ROW 3: ENVIRONMENTAL CONDITIONS (Temperature, Humidity, Pressure)
+        # Format: "72°F, 54% hum, 1013.2 hPa"
+        # =============================================================================
+        metrics3_frame = tk.Frame(card_frame, bg=bg_color)
+        metrics3_frame.pack(fill="x", padx=6, pady=1)
+        
+        # Create three columns for row 3 - evenly spaced
+        row3_col1_frame = tk.Frame(metrics3_frame, bg=bg_color, width=153, height=18)
+        row3_col1_frame.pack(side="left")
+        row3_col1_frame.pack_propagate(False)
+        
+        row3_col2_frame = tk.Frame(metrics3_frame, bg=bg_color, width=153, height=18)
+        row3_col2_frame.pack(side="left", padx=(6, 0))
+        row3_col2_frame.pack_propagate(False)
+        
+        row3_col3_frame = tk.Frame(metrics3_frame, bg=bg_color, width=153, height=18)
+        row3_col3_frame.pack(side="left", padx=(6, 0))
+        row3_col3_frame.pack_propagate(False)
+        
+        # Temperature in column 1
+        temp = node_data.get('Temperature')
+        temp_label = None
+        if temp is not None:
+            # Convert temperature to configured unit
+            temp_value, temp_unit_str, (red_threshold, yellow_threshold) = self.convert_temperature(temp)
+            
+            # Match table view: Red if >red_threshold or <0°C, Yellow if yellow_threshold-red_threshold, Green if 0-yellow_threshold
+            if temp > red_threshold or temp < 0:
+                temp_color = self.colors['fg_bad']  # Red for extreme temps
+            elif temp >= yellow_threshold:
+                temp_color = self.colors['fg_warning']  # Orange for warm temps
+            else:
+                temp_color = self.colors['fg_good']  # Green for normal temps
+            # Use grey if stale, otherwise use color-coded value
+            display_color = stale_color if is_stale else temp_color
+            
+            # Create container for temperature display
+            temp_container = tk.Frame(row3_col1_frame, bg=bg_color)
+            temp_container.pack(anchor="w")
+            
+            # Temperature value and unit in 10pt regular
+            temp_value_label = tk.Label(temp_container, text=f"{temp_value:.0f}{temp_unit_str}",
+                                       bg=bg_color, fg=display_color,
+                                       font=self.font_card_label, padx=0, pady=0)
+            temp_value_label.pack(side="left", padx=0)
+            
+            temp_label = temp_container  # Store container reference
+        
+        # Humidity in column 2
         humidity = node_data.get('Humidity')
         humidity_label = None
         if humidity is not None:
@@ -2057,29 +2123,36 @@ class EnhancedDashboard(tk.Tk):
             # Use grey if stale, otherwise use color-coded value
             display_color = stale_color if is_stale else humidity_color
             
-            # Create container for mixed font display (right-aligned)
-            humidity_container = tk.Frame(row2_col3_frame, bg=bg_color)
-            humidity_container.pack(fill="both", expand=True, anchor="e")
+            # Create container for humidity display
+            humidity_container = tk.Frame(row3_col2_frame, bg=bg_color)
+            humidity_container.pack(anchor="center")
             
-            # "Hum:" label in 10pt regular (light grey)
-            hum_label = tk.Label(humidity_container, text="Hum:",
-                                bg=bg_color, fg=self.colors['fg_secondary'],
-                                font=self.font_card_label, padx=0, pady=0)
-            hum_label.pack(side="left", padx=0)
-            
-            # Value in 10pt regular
-            hum_value = tk.Label(humidity_container, text=f"{humidity:.0f}",
+            # Humidity value in 10pt regular
+            hum_value = tk.Label(humidity_container, text=f"{humidity:.0f}% hum",
                                 bg=bg_color, fg=display_color,
                                 font=self.font_card_label, padx=0, pady=0)
             hum_value.pack(side="left", padx=0)
             
-            # "%" unit in 10pt regular (light grey)
-            hum_unit = tk.Label(humidity_container, text="%",
-                               bg=bg_color, fg=self.colors['fg_secondary'],
-                               font=self.font_card_label, padx=0, pady=0)
-            hum_unit.pack(side="left", padx=0)
-            
             humidity_label = humidity_container
+        
+        # Pressure in column 3
+        pressure = node_data.get('Pressure')
+        pressure_label = None
+        if pressure is not None:
+            # Create container for pressure display (right-aligned)
+            pressure_container = tk.Frame(row3_col3_frame, bg=bg_color)
+            pressure_container.pack(anchor="e")
+            
+            # Pressure value in 10pt regular (grey color, no special thresholds)
+            press_value = tk.Label(pressure_container, text=f"{pressure:.1f} hPa",
+                                  bg=bg_color, fg=stale_color if is_stale else self.colors['fg_secondary'],
+                                  font=self.font_card_label, padx=0, pady=0)
+            press_value.pack(side="left", padx=0)
+            
+            pressure_label = pressure_container
+        
+        # Humidity moved from row 2 to row 3
+        humidity_label = None
         
         # Click handler for showing node detail window (left-click only)
         def on_card_click(event):
@@ -2112,12 +2185,13 @@ class EnhancedDashboard(tk.Tk):
             'lastheard_frame': lastheard_frame,
             'metrics1_frame': metrics1_frame,
             'metrics2_frame': metrics2_frame,
-            'col1_frame': col1_frame,
-            'col2_frame': col2_frame,
-            'col3_frame': col3_frame,
+            'metrics3_frame': metrics3_frame,
             'row2_col1_frame': row2_col1_frame,
             'row2_col2_frame': row2_col2_frame,
             'row2_col3_frame': row2_col3_frame,
+            'row3_col1_frame': row3_col1_frame,
+            'row3_col2_frame': row3_col2_frame,
+            'row3_col3_frame': row3_col3_frame,
             'name_label': name_label,
             'shortname_label': shortname_label,
             'status_label': status_label,
@@ -2126,11 +2200,14 @@ class EnhancedDashboard(tk.Tk):
             'heard_label': heard_label,
             'motion_label': motion_label,
             'battery_label': battery_label,
+            'int_battery_label': int_batt_label,
             'current_label': current_label,
             'temp_label': temp_label,
             'snr_label': snr_label,
             'util_label': util_label,
+            'air_util_label': air_util_label,
             'humidity_label': humidity_label,
+            'pressure_label': pressure_label,
         }
         
         # Fix for initial card creation: explicitly set backgrounds on all labels
@@ -2177,16 +2254,17 @@ class EnhancedDashboard(tk.Tk):
                     # Update all child frames
                     for key in ['header_frame', 'left_header', 'right_header', 
                                'lastheard_frame',
-                               'metrics1_frame', 'metrics2_frame',
-                               'col1_frame', 'col2_frame', 'col3_frame',
-                               'row2_col1_frame', 'row2_col2_frame']:
+                               'metrics1_frame', 'metrics2_frame', 'metrics3_frame',
+                               'row2_col1_frame', 'row2_col2_frame', 'row2_col3_frame',
+                               'row3_col1_frame', 'row3_col2_frame', 'row3_col3_frame']:
                         if key in card_info and card_info[key]:
                             card_info[key].config(bg=normal_bg)
                     
                     # Update all labels
                     for key in ['name_label', 'shortname_label', 'status_label', 'heard_label',
-                               'battery_label', 'temp_label', 'util_label',
-                               'battery_label', 'motion_label', 'current_label', 'humidity_label']:
+                               'battery_label', 'int_battery_label', 'temp_label', 'util_label',
+                               'motion_label', 'current_label', 'humidity_label', 'pressure_label',
+                               'air_util_label']:
                         if key in card_info and card_info[key]:
                             card_info[key].config(bg=normal_bg)
                     
