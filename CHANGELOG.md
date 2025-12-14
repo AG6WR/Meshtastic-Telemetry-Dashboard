@@ -5,6 +5,33 @@ All notable changes to the Meshtastic Telemetry Dashboard will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0b] - 2025-12-14
+
+### Fixed
+- **Context Menu Dismissal**: Restored canvas click handler to properly dismiss menus when clicking blank areas
+- **Message Display on Cards**: Added message_label to card_widgets dictionary so incoming message text displays correctly on node cards
+- Both fixes restore functionality that was broken in post-merge cleanup commit
+
+### Changed
+- Default window size reduced from 1400x720 to 1200x660 for better fit on 1280x720 Raspberry Pi displays
+
+## [1.2.0] - 2025-12-14
+
+### Added
+- **Direct Messaging System**: Send and receive private messages between nodes
+  - Compose messages with recipient selection
+  - View message history per node
+  - Message list window showing all conversations
+  - Unread message indicators on node cards
+  - Message notifications with visual alerts
+- **Message Management**: Archive, delete, and mark messages as read/unread
+- **Quit Button**: Added dedicated quit button for easier application exit on touch screens
+
+### Fixed
+- MessageViewer white window on Pi: Fixed grab_set() timing issue on Linux
+- Tkinter cleanup errors: Added proper exception handling and hasattr checks in on_closing()
+- Window state management: Improved fullscreen exit behavior
+
 ## [1.1.0] - 2025-12-13
 
 ### Major UI/UX Refactor
