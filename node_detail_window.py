@@ -161,7 +161,7 @@ class NodeDetailWindow:
         
         # Node name (long name)
         name = self.node_data.get('Node LongName', 'Unknown')
-        name_font = tkfont.Font(family="Segoe UI", size=12, weight="bold")
+        name_font = tkfont.Font(family="Liberation Sans", size=12, weight="bold")
         name_label = tk.Label(header_frame, text=name,
                              bg=self.colors['bg_frame'],
                              fg=self.colors['fg_normal'],
@@ -183,7 +183,7 @@ class NodeDetailWindow:
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
         # Section title
-        title_font = tkfont.Font(family="Segoe UI", size=10, weight="bold")
+        title_font = tkfont.Font(family="Liberation Sans", size=10, weight="bold")
         title_label = tk.Label(section_frame, text="General Information",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -193,8 +193,8 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_label = tkfont.Font(family="Segoe UI", size=11)
-        font_value = tkfont.Font(family="Segoe UI", size=11)
+        font_label = tkfont.Font(family="Liberation Sans", size=11)
+        font_value = tkfont.Font(family="Liberation Sans", size=11)
         
         # Status - check Last Heard to determine actual status
         last_heard = self.node_data.get('Last Heard', 0)
@@ -245,7 +245,7 @@ class NodeDetailWindow:
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
         # Section title
-        title_font = tkfont.Font(family="Segoe UI", size=10, weight="bold")
+        title_font = tkfont.Font(family="Liberation Sans", size=10, weight="bold")
         title_label = tk.Label(section_frame, text="Environmental Telemetry",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -255,8 +255,8 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_label = tkfont.Font(family="Segoe UI", size=11)
-        font_value = tkfont.Font(family="Segoe UI", size=11)
+        font_label = tkfont.Font(family="Liberation Sans", size=11)
+        font_value = tkfont.Font(family="Liberation Sans", size=11)
         
         # Temperature
         temp = self.node_data.get('Temperature')
@@ -284,7 +284,7 @@ class NodeDetailWindow:
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
         # Section title
-        title_font = tkfont.Font(family="Segoe UI", size=10, weight="bold")
+        title_font = tkfont.Font(family="Liberation Sans", size=10, weight="bold")
         title_label = tk.Label(section_frame, text="Device Telemetry",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -294,8 +294,8 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_label = tkfont.Font(family="Segoe UI", size=11)
-        font_value = tkfont.Font(family="Segoe UI", size=11)
+        font_label = tkfont.Font(family="Liberation Sans", size=11)
+        font_value = tkfont.Font(family="Liberation Sans", size=11)
         
         # === Meshtastic Internal Battery ===
         internal_battery = self.node_data.get('Battery Level')
@@ -306,7 +306,7 @@ class NodeDetailWindow:
             internal_header = tk.Label(content_frame, text="Meshtastic Internal Battery:",
                                       bg=self.colors['bg_frame'],
                                       fg=self.colors['fg_secondary'],
-                                      font=tkfont.Font(family="Segoe UI", size=10, slant="italic"))
+                                      font=tkfont.Font(family="Liberation Sans", size=10, slant="italic"))
             internal_header.pack(anchor="w", pady=(0, 2))
             
             # Internal battery percentage
@@ -334,7 +334,7 @@ class NodeDetailWindow:
             external_header = tk.Label(content_frame, text="Main System Battery:",
                                       bg=self.colors['bg_frame'],
                                       fg=self.colors['fg_secondary'],
-                                      font=tkfont.Font(family="Segoe UI", size=10, slant="italic"))
+                                      font=tkfont.Font(family="Liberation Sans", size=10, slant="italic"))
             external_header.pack(anchor="w", pady=(0, 2))
             
             # Calculate percentage from voltage using parent's data collector
@@ -394,7 +394,7 @@ class NodeDetailWindow:
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
         # Section title
-        title_font = tkfont.Font(family="Segoe UI", size=10, weight="bold")
+        title_font = tkfont.Font(family="Liberation Sans", size=10, weight="bold")
         title_label = tk.Label(section_frame, text="Motion Detection",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -404,8 +404,8 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_label = tkfont.Font(family="Segoe UI", size=11)
-        font_value = tkfont.Font(family="Segoe UI", size=11)
+        font_label = tkfont.Font(family="Liberation Sans", size=11)
+        font_value = tkfont.Font(family="Liberation Sans", size=11)
         
         # Last motion time
         motion_dt = datetime.fromtimestamp(last_motion)
@@ -426,7 +426,7 @@ class NodeDetailWindow:
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
         # Section title
-        title_font = tkfont.Font(family="Segoe UI", size=10, weight="bold")
+        title_font = tkfont.Font(family="Liberation Sans", size=10, weight="bold")
         title_label = tk.Label(section_frame, text="Recent Messages",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],

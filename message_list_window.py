@@ -72,21 +72,21 @@ class MessageListWindow:
         title_frame.pack(fill="x", padx=10, pady=(10, 5))
         
         tk.Label(title_frame, text="Message Center", 
-                font=("Segoe UI", 14, "bold"),
+                font=("Liberation Sans", 14, "bold"),
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(side="left")
         
         # Refresh button
         refresh_btn = tk.Button(title_frame, text="🔄 Refresh", 
                                command=self._refresh_all_tabs,
                                bg='#404040', fg='white',
-                               font=("Segoe UI", 10))
+                               font=("Liberation Sans", 10))
         refresh_btn.pack(side="right", padx=(5, 0))
         
         # Compose button
         compose_btn = tk.Button(title_frame, text="✉ Compose", 
                                command=self._on_compose,
                                bg='#2e7d32', fg='white',
-                               font=("Segoe UI", 10, "bold"))
+                               font=("Liberation Sans", 10, "bold"))
         compose_btn.pack(side="right")
         
         # Tab notebook
@@ -119,24 +119,24 @@ class MessageListWindow:
         
         tk.Button(left_frame, text="View", command=self._on_view_selected,
                  bg='#0d47a1', fg='white', width=10, height=2,
-                 font=("Segoe UI", 10)).pack(side="left", padx=(0, 5))
+                 font=("Liberation Sans", 10)).pack(side="left", padx=(0, 5))
         
         tk.Button(left_frame, text="Reply", command=self._on_reply_selected,
                  bg='#2e7d32', fg='white', width=10, height=2,
-                 font=("Segoe UI", 10)).pack(side="left", padx=(0, 5))
+                 font=("Liberation Sans", 10)).pack(side="left", padx=(0, 5))
         
         tk.Button(left_frame, text="Archive", command=self._on_archive_selected,
                  bg='#f57c00', fg='white', width=10, height=2,
-                 font=("Segoe UI", 10)).pack(side="left", padx=(0, 5))
+                 font=("Liberation Sans", 10)).pack(side="left", padx=(0, 5))
         
         tk.Button(left_frame, text="Delete", command=self._on_delete_selected,
                  bg='#c62828', fg='white', width=10, height=2,
-                 font=("Segoe UI", 10)).pack(side="left")
+                 font=("Liberation Sans", 10)).pack(side="left")
         
         # Selection count label
         self.selection_label = tk.Label(action_frame, text="No selection",
                                        bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                                       font=("Segoe UI", 9))
+                                       font=("Liberation Sans", 9))
         self.selection_label.pack(side="right")
     
     def _create_tab(self, tab_name: str) -> tk.Frame:
@@ -362,20 +362,20 @@ class MessageListWindow:
         
         tk.Label(top_line, text=f"{icon} {dir_label}", 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                font=("Segoe UI", 10, "bold")).pack(side="left")
+                font=("Liberation Sans", 10, "bold")).pack(side="left")
         
         tk.Label(top_line, text=from_to, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                font=("Segoe UI", 10)).pack(side="left", padx=(10, 0))
+                font=("Liberation Sans", 10)).pack(side="left", padx=(10, 0))
         
         tk.Label(top_line, text=time_str, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                font=("Segoe UI", 9)).pack(side="right")
+                font=("Liberation Sans", 9)).pack(side="right")
         
         # Bottom line: preview
         tk.Label(content_frame, text=preview, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                font=("Segoe UI", 10), anchor="w", justify="left").pack(fill="x")
+                font=("Liberation Sans", 10), anchor="w", justify="left").pack(fill="x")
         
         # Make content frame clickable to view message
         def on_click(event):
@@ -531,7 +531,7 @@ class MessageListWindow:
         selector.configure(bg=self.colors['bg_frame'])
         
         tk.Label(selector, text="Select a node to send message:", 
-                font=("Segoe UI", 12, "bold"),
+                font=("Liberation Sans", 12, "bold"),
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(pady=10)
         
         # Create listbox with scrollbar
@@ -543,7 +543,7 @@ class MessageListWindow:
         
         listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
                             bg=self.colors['bg_main'], fg=self.colors['fg_normal'],
-                            font=("Segoe UI", 10), selectmode="single",
+                            font=("Liberation Sans", 10), selectmode="single",
                             height=15)
         listbox.pack(side="left", fill="both", expand=True)
         scrollbar.config(command=listbox.yview)
@@ -572,10 +572,10 @@ class MessageListWindow:
         
         tk.Button(btn_frame, text="Select", command=on_select,
                  bg='#2e7d32', fg='white', width=10, height=2,
-                 font=("Segoe UI", 10, "bold")).pack(side="left", padx=5)
+                 font=("Liberation Sans", 10, "bold")).pack(side="left", padx=5)
         tk.Button(btn_frame, text="Cancel", command=selector.destroy,
                  bg='#424242', fg='white', width=10, height=2,
-                 font=("Segoe UI", 10)).pack(side="left", padx=5)
+                 font=("Liberation Sans", 10)).pack(side="left", padx=5)
         
         # Bind double-click to select
         listbox.bind('<Double-Button-1>', lambda e: on_select())

@@ -110,7 +110,7 @@ class MessageViewer:
             # Sent message: show "To:"
             to_label = tk.Label(header_frame, text="To:",
                               bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                              font=("Segoe UI", 10))
+                              font=("Liberation Sans", 10))
             to_label.pack(side="left")
             
             if self.is_bulletin:
@@ -123,18 +123,18 @@ class MessageViewer:
             
             to_name_label = tk.Label(header_frame, text=f" {to_value}",
                                     bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                                    font=("Segoe UI", 10, "bold"))
+                                    font=("Liberation Sans", 10, "bold"))
             to_name_label.pack(side="left")
         else:
             # Received message: show "From:"
             from_label = tk.Label(header_frame, text="From:",
                                 bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                                font=("Segoe UI", 10))
+                                font=("Liberation Sans", 10))
             from_label.pack(side="left")
             
             from_name_label = tk.Label(header_frame, text=f" {self.from_name}",
                                       bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                                      font=("Segoe UI", 10, "bold"))
+                                      font=("Liberation Sans", 10, "bold"))
             from_name_label.pack(side="left")
         
         # Timestamp
@@ -143,19 +143,19 @@ class MessageViewer:
         
         ts_label = tk.Label(timestamp_frame, text="Received:" if self.direction == 'received' else "Sent:",
                           bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                          font=("Segoe UI", 10))
+                          font=("Liberation Sans", 10))
         ts_label.pack(side="left")
         
         dt = datetime.fromtimestamp(self.timestamp)
         ts_value = tk.Label(timestamp_frame, text=f" {dt.strftime('%Y-%m-%d %H:%M:%S')}",
                           bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                          font=("Segoe UI", 10))
+                          font=("Liberation Sans", 10))
         ts_value.pack(side="left")
         
         # Message text area (scrollable)
         text_label = tk.Label(content_frame, text="Message:",
                             bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                            font=("Segoe UI", 10))
+                            font=("Liberation Sans", 10))
         text_label.pack(anchor="w", pady=(10, 5))
         
         text_frame = tk.Frame(content_frame, bg=self.colors['bg_frame'], height=80)
@@ -166,7 +166,7 @@ class MessageViewer:
         scrollbar.pack(side="right", fill="y")
         
         self.text_display = tk.Text(text_frame, wrap="word", 
-                                    font=("Segoe UI", 11),
+                                    font=("Liberation Sans", 11),
                                     bg='#1e1e1e', fg=self.colors['fg_normal'],
                                     yscrollcommand=scrollbar.set,
                                     relief="sunken", bd=2,
@@ -186,7 +186,7 @@ class MessageViewer:
             
             receipt_label = tk.Label(receipt_frame, text="Read receipts:",
                                    bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                                   font=("Segoe UI", 9))
+                                   font=("Liberation Sans", 9))
             receipt_label.pack(anchor="w")
             
             for node_id, receipt_data in self.read_receipts.items():
@@ -200,7 +200,7 @@ class MessageViewer:
                     
                     status_label = tk.Label(receipt_frame, text=status_text,
                                           bg=self.colors['bg_frame'], fg=self.colors['fg_good'],
-                                          font=("Segoe UI", 9))
+                                          font=("Liberation Sans", 9))
                     status_label.pack(anchor="w")
         
         # Button bar at bottom
@@ -212,7 +212,7 @@ class MessageViewer:
             mark_read_btn = tk.Button(button_frame, text="Mark as Read", width=12,
                                      command=self._on_mark_read,
                                      bg='#2e7d32', fg='white',
-                                     font=("Segoe UI", 10))
+                                     font=("Liberation Sans", 10))
             mark_read_btn.pack(side="left", padx=(0, 10))
         
         # Reply button
@@ -220,7 +220,7 @@ class MessageViewer:
             reply_btn = tk.Button(button_frame, text="Reply", width=10,
                                  command=self._on_reply,
                                  bg='#0d47a1', fg='white',
-                                 font=("Segoe UI", 10))
+                                 font=("Liberation Sans", 10))
             reply_btn.pack(side="left", padx=(0, 10))
         
         # Archive button (only if not already archived)
@@ -228,7 +228,7 @@ class MessageViewer:
             archive_btn = tk.Button(button_frame, text="Archive", width=10,
                                    command=self._on_archive,
                                    bg='#f57c00', fg='white',
-                                   font=("Segoe UI", 10))
+                                   font=("Liberation Sans", 10))
             archive_btn.pack(side="left", padx=(0, 10))
         
         # Delete button
@@ -236,7 +236,7 @@ class MessageViewer:
             delete_btn = tk.Button(button_frame, text="Delete...", width=10,
                                   command=self._on_delete,
                                   bg='#c62828', fg='white',
-                                  font=("Segoe UI", 10))
+                                  font=("Liberation Sans", 10))
             delete_btn.pack(side="left")
     
     def _on_mark_read(self):

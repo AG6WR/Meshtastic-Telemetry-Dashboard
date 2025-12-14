@@ -218,7 +218,7 @@ class SettingsDialog:
     def create_telemetry_tab(self, parent):
         """Create telemetry field settings tab"""
         info_label = tk.Label(parent, text="Select which telemetry fields to display in card view:", 
-                             font=('Arial', 10, 'bold'))
+                             font=('Liberation Sans', 10, 'bold'))
         info_label.pack(anchor="w", padx=5, pady=(5, 15))
         
         # Telemetry field checkboxes
@@ -249,12 +249,12 @@ class SettingsDialog:
             
             # Checkbox
             cb = tk.Checkbutton(field_frame, text=display_name, variable=var, 
-                               font=('Arial', 10, 'bold'), width=20, anchor='w')
+                               font=('Liberation Sans', 10, 'bold'), width=20, anchor='w')
             cb.pack(side="left")
             
             # Description
             desc_label = tk.Label(field_frame, text=description, 
-                                 font=('Arial', 9), fg='gray')
+                                 font=('Liberation Sans', 9), fg='gray')
             desc_label.pack(side="left", padx=(10, 0))
     
     def create_alerts_tab(self, parent):

@@ -72,14 +72,14 @@ class MessageDialog:
         header_frame.pack(fill="x", padx=10, pady=(10, 5))
         
         tk.Label(header_frame, text=f"To: {self.node_name} ({self.node_id})", 
-                font=("Segoe UI", 11, "bold"),
+                font=("Liberation Sans", 11, "bold"),
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(anchor="w")
         
         # Message text area with scrollbar
         text_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
         text_frame.pack(fill="x", padx=10, pady=5)
         
-        tk.Label(text_frame, text="Message:", font=("Segoe UI", 10),
+        tk.Label(text_frame, text="Message:", font=("Liberation Sans", 10),
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(anchor="w")
         
         text_container = tk.Frame(text_frame, bg=self.colors['bg_frame'])
@@ -90,7 +90,7 @@ class MessageDialog:
         
         self.text_area = tk.Text(text_container, 
                                  wrap="word", 
-                                 font=("Segoe UI", 10),
+                                 font=("Liberation Sans", 10),
                                  height=3,  # 3 lines tall (enough for 180 chars)
                                  bg=self.colors['bg_main'], fg=self.colors['fg_normal'],
                                  insertbackground=self.colors['fg_normal'],
@@ -108,7 +108,7 @@ class MessageDialog:
         
         self.char_count_label = tk.Label(counter_frame, 
                                          text=f"0/{MAX_MESSAGE_LENGTH}",
-                                         font=("Segoe UI", 9),
+                                         font=("Liberation Sans", 9),
                                          bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'])
         self.char_count_label.pack(side="right")
         
@@ -117,7 +117,7 @@ class MessageDialog:
         bell_check = tk.Checkbutton(counter_frame, 
                                     text="Send bell character (\\a) to alert",
                                     variable=self.send_bell_var,
-                                    font=("Segoe UI", 9),
+                                    font=("Liberation Sans", 9),
                                     bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
                                     selectcolor=self.colors['bg_main'],
                                     activebackground=self.colors['bg_frame'],
@@ -129,10 +129,10 @@ class MessageDialog:
         button_frame.pack(fill="x", padx=10, pady=10)
         
         tk.Button(button_frame, text="Send", command=self._send_message,
-                 width=12, height=2, font=("Segoe UI", 10, "bold"),
+                 width=12, height=2, font=("Liberation Sans", 10, "bold"),
                  bg=self.colors['fg_good'], fg='white').pack(side="right", padx=5)
         tk.Button(button_frame, text="Cancel", command=self._cancel,
-                 width=12, height=2, font=("Segoe UI", 10),
+                 width=12, height=2, font=("Liberation Sans", 10),
                  bg=self.colors['button_bg'], fg='white').pack(side="right")
         
         # Bind Enter key (Ctrl+Enter to send)
