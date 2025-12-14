@@ -2020,6 +2020,7 @@ class EnhancedDashboard(tk.Tk):
             if self.active_menu:
                 try:
                     self.active_menu.unpost()
+                    self.active_menu = None
                 except:
                     pass
             
@@ -2028,14 +2029,26 @@ class EnhancedDashboard(tk.Tk):
                           fg=self.colors['fg_normal'],
                           activebackground=self.colors['bg_selected'],
                           activeforeground=self.colors['fg_normal'])
-            menu.add_command(label="View Details", command=lambda: self.show_node_detail(node_id))
-            menu.add_command(label="Show Logs", command=lambda: self.open_logs_folder(node_id))
-            menu.add_command(label="Open CSV", command=lambda: self.open_today_csv(node_id))
-            menu.add_command(label="Plot Telemetry", command=lambda: self.show_plot_for_node(node_id))
-            menu.add_command(label=f"Send Message To '{display_name}'...", command=lambda: self._send_message_to_node(node_id))
+            
+            # Helper to unpost menu after command executes
+            def make_command(func):
+                def wrapper():
+                    try:
+                        menu.unpost()
+                        self.active_menu = None
+                    except:
+                        pass
+                    func()
+                return wrapper
+            
+            menu.add_command(label="View Details", command=make_command(lambda: self.show_node_detail(node_id)))
+            menu.add_command(label="Show Logs", command=make_command(lambda: self.open_logs_folder(node_id)))
+            menu.add_command(label="Open CSV", command=make_command(lambda: self.open_today_csv(node_id)))
+            menu.add_command(label="Plot Telemetry", command=make_command(lambda: self.show_plot_for_node(node_id)))
+            menu.add_command(label=f"Send Message To '{display_name}'...", command=make_command(lambda: self._send_message_to_node(node_id)))
             # Only add Forget Node option if this is NOT the local node
             if not is_local:
-                menu.add_command(label=f"Forget Node '{display_name}'", command=lambda: self._forget_node_from_card(node_id))
+                menu.add_command(label=f"Forget Node '{display_name}'", command=make_command(lambda: self._forget_node_from_card(node_id)))
             
             # Track this as active menu
             self.active_menu = menu
