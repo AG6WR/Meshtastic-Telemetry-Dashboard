@@ -694,9 +694,9 @@ class EnhancedDashboard(tk.Tk):
         # Window settings
         self.title("Enhanced Meshtastic Monitor")
         
-        # Set geometry for 1400x720 touchscreen display
-        # Default to fullscreen for Pi deployment
-        geometry = self.config_manager.get('dashboard.window_geometry', '1400x720')
+        # Set geometry for 1280x720 touchscreen display (leave room for Pi menu bar)
+        # Default windowed size fits 3x3 card grid with controls
+        geometry = self.config_manager.get('dashboard.window_geometry', '1200x660')
         self.geometry(geometry)
         
         # Enable fullscreen mode by default (hides Pi OS menubar)
