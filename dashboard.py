@@ -218,7 +218,7 @@ class SettingsDialog:
     def create_telemetry_tab(self, parent):
         """Create telemetry field settings tab"""
         info_label = tk.Label(parent, text="Select which telemetry fields to display in card view:", 
-                             font=('Liberation Sans', 11, 'bold'))
+                             font=self.parent.font_ui_section_title)
         info_label.pack(anchor="w", padx=5, pady=(5, 15))
         
         # Telemetry field checkboxes
@@ -249,12 +249,12 @@ class SettingsDialog:
             
             # Checkbox
             cb = tk.Checkbutton(field_frame, text=display_name, variable=var, 
-                               font=('Liberation Sans', 11, 'bold'), width=20, anchor='w')
+                               font=self.parent.font_ui_body, width=20, anchor='w')
             cb.pack(side="left")
             
             # Description
             desc_label = tk.Label(field_frame, text=description, 
-                                 font=('Liberation Sans', 10), fg='gray')
+                                 font=self.parent.font_ui_notes, fg='gray')
             desc_label.pack(side="left", padx=(10, 0))
     
     def create_alerts_tab(self, parent):
@@ -277,7 +277,7 @@ class SettingsDialog:
         tk.Label(offline_frame, text="minutes").pack(side="left", padx=5)
         # Info label showing offline status threshold (hardcoded at 16 minutes)
         tk.Label(offline_frame, text="(Offline status threshold: 16 min)", 
-                fg="#808080", font=("TkDefaultFont", 8)).pack(side="left", padx=(10, 0))
+                fg="#808080", font=self.parent.font_ui_notes).pack(side="left", padx=(10, 0))
         
         # Low Voltage
         voltage_frame = tk.Frame(rules_group)
@@ -478,7 +478,7 @@ class SettingsDialog:
             "CRITICAL: Severe errors that may crash the application\n"
             "Disable Logging: Turn off all logging output"
         )
-        help_label = tk.Label(level_group, text=help_text, justify="left", font=("TkDefaultFont", 8))
+        help_label = tk.Label(level_group, text=help_text, justify="left", font=self.parent.font_ui_notes)
         help_label.pack(anchor="w", padx=5, pady=(0, 5))
         
         # Log Retention Group
@@ -500,7 +500,7 @@ class SettingsDialog:
         retention_help = tk.Label(retention_group, 
             text="Application logs (meshtastic_monitor.log) will be cleaned up automatically.\n"
                  "Node CSV logs are managed separately by the Data settings.",
-            justify="left", font=("TkDefaultFont", 8))
+            justify="left", font=self.parent.font_ui_notes)
         retention_help.pack(anchor="w", padx=5, pady=(0, 5))
     
     def test_email(self):
