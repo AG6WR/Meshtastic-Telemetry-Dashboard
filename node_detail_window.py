@@ -44,9 +44,15 @@ class NodeDetailWindow:
         # Create top-level window - use exact same pattern as working Plot dialog
         self.window = tk.Toplevel(self.parent)
         self.window.title(f"Node Details: {node_id}")
-        self.window.geometry("420x550+50+50")  # 420x550 - width increased to show scrollbar
+        self.window.geometry("420x550")  # 420x550 - width increased to show scrollbar
         self.window.configure(bg=self.colors['bg_main'])
         logger.info(f"NodeDetailWindow window created and configured")
+        
+        # Position relative to parent (50px down and right)
+        self.window.update_idletasks()
+        x = self.parent.winfo_x() + 50
+        y = self.parent.winfo_y() + 50
+        self.window.geometry(f"+{x}+{y}")
         
         # Make window modal - wrap in try/except for Linux compatibility
         try:

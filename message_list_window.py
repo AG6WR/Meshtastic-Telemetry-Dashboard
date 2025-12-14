@@ -56,6 +56,12 @@ class MessageListWindow:
         self.window.transient(parent)
         self.window.configure(bg=self.colors['bg_frame'])
         
+        # Position relative to parent (50px down and right)
+        self.window.update_idletasks()
+        x = parent.winfo_x() + 50
+        y = parent.winfo_y() + 50
+        self.window.geometry(f"+{x}+{y}")
+        
         # Create widgets
         self._create_widgets()
         
@@ -543,6 +549,12 @@ class MessageListWindow:
         selector.geometry("400x500")
         selector.transient(self.window)
         selector.configure(bg=self.colors['bg_frame'])
+        
+        # Position relative to parent (50px down and right)
+        selector.update_idletasks()
+        x = self.window.winfo_x() + 50
+        y = self.window.winfo_y() + 50
+        selector.geometry(f"+{x}+{y}")
         
         tk.Label(selector, text="Select a node to send message:", 
                 font=("Liberation Sans", 12, "bold"),

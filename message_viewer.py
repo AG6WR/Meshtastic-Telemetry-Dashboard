@@ -90,10 +90,10 @@ class MessageViewer:
         # Handle window close
         self.dialog.protocol("WM_DELETE_WINDOW", self._on_window_close)
         
-        # Center on parent
+        # Position relative to parent (50px down and right)
         self.dialog.update_idletasks()
-        x = parent.winfo_x() + (parent.winfo_width() - self.dialog.winfo_width()) // 2
-        y = parent.winfo_y() + (parent.winfo_height() - self.dialog.winfo_height()) // 2
+        x = parent.winfo_x() + 50
+        y = parent.winfo_y() + 50
         self.dialog.geometry(f"+{x}+{y}")
     
     def _create_widgets(self):
