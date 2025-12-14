@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import messagebox
 from typing import Callable, Optional
 import logging
+from virtual_keyboard import VirtualKeyboard
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ class MessageDialog:
         self.node_name = node_name
         self.send_callback = send_callback
         self.result = None
+        self.virtual_keyboard = None  # Will be created when keyboard button clicked
         
         # Get colors from parent (dark theme)
         self.colors = getattr(parent, 'colors', {
@@ -131,6 +133,11 @@ class MessageDialog:
         button_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
         button_frame.pack(fill="x", padx=10, pady=10)
         
+        # Keyboard button on left
+        tk.Button(button_frame, text="⌨ Keyboard", command=self._toggle_keyboard,
+                 width=12, height=2, font=("Liberation Sans", 12),
+                 bg='#9c27b0', fg='white').pack(side="left")
+        
         tk.Button(button_frame, text="Send", command=self._send_message,
                  width=12, height=2, font=("Liberation Sans", 12, "bold"),
                  bg=self.colors['fg_good'], fg='white').pack(side="right", padx=5)
@@ -141,6 +148,9 @@ class MessageDialog:
         # Bind Enter key (Ctrl+Enter to send)
         self.dialog.bind('<Control-Return>', lambda e: self._send_message())
         self.dialog.bind('<Escape>', lambda e: self._cancel())
+        
+        # Clean up keyboard when dialog closes
+        self.dialog.protocol("WM_DELETE_WINDOW", self._on_close)
         
     def _on_text_change(self, event=None):
         """Update character count and enforce limit"""
@@ -208,8 +218,23 @@ class MessageDialog:
     
     def _cancel(self):
         """Cancel and close dialog"""
+        self._cleanup_keyboard()
         self.result = "cancelled"
         self.dialog.destroy()
+    
+    def _on_close(self):
+        """Handle window close event"""
+        self._cleanup_keyboard()
+        self.dialog.destroy()
+    
+    def _cleanup_keyboard(self):
+        """Clean up virtual keyboard if it exists"""
+        if self.virtual_keyboard:
+            try:
+                self.virtual_keyboard.destroy()
+            except:
+                pass
+            self.virtual_keyboard = None
     
     def show(self):
         """Show the dialog and wait for result"""
