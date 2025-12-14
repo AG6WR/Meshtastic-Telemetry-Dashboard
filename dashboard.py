@@ -958,7 +958,9 @@ class EnhancedDashboard(tk.Tk):
         
         # When exiting fullscreen, restore to normal window (not maximized)
         if not self.is_fullscreen:
-            self.attributes('-zoomed', False)  # Unset zoomed state on Linux
+            # The '-zoomed' attribute is Linux-only; Windows doesn't support it
+            if sys.platform.startswith('linux'):
+                self.attributes('-zoomed', False)  # Unset zoomed state on Linux
             self.state('normal')
             self.wm_geometry('')  # Clear geometry to reset window manager state
             # Restore saved geometry or use default
@@ -3136,6 +3138,10 @@ class EnhancedDashboard(tk.Tk):
                 card_info['msg_indicator'].pack_forget()
         
         # Update Last Heard / Motion Detected
+        # Calculate background color based on whether this is local node
+        local_node_id = self._get_local_node_id()
+        normal_bg = self.colors['bg_local_node'] if (node_id == local_node_id) else self.colors['bg_frame']
+        
         last_motion = node_data.get('Last Motion')
         motion_display_duration = self.config_manager.get('dashboard.motion_display_seconds', 900)
         
