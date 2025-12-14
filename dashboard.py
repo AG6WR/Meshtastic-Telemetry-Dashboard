@@ -2023,36 +2023,19 @@ class EnhancedDashboard(tk.Tk):
                 except:
                     pass
             
-            # Create menu
             menu = tk.Menu(self, tearoff=0,
                           bg=self.colors['bg_frame'],
                           fg=self.colors['fg_normal'],
                           activebackground=self.colors['bg_selected'],
                           activeforeground=self.colors['fg_normal'])
-            
-            # Create wrapper functions that dismiss menu after action
-            # Capture menu reference in closure
-            def dismiss_after(action):
-                def wrapper():
-                    try:
-                        action()
-                    finally:
-                        try:
-                            menu.unpost()
-                            if self.active_menu == menu:
-                                self.active_menu = None
-                        except:
-                            pass
-                return wrapper
-            
-            menu.add_command(label="View Details", command=dismiss_after(lambda: self.show_node_detail(node_id)))
-            menu.add_command(label="Show Logs", command=dismiss_after(lambda: self.open_logs_folder(node_id)))
-            menu.add_command(label="Open CSV", command=dismiss_after(lambda: self.open_today_csv(node_id)))
-            menu.add_command(label="Plot Telemetry", command=dismiss_after(lambda: self.show_plot_for_node(node_id)))
-            menu.add_command(label=f"Send Message To '{display_name}'...", command=dismiss_after(lambda: self._send_message_to_node(node_id)))
+            menu.add_command(label="View Details", command=lambda: self.show_node_detail(node_id))
+            menu.add_command(label="Show Logs", command=lambda: self.open_logs_folder(node_id))
+            menu.add_command(label="Open CSV", command=lambda: self.open_today_csv(node_id))
+            menu.add_command(label="Plot Telemetry", command=lambda: self.show_plot_for_node(node_id))
+            menu.add_command(label=f"Send Message To '{display_name}'...", command=lambda: self._send_message_to_node(node_id))
             # Only add Forget Node option if this is NOT the local node
             if not is_local:
-                menu.add_command(label=f"Forget Node '{display_name}'", command=dismiss_after(lambda: self._forget_node_from_card(node_id)))
+                menu.add_command(label=f"Forget Node '{display_name}'", command=lambda: self._forget_node_from_card(node_id))
             
             # Track this as active menu
             self.active_menu = menu
