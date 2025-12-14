@@ -237,7 +237,14 @@ class MessageViewer:
                                   command=self._on_delete,
                                   bg='#c62828', fg='white',
                                   font=("Liberation Sans", 12))
-            delete_btn.pack(side="left")
+            delete_btn.pack(side="left", padx=(0, 11))
+        
+        # Close button (always present on right side)
+        close_btn = tk.Button(button_frame, text="Close", width=10,
+                             command=self._on_window_close,
+                             bg='#424242', fg='white',
+                             font=("Liberation Sans", 12))
+        close_btn.pack(side="right")
     
     def _on_mark_read(self):
         """Handle Mark as Read button click"""
