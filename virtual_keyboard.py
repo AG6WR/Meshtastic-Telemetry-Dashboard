@@ -52,11 +52,9 @@ class VirtualKeyboard(ttk.Frame):
         self.window.title("Keyboard")
         self.window.configure(bg=self.colors['bg_frame'])
         
-        # Position below parent
-        self.window.update_idletasks()
-        x = parent.winfo_x()
-        y = parent.winfo_y() + parent.winfo_height() + 5
-        self.window.geometry(f"+{x}+{y}")
+        # Don't show at instantiation (will be shown on focus)
+        # Position will be set when first shown
+        self._positioned = False
         
         # Make it stay on top
         self.window.attributes('-topmost', True)
@@ -233,6 +231,15 @@ class VirtualKeyboard(ttk.Frame):
     
     def show(self):
         """Show the keyboard"""
+        # Position below parent on first show
+        if not self._positioned:
+            self.window.update_idletasks()
+            parent = self.window.master
+            x = parent.winfo_x()
+            y = parent.winfo_y() + parent.winfo_height() + 5
+            self.window.geometry(f"+{x}+{y}")
+            self._positioned = True
+        
         self.window.deiconify()
     
     def hide(self):
