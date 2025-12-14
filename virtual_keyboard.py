@@ -74,22 +74,15 @@ class VirtualKeyboard:
             'row1': ['`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'Bksp'],
             'row2': ['Tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\'],
             'row3': ['Caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', "'", 'Enter'],
-            'row4': ['Shift', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'Shift'],
-            'row5': ['Sym', 'space', 'Close']
+            'row4': ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', '↑'],
+            'row5': ['Close', 'gap1', 'space', 'gap', '←', '↓', '→']
         }
         self.uppercase = {
             'row1': ['~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', 'Bksp'],
             'row2': ['Tab', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '|'],
             'row3': ['Caps', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', 'Enter'],
-            'row4': ['Shift', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', 'Shift'],
-            'row5': ['abc', 'space', 'Close']
-        }
-        self.symbols = {
-            'row1': ['`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'Bksp'],
-            'row2': ['Tab', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '[', ']', '\\'],
-            'row3': ['abc', '+', '=', '-', '_', '/', '\\', '|', '{', '}', ';', ':', 'Enter'],
-            'row4': ['Shift', '<', '>', ',', '.', '?', '!', '"', "'", '`', '~', 'Shift'],
-            'row5': ['abc', 'space', 'Close']
+            'row4': ['Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', '↑'],
+            'row5': ['Close', 'gap1', 'space', 'gap', '←', '↓', '→']
         }
         
         # Create frames for each keyboard layer
@@ -99,13 +92,13 @@ class VirtualKeyboard:
         self.uppercase_frame = tk.Frame(self.container, bg=self.colors['bg_frame'])
         self.uppercase_frame.grid(row=0, column=0, sticky="nsew")
         
-        self.symbols_frame = tk.Frame(self.container, bg=self.colors['bg_frame'])
-        self.symbols_frame.grid(row=0, column=0, sticky="nsew")
+        # Initialize caps lock state and button storage BEFORE creating layers
+        self._caps_enabled = False
+        self._buttons = {}
         
         # Initialize all keyboard layers
         self._init_keyboard_layer(self.lowercase_frame, self.lowercase)
         self._init_keyboard_layer(self.uppercase_frame, self.uppercase)
-        self._init_keyboard_layer(self.symbols_frame, self.symbols)
         
         # Show lowercase by default
         self.lowercase_frame.tkraise()
@@ -119,12 +112,14 @@ class VirtualKeyboard:
         row1_frame.pack()
         for key in layout['row1']:
             width, colors = self._get_key_style(key)
-            tk.Button(row1_frame, text=key, width=width,
+            btn = tk.Button(row1_frame, text=key, width=width,
                      font=("Liberation Sans", 10, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
-                     relief='raised', bd=2,
-                     command=lambda k=key: self._key_press(k)).pack(side='left', padx=1, pady=1)
+                     relief='raised', bd=2)
+            btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
+            btn.pack(side='left', padx=1, pady=1)
+            self._buttons[key] = btn
         
         # Row 2 - qwerty row - stagger 1/4 key (8 pixels)
         row2_frame = tk.Frame(frame, bg=self.colors['bg_frame'])
@@ -132,12 +127,14 @@ class VirtualKeyboard:
         tk.Frame(row2_frame, width=8, bg=self.colors['bg_frame']).pack(side='left')
         for key in layout['row2']:
             width, colors = self._get_key_style(key)
-            tk.Button(row2_frame, text=key, width=width,
+            btn = tk.Button(row2_frame, text=key, width=width,
                      font=("Liberation Sans", 10, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
-                     relief='raised', bd=2,
-                     command=lambda k=key: self._key_press(k)).pack(side='left', padx=1, pady=1)
+                     relief='raised', bd=2)
+            btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
+            btn.pack(side='left', padx=1, pady=1)
+            self._buttons[key] = btn
         
         # Row 3 - asdf row - stagger 2/4 key (16 pixels)
         row3_frame = tk.Frame(frame, bg=self.colors['bg_frame'])
@@ -145,44 +142,60 @@ class VirtualKeyboard:
         tk.Frame(row3_frame, width=16, bg=self.colors['bg_frame']).pack(side='left')
         for key in layout['row3']:
             width, colors = self._get_key_style(key)
-            tk.Button(row3_frame, text=key, width=width,
+            btn = tk.Button(row3_frame, text=key, width=width,
                      font=("Liberation Sans", 10, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
-                     relief='raised', bd=2,
-                     command=lambda k=key: self._key_press(k)).pack(side='left', padx=1, pady=1)
+                     relief='raised', bd=2)
+            btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
+            btn.pack(side='left', padx=1, pady=1)
+            self._buttons[key] = btn
         
-        # Row 4 - zxcv row - stagger 3/4 key (24 pixels)
+        # Row 4 - zxcv row - stagger 1 key + 1/3 (32 pixels)
         row4_frame = tk.Frame(frame, bg=self.colors['bg_frame'])
         row4_frame.pack()
-        tk.Frame(row4_frame, width=24, bg=self.colors['bg_frame']).pack(side='left')
+        tk.Frame(row4_frame, width=32, bg=self.colors['bg_frame']).pack(side='left')
         for key in layout['row4']:
             width, colors = self._get_key_style(key)
-            tk.Button(row4_frame, text=key, width=width,
+            btn = tk.Button(row4_frame, text=key, width=width,
                      font=("Liberation Sans", 10, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
-                     relief='raised', bd=2,
-                     command=lambda k=key: self._key_press(k)).pack(side='left', padx=1, pady=1)
+                     relief='raised', bd=2)
+            btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
+            btn.pack(side='left', padx=1, pady=1)
+            self._buttons[key] = btn
         
         # Row 5 - space bar row
         row5_frame = tk.Frame(frame, bg=self.colors['bg_frame'])
         row5_frame.pack()
+        # Add left spacer - shift right by 3/5 key (approx 48px)
+        tk.Frame(row5_frame, width=48, bg=self.colors['bg_frame']).pack(side='left')
         for key in layout['row5']:
-            if key == 'space':
-                width = int(self.keysize * 20)  # Wide space bar
+            if key == 'gap1':
+                # Gap between Close and space bar to prevent accidental touches
+                tk.Frame(row5_frame, width=int(self.keysize * 1.5 * 8), bg=self.colors['bg_frame']).pack(side='left')
+                continue
+            elif key == 'gap':
+                # 2.5 key width spacer between space bar and arrows
+                tk.Frame(row5_frame, width=int(self.keysize * 2.5 * 8), bg=self.colors['bg_frame']).pack(side='left')
+                continue
+            elif key == 'space':
+                width = int(self.keysize * 6.5)  # Space bar width of c-m (5 keys visually)
                 text = ' '
                 colors = self.key_colors['letter']
             else:
                 width, colors = self._get_key_style(key)
                 text = key
             
-            tk.Button(row5_frame, text=text, width=width,
+            btn = tk.Button(row5_frame, text=text, width=width,
                      font=("Liberation Sans", 10, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
-                     relief='raised', bd=2,
-                     command=lambda k=key: self._key_press(k)).pack(side='left', padx=1, pady=1)
+                     relief='raised', bd=2)
+            btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
+            btn.pack(side='left', padx=1, pady=1)
+            self._buttons[key] = btn
     
     def _get_key_style(self, key):
         """Get width and colors for a key"""
@@ -191,12 +204,11 @@ class VirtualKeyboard:
             return int(self.keysize * 1.5), self.key_colors['action']
         elif key in ['Caps', 'Enter']:
             return int(self.keysize * 1.75), self.key_colors['action']
-        elif key in ['Shift']:
-            return int(self.keysize * 2), self.key_colors['action']
-        elif key in ['Sym', 'abc']:
-            return int(self.keysize * 1.5), self.key_colors['special']
         elif key == 'Close':
             return int(self.keysize * 2), self.key_colors['close']
+        # Arrow keys
+        elif key in ['↑', '↓', '←', '→']:
+            return int(self.keysize), self.key_colors['action']
         # Letter keys
         elif key.isalpha():
             return int(self.keysize), self.key_colors['letter']
@@ -204,17 +216,45 @@ class VirtualKeyboard:
         else:
             return int(self.keysize), self.key_colors['punctuation']
     
-    def _key_press(self, key):
+    def _flash_key(self, button):
+        """Flash the pressed key briefly"""
+        if not button:
+            return
+        try:
+            if button.winfo_exists():
+                original_bg = button.cget('bg')
+                # Flash to lighter color
+                button.config(bg='#ffffff')
+                # Restore original color after 100ms
+                button.after(100, lambda: button.config(bg=original_bg) if button.winfo_exists() else None)
+        except tk.TclError:
+            # Button was destroyed or doesn't exist
+            pass
+    
+    def _key_press(self, key, button=None):
         """Handle key press"""
-        # Mode switching
-        if key == 'Sym':
-            self.symbols_frame.tkraise()
-        elif key == 'abc':
-            self.lowercase_frame.tkraise()
-        elif key == 'Caps':
-            self.uppercase_frame.tkraise()
+        # Mode switching (do this first, before flash, to minimize redraw artifacts)
+        if key == 'Caps':
+            # Toggle caps lock on/off
+            if hasattr(self, '_caps_enabled') and self._caps_enabled:
+                # Turn off caps
+                self._caps_enabled = False
+                self.lowercase_frame.tkraise()
+            else:
+                # Turn on caps
+                self._caps_enabled = True
+                self.uppercase_frame.tkraise()
+            # Flash AFTER tkraise to avoid double-draw - DISABLED for testing
+            #if button:
+            #    self._flash_key(button)
+            return
+        
+        # Flash the key (for non-Caps keys) - DISABLED for testing
+        #if button:
+        #    self._flash_key(button)
+        
         # Action keys
-        elif key == 'Bksp':
+        if key == 'Bksp':
             self._backspace()
         elif key == 'Enter':
             self._enter()
@@ -224,12 +264,15 @@ class VirtualKeyboard:
             self._insert_char('\t')
         elif key == 'space':
             self._insert_char(' ')
-        elif key == 'Shift':
-            # Toggle uppercase temporarily
-            if self.lowercase_frame.winfo_ismapped():
-                self.uppercase_frame.tkraise()
-            else:
-                self.lowercase_frame.tkraise()
+        # Arrow keys
+        elif key == '↑':
+            self._arrow_up()
+        elif key == '↓':
+            self._arrow_down()
+        elif key == '←':
+            self._arrow_left()
+        elif key == '→':
+            self._arrow_right()
         # Regular keys
         else:
             self._insert_char(key)
@@ -261,6 +304,33 @@ class VirtualKeyboard:
             self.target_widget.insert('insert', '\n')
             self.target_widget.event_generate('<<Modified>>')
             self.target_widget.event_generate('<KeyRelease>')
+    
+    def _arrow_up(self):
+        """Move cursor up"""
+        if isinstance(self.target_widget, tk.Text):
+            self.target_widget.mark_set('insert', 'insert-1l')
+    
+    def _arrow_down(self):
+        """Move cursor down"""
+        if isinstance(self.target_widget, tk.Text):
+            self.target_widget.mark_set('insert', 'insert+1l')
+    
+    def _arrow_left(self):
+        """Move cursor left"""
+        if isinstance(self.target_widget, tk.Text):
+            self.target_widget.mark_set('insert', 'insert-1c')
+        elif isinstance(self.target_widget, tk.Entry):
+            pos = self.target_widget.index('insert')
+            if pos > 0:
+                self.target_widget.icursor(pos - 1)
+    
+    def _arrow_right(self):
+        """Move cursor right"""
+        if isinstance(self.target_widget, tk.Text):
+            self.target_widget.mark_set('insert', 'insert+1c')
+        elif isinstance(self.target_widget, tk.Entry):
+            pos = self.target_widget.index('insert')
+            self.target_widget.icursor(pos + 1)
     
     def _close(self):
         """Close keyboard"""

@@ -105,10 +105,16 @@ class MessageDialog:
                                  font=("Liberation Sans", 12),
                                  height=3,  # 3 lines tall (enough for 180 chars)
                                  bg=self.colors['bg_main'], fg=self.colors['fg_normal'],
-                                 insertbackground=self.colors['fg_normal'],
+                                 insertbackground='yellow',  # Bright yellow - highly visible
+                                 insertwidth=6,  # VERY wide cursor
+                                 insertontime=1000,  # On longer
+                                 insertofftime=200,  # Off shorter
                                  yscrollcommand=scrollbar.set)
         self.text_area.pack(side="left", fill="x", expand=True)
         scrollbar.config(command=self.text_area.yview)
+        
+        # Set focus to text area so cursor is visible
+        self.text_area.focus_set()
         
         # Bind text change event
         self.text_area.bind('<<Modified>>', self._on_text_change)
