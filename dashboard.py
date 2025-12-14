@@ -705,9 +705,17 @@ class EnhancedDashboard(tk.Tk):
         self.attributes('-fullscreen', True)
         self.bind('<F11>', self._toggle_fullscreen)
         
-        # Escape exits fullscreen and restores normal window
+        # Escape exits fullscreen and restores normal window, or dismisses active menu
         def escape_handler(e):
-            if self.is_fullscreen:
+            # First check if there's an active menu to dismiss
+            if self.active_menu:
+                try:
+                    self.active_menu.unpost()
+                    self.active_menu = None
+                except:
+                    pass
+            # Otherwise, exit fullscreen if active
+            elif self.is_fullscreen:
                 self.is_fullscreen = False
                 self.attributes('-fullscreen', False)
                 self.attributes('-zoomed', False)  # Unset zoomed state on Linux
@@ -1155,6 +1163,16 @@ class EnhancedDashboard(tk.Tk):
         def on_mousewheel(event):
             self.card_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         self.card_canvas.bind("<MouseWheel>", on_mousewheel)
+        
+        # Bind canvas click to dismiss active menu when clicking blank area
+        def on_canvas_click(event):
+            if self.active_menu:
+                try:
+                    self.active_menu.unpost()
+                    self.active_menu = None
+                except:
+                    pass
+        self.card_canvas.bind("<Button-1>", on_canvas_click)
         
         # Bind window resize to detect when card layout should change
         self.bind("<Configure>", self.on_window_resize)
@@ -2015,19 +2033,33 @@ class EnhancedDashboard(tk.Tk):
                 except:
                     pass
             
+            # Create wrapper functions that dismiss menu after action
+            def dismiss_after(action):
+                def wrapper():
+                    try:
+                        action()
+                    finally:
+                        if self.active_menu:
+                            try:
+                                self.active_menu.unpost()
+                                self.active_menu = None
+                            except:
+                                pass
+                return wrapper
+            
             menu = tk.Menu(self, tearoff=0,
                           bg=self.colors['bg_frame'],
                           fg=self.colors['fg_normal'],
                           activebackground=self.colors['bg_selected'],
                           activeforeground=self.colors['fg_normal'])
-            menu.add_command(label="View Details", command=lambda: self.show_node_detail(node_id))
-            menu.add_command(label="Show Logs", command=lambda: self.open_logs_folder(node_id))
-            menu.add_command(label="Open CSV", command=lambda: self.open_today_csv(node_id))
-            menu.add_command(label="Plot Telemetry", command=lambda: self.show_plot_for_node(node_id))
-            menu.add_command(label=f"Send Message To '{display_name}'...", command=lambda: self._send_message_to_node(node_id))
+            menu.add_command(label="View Details", command=dismiss_after(lambda: self.show_node_detail(node_id)))
+            menu.add_command(label="Show Logs", command=dismiss_after(lambda: self.open_logs_folder(node_id)))
+            menu.add_command(label="Open CSV", command=dismiss_after(lambda: self.open_today_csv(node_id)))
+            menu.add_command(label="Plot Telemetry", command=dismiss_after(lambda: self.show_plot_for_node(node_id)))
+            menu.add_command(label=f"Send Message To '{display_name}'...", command=dismiss_after(lambda: self._send_message_to_node(node_id)))
             # Only add Forget Node option if this is NOT the local node
             if not is_local:
-                menu.add_command(label=f"Forget Node '{display_name}'", command=lambda: self._forget_node_from_card(node_id))
+                menu.add_command(label=f"Forget Node '{display_name}'", command=dismiss_after(lambda: self._forget_node_from_card(node_id)))
             
             # Track this as active menu
             self.active_menu = menu
