@@ -254,7 +254,7 @@ class SettingsDialog:
             
             # Description
             desc_label = tk.Label(field_frame, text=description, 
-                                 font=('Liberation Sans', 9), fg='gray')
+                                 font=('Liberation Sans', 10), fg='gray')
             desc_label.pack(side="left", padx=(10, 0))
     
     def create_alerts_tab(self, parent):

@@ -136,7 +136,7 @@ class MessageListWindow:
         # Selection count label
         self.selection_label = tk.Label(action_frame, text="No selection",
                                        bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                                       font=("Liberation Sans", 9))
+                                       font=("Liberation Sans", 10))
         self.selection_label.pack(side="right")
     
     def _create_tab(self, tab_name: str) -> tk.Frame:
@@ -370,7 +370,7 @@ class MessageListWindow:
         
         tk.Label(top_line, text=time_str, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                font=("Liberation Sans", 9)).pack(side="right")
+                font=("Liberation Sans", 10)).pack(side="right")
         
         # Bottom line: preview
         tk.Label(content_frame, text=preview, 

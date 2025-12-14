@@ -437,7 +437,7 @@ class NodeDetailWindow:
         content_frame.pack(fill="x")
         
         font_msg = tkfont.Font(family="Consolas", size=10)
-        font_header = tkfont.Font(family="Consolas", size=9)
+        font_header = tkfont.Font(family="Consolas", size=10)
         
         # Display messages in reverse chronological order
         for msg in reversed(messages):

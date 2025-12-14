@@ -186,7 +186,7 @@ class MessageViewer:
             
             receipt_label = tk.Label(receipt_frame, text="Read receipts:",
                                    bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                                   font=("Liberation Sans", 9))
+                                   font=("Liberation Sans", 10))
             receipt_label.pack(anchor="w")
             
             for node_id, receipt_data in self.read_receipts.items():
@@ -200,7 +200,7 @@ class MessageViewer:
                     
                     status_label = tk.Label(receipt_frame, text=status_text,
                                           bg=self.colors['bg_frame'], fg=self.colors['fg_good'],
-                                          font=("Liberation Sans", 9))
+                                          font=("Liberation Sans", 10))
                     status_label.pack(anchor="w")
         
         # Button bar at bottom

@@ -108,7 +108,7 @@ class MessageDialog:
         
         self.char_count_label = tk.Label(counter_frame, 
                                          text=f"0/{MAX_MESSAGE_LENGTH}",
-                                         font=("Liberation Sans", 9),
+                                         font=("Liberation Sans", 10),
                                          bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'])
         self.char_count_label.pack(side="right")
         
@@ -117,7 +117,7 @@ class MessageDialog:
         bell_check = tk.Checkbutton(counter_frame, 
                                     text="Send bell character (\\a) to alert",
                                     variable=self.send_bell_var,
-                                    font=("Liberation Sans", 9),
+                                    font=("Liberation Sans", 10),
                                     bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
                                     selectcolor=self.colors['bg_main'],
                                     activebackground=self.colors['bg_frame'],
