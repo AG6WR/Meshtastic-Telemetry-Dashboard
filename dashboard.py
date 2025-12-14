@@ -3870,19 +3870,49 @@ class EnhancedDashboard(tk.Tk):
     def on_closing(self):
         """Handle application closing"""
         try:
+            # Cancel all pending timer callbacks
+            if self.notification_timer is not None:
+                try:
+                    self.after_cancel(self.notification_timer)
+                    self.notification_timer = None
+                except:
+                    pass
+            
+            # Cancel all flash timers
+            for timer_id in list(self.flash_timers.values()):
+                try:
+                    self.after_cancel(timer_id)
+                except:
+                    pass
+            self.flash_timers.clear()
+            
             # Unsubscribe from events
             try:
                 pub.unsubscribe(self._on_critical_error, "meshtastic.connection.critical_error")
             except:
                 pass
             
-            # Save window geometry
-            self.config_manager.set('dashboard.window_geometry', self.geometry())
-            self.config_manager.save_config()
+            # Save any pending messages
+            if hasattr(self, 'message_manager') and self.message_manager:
+                try:
+                    # Message manager auto-saves, but call save explicitly to be sure
+                    self.message_manager.save_messages()
+                except Exception as e:
+                    logger.error(f"Error saving messages during shutdown: {e}")
             
-            # Stop data collection
+            # Save window geometry
+            try:
+                self.config_manager.set('dashboard.window_geometry', self.geometry())
+                self.config_manager.save_config()
+            except Exception as e:
+                logger.error(f"Error saving config during shutdown: {e}")
+            
+            # Stop data collection (closes Meshtastic connection)
             if self.data_collector:
-                self.data_collector.stop()
+                try:
+                    self.data_collector.stop()
+                except Exception as e:
+                    logger.error(f"Error stopping data collector: {e}")
             
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
