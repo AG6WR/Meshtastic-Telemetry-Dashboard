@@ -66,7 +66,7 @@ class MessageViewer:
         # Create dialog
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("Message")
-        self.dialog.geometry("630x350")
+        self.dialog.geometry("630x280")
         self.dialog.resizable(True, True)
         self.dialog.transient(parent)
         
@@ -209,7 +209,7 @@ class MessageViewer:
         
         # Mark as Read button (only for unread received messages)
         if self.direction == 'received' and not self.message_data.get('read', False) and self.on_mark_read_callback:
-            mark_read_btn = tk.Button(button_frame, text="Mark as Read", width=12,
+            mark_read_btn = tk.Button(button_frame, text="Mark as Read", width=12, height=2,
                                      command=self._on_mark_read,
                                      bg='#2e7d32', fg='white',
                                      font=("Liberation Sans", 12))
@@ -217,7 +217,7 @@ class MessageViewer:
         
         # Reply button
         if self.on_reply_callback:
-            reply_btn = tk.Button(button_frame, text="Reply", width=10,
+            reply_btn = tk.Button(button_frame, text="Reply", width=10, height=2,
                                  command=self._on_reply,
                                  bg='#0d47a1', fg='white',
                                  font=("Liberation Sans", 12))
@@ -225,7 +225,7 @@ class MessageViewer:
         
         # Archive button (only if not already archived)
         if not self.archived and self.on_archive_callback:
-            archive_btn = tk.Button(button_frame, text="Archive", width=10,
+            archive_btn = tk.Button(button_frame, text="Archive", width=10, height=2,
                                    command=self._on_archive,
                                    bg='#f57c00', fg='white',
                                    font=("Liberation Sans", 12))
@@ -233,14 +233,14 @@ class MessageViewer:
         
         # Delete button
         if self.on_delete_callback:
-            delete_btn = tk.Button(button_frame, text="Delete...", width=10,
+            delete_btn = tk.Button(button_frame, text="Delete...", width=10, height=2,
                                   command=self._on_delete,
                                   bg='#c62828', fg='white',
                                   font=("Liberation Sans", 12))
             delete_btn.pack(side="left", padx=(0, 11))
         
         # Close button (always present on right side)
-        close_btn = tk.Button(button_frame, text="Close", width=10,
+        close_btn = tk.Button(button_frame, text="Close", width=10, height=2,
                              command=self._on_window_close,
                              bg='#424242', fg='white',
                              font=("Liberation Sans", 12))
