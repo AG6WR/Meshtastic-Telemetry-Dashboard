@@ -66,7 +66,7 @@ class MessageViewer:
         # Create dialog
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("Message")
-        self.dialog.geometry("1125x350")
+        self.dialog.geometry("630x350")
         self.dialog.resizable(True, True)
         self.dialog.transient(parent)
         
