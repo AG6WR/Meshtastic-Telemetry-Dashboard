@@ -111,7 +111,7 @@ class TelemetryPlotter:
         """
         dialog = tk.Toplevel(self.parent)
         dialog.title("Plot Configuration")
-        dialog.geometry("450x560")  # Reduced from 800 to 560 (30% reduction)
+        dialog.geometry("473x560")  # 5% wider than 450
         dialog.configure(bg='#1e1e1e')
         dialog.transient(self.parent)
         dialog.grab_set()
@@ -129,7 +129,7 @@ class TelemetryPlotter:
             x = parent_x + 40
             y = parent_y + 30
             
-            dialog.geometry(f"450x560+{x}+{y}")
+            dialog.geometry(f"473x560+{x}+{y}")
         
         result = {}
         
@@ -164,7 +164,8 @@ class TelemetryPlotter:
             rb = tk.Radiobutton(parent, text=text, variable=param_var, value=value,
                                bg='#2d2d2d', fg='white', selectcolor='#404040',
                                activebackground='#2d2d2d', activeforeground='white',
-                               font=("Liberation Sans", 12))
+                               font=("Liberation Sans", 12),
+                               highlightthickness=0)
             rb.pack(anchor="w", pady=2)
         
         # Time window selection - two column layout
@@ -201,14 +202,16 @@ class TelemetryPlotter:
             rb = tk.Radiobutton(col1, text=text, variable=time_var, value=value,
                                bg='#2d2d2d', fg='white', selectcolor='#404040',
                                activebackground='#2d2d2d', activeforeground='white',
-                               font=("Liberation Sans", 12))
+                               font=("Liberation Sans", 12),
+                               highlightthickness=0)
             rb.pack(anchor="w", padx=10, pady=2)
         
         for text, value in right_options:
             rb = tk.Radiobutton(col2, text=text, variable=time_var, value=value,
                                bg='#2d2d2d', fg='white', selectcolor='#404040',
                                activebackground='#2d2d2d', activeforeground='white',
-                               font=("Liberation Sans", 12))
+                               font=("Liberation Sans", 12),
+                               highlightthickness=0)
             rb.pack(anchor="w", padx=10, pady=2)
         
         # Node selection - restored to original height
@@ -222,7 +225,8 @@ class TelemetryPlotter:
         select_all_cb = tk.Checkbutton(node_frame, text="All Nodes", variable=select_all_var,
                                       bg='#2d2d2d', fg='white', selectcolor='#404040',
                                       activebackground='#2d2d2d', activeforeground='white',
-                                      font=("Liberation Sans", 12))
+                                      font=("Liberation Sans", 12),
+                                      highlightthickness=0)
         select_all_cb.pack(anchor="w", padx=10, pady=3)
         
         # Individual node checkboxes
@@ -261,7 +265,8 @@ class TelemetryPlotter:
             cb = tk.Checkbutton(scrollable_frame, text=display_name, variable=var,
                                bg='#2d2d2d', fg='white', selectcolor='#404040',
                                activebackground='#2d2d2d', activeforeground='white',
-                               font=("Liberation Sans", 12))
+                               font=("Liberation Sans", 12),
+                               highlightthickness=0)
             cb.pack(anchor="w", padx=10, pady=2)
             node_checkboxes.append(cb)
         
