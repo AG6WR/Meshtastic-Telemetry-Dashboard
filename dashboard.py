@@ -1164,16 +1164,6 @@ class EnhancedDashboard(tk.Tk):
             self.card_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         self.card_canvas.bind("<MouseWheel>", on_mousewheel)
         
-        # Bind canvas click to dismiss active menu when clicking blank area
-        def on_canvas_click(event):
-            if self.active_menu:
-                try:
-                    self.active_menu.unpost()
-                    self.active_menu = None
-                except:
-                    pass
-        self.card_canvas.bind("<Button-1>", on_canvas_click)
-        
         # Bind window resize to detect when card layout should change
         self.bind("<Configure>", self.on_window_resize)
     
@@ -3897,13 +3887,12 @@ class EnhancedDashboard(tk.Tk):
     def quit_app(self):
         """Quit the application"""
         self.on_closing()
-        self.destroy()
     
     def on_closing(self):
         """Handle application closing"""
         try:
             # Cancel all pending timer callbacks
-            if self.notification_timer is not None:
+            if hasattr(self, 'notification_timer') and self.notification_timer is not None:
                 try:
                     self.after_cancel(self.notification_timer)
                     self.notification_timer = None
@@ -3911,12 +3900,13 @@ class EnhancedDashboard(tk.Tk):
                     pass
             
             # Cancel all flash timers
-            for timer_id in list(self.flash_timers.values()):
-                try:
-                    self.after_cancel(timer_id)
-                except:
-                    pass
-            self.flash_timers.clear()
+            if hasattr(self, 'flash_timers'):
+                for timer_id in list(self.flash_timers.values()):
+                    try:
+                        self.after_cancel(timer_id)
+                    except:
+                        pass
+                self.flash_timers.clear()
             
             # Unsubscribe from events
             try:
@@ -3932,15 +3922,18 @@ class EnhancedDashboard(tk.Tk):
                 except Exception as e:
                     logger.error(f"Error saving messages during shutdown: {e}")
             
-            # Save window geometry
-            try:
-                self.config_manager.set('dashboard.window_geometry', self.geometry())
-                self.config_manager.save_config()
-            except Exception as e:
-                logger.error(f"Error saving config during shutdown: {e}")
+            # Save window geometry (must be done before destroy)
+            if hasattr(self, 'config_manager'):
+                try:
+                    # geometry() can fail if window is already being destroyed
+                    geom = self.geometry()
+                    self.config_manager.set('dashboard.window_geometry', geom)
+                    self.config_manager.save_config()
+                except Exception as e:
+                    logger.error(f"Error saving config during shutdown: {e}")
             
             # Stop data collection (closes Meshtastic connection)
-            if self.data_collector:
+            if hasattr(self, 'data_collector') and self.data_collector:
                 try:
                     self.data_collector.stop()
                 except Exception as e:
@@ -3948,8 +3941,12 @@ class EnhancedDashboard(tk.Tk):
             
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
-        
-        self.destroy()
+        finally:
+            # Always destroy, even if cleanup fails
+            try:
+                self.destroy()
+            except:
+                pass
     
     def _on_critical_error(self, error):
         """Handle critical connection errors - exit dashboard"""
