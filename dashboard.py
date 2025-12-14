@@ -704,7 +704,18 @@ class EnhancedDashboard(tk.Tk):
         self.is_fullscreen = True
         self.attributes('-fullscreen', True)
         self.bind('<F11>', self._toggle_fullscreen)
-        self.bind('<Escape>', lambda e: self.attributes('-fullscreen', False) if self.is_fullscreen else None)
+        
+        # Escape exits fullscreen and restores normal window
+        def escape_handler(e):
+            if self.is_fullscreen:
+                self.is_fullscreen = False
+                self.attributes('-fullscreen', False)
+                self.state('normal')
+                geometry = self.config_manager.get('dashboard.window_geometry', '1200x660')
+                self.geometry(geometry)
+                self._update_fullscreen_button_text()
+        
+        self.bind('<Escape>', escape_handler)
         
         # Dark theme color palette
         # Usage: self.colors['key_name'] to reference colors throughout the application
@@ -902,6 +913,14 @@ class EnhancedDashboard(tk.Tk):
         """Toggle fullscreen mode (F11 key)"""
         self.is_fullscreen = not self.is_fullscreen
         self.attributes('-fullscreen', self.is_fullscreen)
+        
+        # When exiting fullscreen, restore to normal window (not maximized)
+        if not self.is_fullscreen:
+            self.state('normal')
+            # Restore saved geometry or use default
+            geometry = self.config_manager.get('dashboard.window_geometry', '1200x660')
+            self.geometry(geometry)
+        
         self._update_fullscreen_button_text()  # Update button text to reflect new state
         logger.info(f"Fullscreen mode: {'ON' if self.is_fullscreen else 'OFF'}")
     
@@ -909,6 +928,14 @@ class EnhancedDashboard(tk.Tk):
         """Toggle fullscreen mode (for button clicks)"""
         self.is_fullscreen = not self.is_fullscreen
         self.attributes('-fullscreen', self.is_fullscreen)
+        
+        # When exiting fullscreen, restore to normal window (not maximized)
+        if not self.is_fullscreen:
+            self.state('normal')
+            # Restore saved geometry or use default
+            geometry = self.config_manager.get('dashboard.window_geometry', '1200x660')
+            self.geometry(geometry)
+        
         self._update_fullscreen_button_text()  # Update button text to reflect new state
         logger.info(f"Fullscreen mode: {'ON' if self.is_fullscreen else 'OFF'} (via button)")
     
