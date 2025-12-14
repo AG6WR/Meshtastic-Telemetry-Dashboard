@@ -92,25 +92,35 @@
 ## Notes
 
 ### Font Investigation - Current State
-**Current Font Family:**
-- Windows: `Consolas` (monospace)
-- Pi/Linux: `Courier New` (monospace)
-- Location: `dashboard.py` line 752: `base_family = "Consolas" if sys.platform.startswith("win") else "Courier New"`
+**Current Font Usage (CORRECTED):**
 
-**Why Monospace?**
-- Monospace fonts (Consolas/Courier) are NARROW by design
-- This is contributing to readability issues in non-space-constrained areas
+**Dashboard/Cards (dashboard.py):**
+- Windows: `Consolas` (monospace/narrow)
+- Pi/Linux: `Courier New` (monospace/narrow)
+- Used for: All card text, headers, labels, values
+- Location: `dashboard.py` line 752
+
+**Message Windows & Dialogs:**
+- `Segoe UI` (standard sans-serif) - ALL platforms
+- Used in: node_detail_window.py, message_dialog.py, message_viewer.py, message_list_window.py
+- Font sizes: 9pt-14pt depending on element
+- This is ALREADY readable!
+
+**The Real Problem:**
+- Cards use monospace (Consolas/Courier) which is narrow and hard to read
+- Message windows already use proper sans-serif (Segoe UI) ✅
+- **We only need to fix the card/dashboard fonts**
 
 **Available on Pi (Liberation family):**
-- Liberation Sans (standard width sans-serif)
+- Liberation Sans (≈ Arial, standard sans-serif)
 - Liberation Sans Narrow (condensed variant)
-- Liberation Mono (monospace)
+- Liberation Mono (≈ Courier, monospace)
 - Each has: Regular, Bold, Italic, Bold Italic
 
 **Proposed Change:**
-- Buttons: Keep using Liberation Sans Narrow (space-efficient)
-- All other text: Switch to Liberation Sans (better readability)
-- Cards, labels, values, headers: Liberation Sans
+- Dashboard cards: Switch from Courier New to **Liberation Sans**
+- Buttons: Can use Liberation Sans Narrow if space is tight
+- Message windows: Keep Segoe UI (already good, will fall back to Liberation Sans on Pi)
 - Emojis: Test with Noto Color Emoji font if available
 
 ### Design Principles for Kiosk Mode
