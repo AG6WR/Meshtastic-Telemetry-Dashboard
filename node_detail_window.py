@@ -147,18 +147,20 @@ class NodeDetailWindow:
         if self.on_plot:
             tk.Button(row1_frame, text="Plot", command=self.on_plot, **btn_config).pack(side="left", padx=(0, 5))
         
-        # ROW 2: Close and Forget Node buttons
+        # ROW 2: Forget Node button (left) and Close button (right)
         row2_frame = tk.Frame(button_frame, bg=self.colors['bg_frame'])
         row2_frame.pack(fill="x")
         
-        # CLOSE BUTTON (left side)
-        tk.Button(row2_frame, text="Close", command=self.window.destroy, **btn_config).pack(side="left", padx=(0, 5))
-        
-        # FORGET NODE BUTTON (left side, after Close)
+        # FORGET NODE BUTTON (left side)
         forget_config = btn_config.copy()
         forget_config['fg'] = self.colors['fg_bad']  # Crimson to indicate destructive action
         forget_config['width'] = 13
         tk.Button(row2_frame, text="Forget Node", command=self._forget_node, **forget_config).pack(side="left")
+        
+        # CLOSE BUTTON (right side - upper right corner)
+        close_config = btn_config.copy()
+        close_config['bg'] = '#424242'  # Gray close button
+        tk.Button(row2_frame, text="Close", command=self.window.destroy, **close_config).pack(side="right")
     
     def _create_header(self):
         """Create header with node name and ID"""

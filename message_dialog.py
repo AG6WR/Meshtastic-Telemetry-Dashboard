@@ -18,17 +18,20 @@ MAX_MESSAGE_LENGTH = 180
 class MessageDialog:
     """Dialog for composing and sending text messages to Meshtastic nodes"""
     
-    def __init__(self, parent, node_id: str, node_name: str, send_callback: Callable[[str, str, bool], None]):
+    def __init__(self, parent, node_id: str, node_name: str, send_callback: Callable[[str, str, bool], None],
+                 positioning_parent: Optional = None):
         """
         Create a message dialog
         
         Args:
-            parent: Parent window
+            parent: Parent window (for transient relationship and color scheme)
             node_id: Target node ID (e.g., "!a20a0de0")
             node_name: Display name for the node
             send_callback: Function to call when sending - callback(node_id, message, send_bell)
+            positioning_parent: Window to position relative to (defaults to parent)
         """
         self.parent = parent
+        self.positioning_parent = positioning_parent if positioning_parent else parent
         self.node_id = node_id
         self.node_name = node_name
         self.send_callback = send_callback
@@ -54,10 +57,10 @@ class MessageDialog:
         self.dialog.grab_set()
         self.dialog.configure(bg=self.colors['bg_frame'])
         
-        # Position relative to parent (50px down and right)
+        # Position relative to positioning_parent (50px down and right)
         self.dialog.update_idletasks()
-        x = parent.winfo_x() + 50
-        y = parent.winfo_y() + 50
+        x = self.positioning_parent.winfo_x() + 50
+        y = self.positioning_parent.winfo_y() + 50
         self.dialog.geometry(f"+{x}+{y}")
         
         self._create_widgets()

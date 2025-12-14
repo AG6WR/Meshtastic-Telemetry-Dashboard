@@ -3441,7 +3441,7 @@ class EnhancedDashboard(tk.Tk):
     def open_messages(self):
         """Open the message list window"""
         from message_list_window import MessageListWindow
-        MessageListWindow(self, self.message_manager, 
+        self.message_list_window = MessageListWindow(self, self.message_manager, 
                          on_view_message=self._view_message_by_id,
                          on_send_message=self._send_message_to_node)
     
@@ -3565,12 +3565,27 @@ class EnhancedDashboard(tk.Tk):
         
         # Open the viewer
         from message_viewer import MessageViewer
-        MessageViewer(self, message_data, 
-                     on_reply=on_reply,
+        
+        # Determine positioning parent - use message list window if available
+        positioning_parent = None
+        if hasattr(self, 'message_list_window') and self.message_list_window:
+            positioning_parent = self.message_list_window.window
+        
+        # Create viewer first so we can reference its dialog in callbacks
+        viewer = MessageViewer(self, message_data, 
+                     on_reply=None,  # Set after creation
                      on_delete=on_delete,
                      on_close=on_close,
                      on_mark_read=on_mark_read,
-                     on_archive=on_archive)
+                     on_archive=on_archive,
+                     positioning_parent=positioning_parent)
+        
+        # Now set the reply callback with access to viewer.dialog
+        def on_reply_with_positioning(reply_to_id: str, reply_to_name: str):
+            """Callback when user clicks Reply in viewer - positions relative to viewer"""
+            self._send_message_to_node(reply_to_id, positioning_parent=viewer.dialog)
+        
+        viewer.on_reply_callback = on_reply_with_positioning
     
     def _update_all_message_indicators(self):
         """Update message indicators on all cards"""
@@ -3706,8 +3721,13 @@ class EnhancedDashboard(tk.Tk):
                      on_mark_read=on_mark_read,
                      on_archive=on_archive)
     
-    def _send_message_to_node(self, node_id: str):
-        """Open dialog to send a message to a node"""
+    def _send_message_to_node(self, node_id: str, positioning_parent=None):
+        """Open dialog to send a message to a node
+        
+        Args:
+            node_id: Target node ID
+            positioning_parent: Optional window to position dialog relative to
+        """
         nodes_data = self.data_collector.get_nodes_data() if self.data_collector else {}
         node_data = nodes_data.get(node_id, {})
         node_name = node_data.get('Node LongName', node_id)
@@ -3758,7 +3778,8 @@ class EnhancedDashboard(tk.Tk):
                 messagebox.showerror("Send Failed", f"Failed to send message to {node_name}")
         
         # Open the message dialog
-        dialog = MessageDialog(self, node_id, node_name, send_callback)
+        dialog = MessageDialog(self, node_id, node_name, send_callback,
+                             positioning_parent=positioning_parent)
         dialog.show()
     
     def _on_message_received(self, message_data: Dict[str, Any]):

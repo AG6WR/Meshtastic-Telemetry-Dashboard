@@ -30,19 +30,22 @@ class MessageViewer:
                  on_delete: Optional[Callable] = None,
                  on_close: Optional[Callable] = None,
                  on_mark_read: Optional[Callable] = None,
-                 on_archive: Optional[Callable] = None):
+                 on_archive: Optional[Callable] = None,
+                 positioning_parent: Optional[Any] = None):
         """Initialize message viewer dialog
         
         Args:
-            parent: Parent window
+            parent: Parent window (for transient relationship and color scheme)
             message_data: Message dictionary from MessageManager
             on_reply: Callback when Reply clicked - receives (node_id, node_name)
             on_delete: Callback when Delete clicked - receives (message_id)
             on_close: Callback when dialog closes - receives (message_id, direction)
             on_mark_read: Callback when Mark as Read clicked - receives (message_id)
             on_archive: Callback when Archive clicked - receives (message_id)
+            positioning_parent: Window to position relative to (defaults to parent)
         """
         self.parent = parent
+        self.positioning_parent = positioning_parent if positioning_parent else parent
         self.message_data = message_data
         self.on_reply_callback = on_reply
         self.on_delete_callback = on_delete
@@ -90,10 +93,10 @@ class MessageViewer:
         # Handle window close
         self.dialog.protocol("WM_DELETE_WINDOW", self._on_window_close)
         
-        # Position relative to parent (50px down and right)
+        # Position relative to positioning_parent (50px down and right)
         self.dialog.update_idletasks()
-        x = parent.winfo_x() + 50
-        y = parent.winfo_y() + 50
+        x = self.positioning_parent.winfo_x() + 50
+        y = self.positioning_parent.winfo_y() + 50
         self.dialog.geometry(f"+{x}+{y}")
     
     def _create_widgets(self):
