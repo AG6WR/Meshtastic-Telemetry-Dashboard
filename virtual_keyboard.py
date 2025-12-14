@@ -1,17 +1,28 @@
 """
-Virtual Keyboard for Tkinter Text Widgets
+Virtual Keyboard for Tkinter Text and Entry Widgets
+Adapted from vKeyboard by Fantilein1990 (GPL v3)
+https://github.com/Fantilein1990/vKeyboard
+
 Required for Raspberry Pi kiosk mode where Wayland keyboard doesn't work with Tkinter
+
+Modifications for Meshtastic Dashboard:
+- Ported from Python 2 to Python 3
+- Adapted to work with Text widgets (not just Entry)
+- Applied dark theme color scheme
+- Simplified to singleton pattern (show/hide instead of destroy/recreate)
+- Removed page navigation (kept keyboard-only functionality)
 """
 
 import tkinter as tk
+from tkinter import ttk
 from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class VirtualKeyboard:
-    """Virtual keyboard that integrates with Tkinter Text and Entry widgets"""
+class VirtualKeyboard(ttk.Frame):
+    """Virtual keyboard optimized for touchscreens with 3-layer layout (lowercase, uppercase, symbols)"""
     
     def __init__(self, parent, target_widget, colors: dict = None):
         """
@@ -22,10 +33,10 @@ class VirtualKeyboard:
             target_widget: Text or Entry widget to type into
             colors: Color scheme dictionary (optional)
         """
-        self.parent = parent
+        ttk.Frame.__init__(self, parent)
+        
         self.target_widget = target_widget
-        self.shift_on = False
-        self.caps_lock = False
+        self.keysize = 4  # Button width in characters
         
         # Default colors if none provided
         self.colors = colors or {
@@ -33,7 +44,7 @@ class VirtualKeyboard:
             'bg_main': '#1e1e1e',
             'fg_normal': '#e0e0e0',
             'button_bg': '#404040',
-            'button_active': '#0d47a1'
+            'button_special': '#9c27b0'
         }
         
         # Create keyboard window
@@ -50,125 +61,153 @@ class VirtualKeyboard:
         # Make it stay on top
         self.window.attributes('-topmost', True)
         
-        # Create keyboard layout
-        self._create_keyboard()
+        # Configure button styles
+        style = ttk.Style()
+        style.configure("vKeyboard.TButton", 
+                       font=("Liberation Sans", 10),
+                       background=self.colors['button_bg'],
+                       foreground='white')
+        style.configure("vKeyboardSpecial.TButton",
+                       font=("Liberation Sans", 10, "bold"),
+                       background=self.colors['button_special'],
+                       foreground='white')
+        
+        # Create container frame
+        self.container = tk.Frame(self.window, bg=self.colors['bg_frame'])
+        self.container.pack(padx=5, pady=5)
+        
+        # Define keyboard layouts
+        self.lowercase = {
+            'row1': ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'Bksp'],
+            'row2': ['Sym', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
+            'row3': ['ABC', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'ENTER'],
+            'row4': ['[ space ]', 'Close']
+        }
+        self.uppercase = {
+            'row1': ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'Bksp'],
+            'row2': ['Sym', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+            'row3': ['abc', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'ENTER'],
+            'row4': ['[ space ]', 'Close']
+        }
+        self.symbols = {
+            'row1': ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'Bksp'],
+            'row2': ['abc', '!', '"', '$', '%', '&', '/', '(', ')', '[', ']', '='],
+            'row3': ['@', '-', '_', '?', '#', '*', '{', '}', ':', ';', 'ENTER'],
+            'row4': ['+', '[ space ]', '.', ',', 'Close']
+        }
+        
+        # Create frames for each keyboard layer
+        self.lowercase_frame = tk.Frame(self.container, bg=self.colors['bg_frame'])
+        self.lowercase_frame.grid(row=0, column=0, sticky="nsew")
+        
+        self.uppercase_frame = tk.Frame(self.container, bg=self.colors['bg_frame'])
+        self.uppercase_frame.grid(row=0, column=0, sticky="nsew")
+        
+        self.symbols_frame = tk.Frame(self.container, bg=self.colors['bg_frame'])
+        self.symbols_frame.grid(row=0, column=0, sticky="nsew")
+        
+        # Initialize all keyboard layers
+        self._init_keyboard_layer(self.lowercase_frame, self.lowercase)
+        self._init_keyboard_layer(self.uppercase_frame, self.uppercase)
+        self._init_keyboard_layer(self.symbols_frame, self.symbols)
+        
+        # Show lowercase by default
+        self.lowercase_frame.tkraise()
         
         logger.info("Virtual keyboard created")
     
-    def _create_keyboard(self):
-        """Create the keyboard layout"""
-        main_frame = tk.Frame(self.window, bg=self.colors['bg_frame'], padx=5, pady=5)
-        main_frame.pack()
+    def _init_keyboard_layer(self, frame, layout):
+        """Initialize a keyboard layer with buttons"""
+        rows = []
+        for i in range(1, 5):
+            row_frame = tk.Frame(frame, bg=self.colors['bg_frame'])
+            row_frame.grid(row=i)
+            rows.append(row_frame)
         
-        # Row 1: Numbers
-        row1_keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=']
-        row1_frame = tk.Frame(main_frame, bg=self.colors['bg_frame'])
-        row1_frame.pack(pady=2)
+        # Row 1
+        for i, key in enumerate(layout['row1']):
+            if key == 'Bksp':
+                width = self.keysize * 2
+                style = "vKeyboardSpecial.TButton"
+            else:
+                width = self.keysize
+                style = "vKeyboard.TButton"
+            
+            ttk.Button(rows[0], text=key, width=width, style=style,
+                      command=lambda k=key: self._key_press(k)).grid(row=0, column=i, padx=1, pady=1)
         
-        for key in row1_keys:
-            self._create_key_button(row1_frame, key, width=5)
+        # Row 2
+        for i, key in enumerate(layout['row2']):
+            if key in ['Sym', 'abc']:
+                width = self.keysize * 1.5
+                style = "vKeyboardSpecial.TButton"
+            else:
+                width = self.keysize
+                style = "vKeyboard.TButton"
+            
+            ttk.Button(rows[1], text=key, width=width, style=style,
+                      command=lambda k=key: self._key_press(k)).grid(row=0, column=i+2, padx=1, pady=1)
         
-        self._create_key_button(row1_frame, '⌫', width=8, command=self._backspace, bg='#c62828')
+        # Row 3
+        for i, key in enumerate(layout['row3']):
+            if key in ['ABC', 'abc']:
+                width = self.keysize * 1.5
+                style = "vKeyboardSpecial.TButton"
+            elif key == 'ENTER':
+                width = self.keysize * 2.5
+                style = "vKeyboardSpecial.TButton"
+            else:
+                width = self.keysize
+                style = "vKeyboard.TButton"
+            
+            ttk.Button(rows[2], text=key, width=width, style=style,
+                      command=lambda k=key: self._key_press(k)).grid(row=0, column=i+2, padx=1, pady=1)
         
-        # Row 2: QWERTY
-        row2_keys = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']']
-        row2_frame = tk.Frame(main_frame, bg=self.colors['bg_frame'])
-        row2_frame.pack(pady=2)
-        
-        for key in row2_keys:
-            self._create_key_button(row2_frame, key, width=5)
-        
-        self._create_key_button(row2_frame, '\\', width=5)
-        
-        # Row 3: ASDFGH
-        row3_keys = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', "'"]
-        row3_frame = tk.Frame(main_frame, bg=self.colors['bg_frame'])
-        row3_frame.pack(pady=2)
-        
-        self._create_key_button(row3_frame, '⇪', width=8, command=self._caps_lock, bg='#2e7d32')
-        
-        for key in row3_keys:
-            self._create_key_button(row3_frame, key, width=5)
-        
-        self._create_key_button(row3_frame, '↵', width=8, command=self._enter, bg='#0d47a1')
-        
-        # Row 4: ZXCVBN
-        row4_keys = ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/']
-        row4_frame = tk.Frame(main_frame, bg=self.colors['bg_frame'])
-        row4_frame.pack(pady=2)
-        
-        self._create_key_button(row4_frame, '⇧', width=10, command=self._shift, bg='#f57c00')
-        
-        for key in row4_keys:
-            self._create_key_button(row4_frame, key, width=5)
-        
-        self._create_key_button(row4_frame, '⇧', width=10, command=self._shift, bg='#f57c00')
-        
-        # Row 5: Space bar and special
-        row5_frame = tk.Frame(main_frame, bg=self.colors['bg_frame'])
-        row5_frame.pack(pady=2)
-        
-        self._create_key_button(row5_frame, '!@#', width=8, command=self._symbols, bg='#9c27b0')
-        self._create_key_button(row5_frame, ' ', width=40, label='Space')
-        self._create_key_button(row5_frame, 'Close', width=12, command=self._close, bg='#424242')
-    
-    def _create_key_button(self, parent, key, width=5, label=None, command=None, bg=None):
-        """Create a key button
-        
-        Args:
-            parent: Parent frame
-            key: Key character
-            width: Button width
-            label: Display label (defaults to key)
-            command: Custom command (defaults to _key_press)
-            bg: Background color (defaults to button_bg)
-        """
-        if label is None:
-            label = key
-        
-        if command is None:
-            command = lambda k=key: self._key_press(k)
-        
-        if bg is None:
-            bg = self.colors['button_bg']
-        
-        btn = tk.Button(parent, text=label, width=width, height=2,
-                       font=("Liberation Sans", 10),
-                       bg=bg, fg='white',
-                       command=command,
-                       relief='raised', bd=2)
-        btn.pack(side='left', padx=2)
-        return btn
+        # Row 4
+        col = 3
+        for key in layout['row4']:
+            if key == '[ space ]':
+                width = self.keysize * 6
+                text = '     '
+            elif key == 'Close':
+                width = self.keysize * 2
+                text = key
+            else:
+                width = self.keysize
+                text = key
+            
+            ttk.Button(rows[3], text=text, width=width, style="vKeyboard.TButton",
+                      command=lambda k=key: self._key_press(k)).grid(row=0, column=col, padx=1, pady=1)
+            col += 1
     
     def _key_press(self, key):
         """Handle key press"""
-        # Apply shift/caps transformations
-        if self.shift_on or self.caps_lock:
-            if key.isalpha():
-                key = key.upper()
-            else:
-                # Shift symbols
-                shift_map = {
-                    '1': '!', '2': '@', '3': '#', '4': '$', '5': '%',
-                    '6': '^', '7': '&', '8': '*', '9': '(', '0': ')',
-                    '-': '_', '=': '+', '[': '{', ']': '}', '\\': '|',
-                    ';': ':', "'": '"', ',': '<', '.': '>', '/': '?'
-                }
-                key = shift_map.get(key, key)
-        
-        # Insert into target widget
+        if key == 'Sym':
+            self.symbols_frame.tkraise()
+        elif key == 'abc':
+            self.lowercase_frame.tkraise()
+        elif key == 'ABC':
+            self.uppercase_frame.tkraise()
+        elif key == 'Bksp':
+            self._backspace()
+        elif key == 'ENTER':
+            self._enter()
+        elif key == 'Close':
+            self._close()
+        elif key == '[ space ]':
+            self._insert_char(' ')
+        else:
+            self._insert_char(key)
+    
+    def _insert_char(self, char):
+        """Insert character into target widget"""
         if isinstance(self.target_widget, tk.Text):
-            self.target_widget.insert('insert', key)
-            # Trigger any text change events
+            self.target_widget.insert('insert', char)
             self.target_widget.event_generate('<<Modified>>')
             self.target_widget.event_generate('<KeyRelease>')
         elif isinstance(self.target_widget, tk.Entry):
             current_pos = self.target_widget.index('insert')
-            self.target_widget.insert(current_pos, key)
-        
-        # Turn off shift after key press (but not caps lock)
-        if self.shift_on:
-            self.shift_on = False
+            self.target_widget.insert(current_pos, char)
     
     def _backspace(self):
         """Handle backspace"""
@@ -187,21 +226,6 @@ class VirtualKeyboard:
             self.target_widget.insert('insert', '\n')
             self.target_widget.event_generate('<<Modified>>')
             self.target_widget.event_generate('<KeyRelease>')
-    
-    def _shift(self):
-        """Toggle shift"""
-        self.shift_on = not self.shift_on
-        logger.debug(f"Shift: {self.shift_on}")
-    
-    def _caps_lock(self):
-        """Toggle caps lock"""
-        self.caps_lock = not self.caps_lock
-        logger.debug(f"Caps Lock: {self.caps_lock}")
-    
-    def _symbols(self):
-        """Show symbol keyboard (future enhancement)"""
-        # For now, just toggle shift for quick symbol access
-        self.shift_on = not self.shift_on
     
     def _close(self):
         """Close keyboard"""
