@@ -2020,6 +2020,7 @@ class EnhancedDashboard(tk.Tk):
             if self.active_menu:
                 try:
                     self.active_menu.unpost()
+                    self.active_menu = None
                 except:
                     pass
             
@@ -2037,11 +2038,10 @@ class EnhancedDashboard(tk.Tk):
             if not is_local:
                 menu.add_command(label=f"Forget Node '{display_name}'", command=lambda: self._forget_node_from_card(node_id))
             
-            # Track this as active menu
-            self.active_menu = menu
+            # DON'T track this menu - let it auto-cleanup
+            # Tracking prevents proper dismissal
             
             # Post menu at event coordinates (card was clicked)
-            # Use tk_popup instead of post - tk_popup auto-handles grab/release
             if event:
                 try:
                     menu.tk_popup(event.x_root, event.y_root)
