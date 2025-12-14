@@ -104,7 +104,8 @@ class MessageListWindow:
         style.theme_use('default')
         style.configure('TNotebook', background=self.colors['bg_frame'], borderwidth=0)
         style.configure('TNotebook.Tab', background=self.colors['bg_main'], 
-                       foreground=self.colors['fg_normal'], padding=[10, 5])
+                       foreground=self.colors['fg_normal'], padding=[10, 5],
+                       font=("Liberation Sans", 12))
         style.map('TNotebook.Tab', background=[('selected', self.colors['bg_frame'])])
         
         self.notebook = ttk.Notebook(self.window)
