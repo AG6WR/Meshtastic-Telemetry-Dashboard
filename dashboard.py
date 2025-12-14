@@ -3571,21 +3571,24 @@ class EnhancedDashboard(tk.Tk):
         if hasattr(self, 'message_list_window') and self.message_list_window:
             positioning_parent = self.message_list_window.window
         
-        # Create viewer first so we can reference its dialog in callbacks
+        # Define reply callback that will have access to viewer after creation
+        viewer = None  # Will be set below
+        
+        def on_reply_with_positioning(reply_to_id: str, reply_to_name: str):
+            """Callback when user clicks Reply in viewer - positions relative to viewer"""
+            if viewer:
+                self._send_message_to_node(reply_to_id, positioning_parent=viewer.dialog)
+            else:
+                self._send_message_to_node(reply_to_id)
+        
+        # Create viewer with reply callback
         viewer = MessageViewer(self, message_data, 
-                     on_reply=None,  # Set after creation
+                     on_reply=on_reply_with_positioning,
                      on_delete=on_delete,
                      on_close=on_close,
                      on_mark_read=on_mark_read,
                      on_archive=on_archive,
                      positioning_parent=positioning_parent)
-        
-        # Now set the reply callback with access to viewer.dialog
-        def on_reply_with_positioning(reply_to_id: str, reply_to_name: str):
-            """Callback when user clicks Reply in viewer - positions relative to viewer"""
-            self._send_message_to_node(reply_to_id, positioning_parent=viewer.dialog)
-        
-        viewer.on_reply_callback = on_reply_with_positioning
     
     def _update_all_message_indicators(self):
         """Update message indicators on all cards"""

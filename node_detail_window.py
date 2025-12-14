@@ -134,7 +134,7 @@ class NodeDetailWindow:
             'height': 2
         }
         
-        # ROW 1: Action buttons (Logs, CSV, Plot)
+        # ROW 1: Action buttons (Logs, CSV, Plot) and Close button
         row1_frame = tk.Frame(button_frame, bg=self.colors['bg_frame'])
         row1_frame.pack(fill="x", pady=(0, 5))
         
@@ -147,20 +147,21 @@ class NodeDetailWindow:
         if self.on_plot:
             tk.Button(row1_frame, text="Plot", command=self.on_plot, **btn_config).pack(side="left", padx=(0, 5))
         
-        # ROW 2: Forget Node button (left) and Close button (right)
+        # CLOSE BUTTON (right side of row 1)
+        close_config = btn_config.copy()
+        close_config['bg'] = '#424242'  # Gray close button
+        tk.Button(row1_frame, text="Close", command=self.window.destroy, **close_config).pack(side="right")
+        
+        # ROW 2: Forget Node button (right side)
         row2_frame = tk.Frame(button_frame, bg=self.colors['bg_frame'])
         row2_frame.pack(fill="x")
         
-        # FORGET NODE BUTTON (left side)
+        # FORGET NODE BUTTON (right side of row 2)
         forget_config = btn_config.copy()
-        forget_config['fg'] = self.colors['fg_bad']  # Crimson to indicate destructive action
+        forget_config['bg'] = '#c62828'  # Red background to indicate destructive action
+        forget_config['fg'] = 'white'  # White text
         forget_config['width'] = 13
-        tk.Button(row2_frame, text="Forget Node", command=self._forget_node, **forget_config).pack(side="left")
-        
-        # CLOSE BUTTON (right side - upper right corner)
-        close_config = btn_config.copy()
-        close_config['bg'] = '#424242'  # Gray close button
-        tk.Button(row2_frame, text="Close", command=self.window.destroy, **close_config).pack(side="right")
+        tk.Button(row2_frame, text="Forget Node", command=self._forget_node, **forget_config).pack(side="right")
     
     def _create_header(self):
         """Create header with node name and ID"""
