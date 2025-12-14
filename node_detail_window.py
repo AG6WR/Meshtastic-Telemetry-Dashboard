@@ -183,7 +183,7 @@ class NodeDetailWindow:
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
         # Section title
-        title_font = tkfont.Font(family="Liberation Sans", size=10, weight="bold")
+        title_font = tkfont.Font(family="Liberation Sans", size=11, weight="bold")
         title_label = tk.Label(section_frame, text="General Information",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -245,7 +245,7 @@ class NodeDetailWindow:
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
         # Section title
-        title_font = tkfont.Font(family="Liberation Sans", size=10, weight="bold")
+        title_font = tkfont.Font(family="Liberation Sans", size=11, weight="bold")
         title_label = tk.Label(section_frame, text="Environmental Telemetry",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -284,7 +284,7 @@ class NodeDetailWindow:
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
         # Section title
-        title_font = tkfont.Font(family="Liberation Sans", size=10, weight="bold")
+        title_font = tkfont.Font(family="Liberation Sans", size=11, weight="bold")
         title_label = tk.Label(section_frame, text="Device Telemetry",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -306,7 +306,7 @@ class NodeDetailWindow:
             internal_header = tk.Label(content_frame, text="Meshtastic Internal Battery:",
                                       bg=self.colors['bg_frame'],
                                       fg=self.colors['fg_secondary'],
-                                      font=tkfont.Font(family="Liberation Sans", size=10, slant="italic"))
+                                      font=tkfont.Font(family="Liberation Sans", size=11, slant="italic"))
             internal_header.pack(anchor="w", pady=(0, 2))
             
             # Internal battery percentage
@@ -334,7 +334,7 @@ class NodeDetailWindow:
             external_header = tk.Label(content_frame, text="Main System Battery:",
                                       bg=self.colors['bg_frame'],
                                       fg=self.colors['fg_secondary'],
-                                      font=tkfont.Font(family="Liberation Sans", size=10, slant="italic"))
+                                      font=tkfont.Font(family="Liberation Sans", size=11, slant="italic"))
             external_header.pack(anchor="w", pady=(0, 2))
             
             # Calculate percentage from voltage using parent's data collector
@@ -394,7 +394,7 @@ class NodeDetailWindow:
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
         # Section title
-        title_font = tkfont.Font(family="Liberation Sans", size=10, weight="bold")
+        title_font = tkfont.Font(family="Liberation Sans", size=11, weight="bold")
         title_label = tk.Label(section_frame, text="Motion Detection",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -426,7 +426,7 @@ class NodeDetailWindow:
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
         # Section title
-        title_font = tkfont.Font(family="Liberation Sans", size=10, weight="bold")
+        title_font = tkfont.Font(family="Liberation Sans", size=11, weight="bold")
         title_label = tk.Label(section_frame, text="Recent Messages",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -436,8 +436,8 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_msg = tkfont.Font(family="Consolas", size=10)
-        font_header = tkfont.Font(family="Consolas", size=10)
+        font_msg = tkfont.Font(family="Consolas", size=11)
+        font_header = tkfont.Font(family="Consolas", size=11)
         
         # Display messages in reverse chronological order
         for msg in reversed(messages):

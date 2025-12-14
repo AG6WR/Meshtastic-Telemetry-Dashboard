@@ -111,7 +111,7 @@ class SettingsDialog:
         
         # Buttons - enlarged for touch input
         button_frame = tk.Frame(self.dialog)
-        button_frame.pack(fill="x", padx=10, pady=(0, 10))
+        button_frame.pack(fill="x", padx=10, pady=(0, 11))
         
         tk.Button(button_frame, text="Test Email", command=self.test_email,
                  width=12, height=2).pack(side="left", padx=(0, 5))
@@ -218,7 +218,7 @@ class SettingsDialog:
     def create_telemetry_tab(self, parent):
         """Create telemetry field settings tab"""
         info_label = tk.Label(parent, text="Select which telemetry fields to display in card view:", 
-                             font=('Liberation Sans', 10, 'bold'))
+                             font=('Liberation Sans', 11, 'bold'))
         info_label.pack(anchor="w", padx=5, pady=(5, 15))
         
         # Telemetry field checkboxes
@@ -249,12 +249,12 @@ class SettingsDialog:
             
             # Checkbox
             cb = tk.Checkbutton(field_frame, text=display_name, variable=var, 
-                               font=('Liberation Sans', 10, 'bold'), width=20, anchor='w')
+                               font=('Liberation Sans', 11, 'bold'), width=20, anchor='w')
             cb.pack(side="left")
             
             # Description
             desc_label = tk.Label(field_frame, text=description, 
-                                 font=('Liberation Sans', 10), fg='gray')
+                                 font=('Liberation Sans', 11), fg='gray')
             desc_label.pack(side="left", padx=(10, 0))
     
     def create_alerts_tab(self, parent):
@@ -755,7 +755,7 @@ class EnhancedDashboard(tk.Tk):
         self.font_data = tkfont.Font(family=base_family, size=12)  # Card view data font
         self.font_data_bold = tkfont.Font(family=base_family, size=12, weight="bold")  # Card view bold data
         self.font_card_header = tkfont.Font(family=base_family, size=14, weight="bold")  # Card header 14pt
-        self.font_card_line2 = tkfont.Font(family=base_family, size=10)  # Card line 2 (Motion/Last Heard) 10pt - matches line 4
+        self.font_card_line2 = tkfont.Font(family=base_family, size=11)  # Card line 2 (Motion/Last Heard) 10pt - matches line 4
         self.font_card_line3 = tkfont.Font(family=base_family, size=14, weight="bold")  # Card line 3 (V/I/T) 14pt
         self.font_card_label = tkfont.Font(family=base_family, size=8)  # Card labels 8pt small (for "ICP Batt:", "Ch:", etc.)
         self.font_card_value = tkfont.Font(family=base_family, size=11, weight="bold")  # Card values 11pt bold (for data values)
@@ -1100,7 +1100,7 @@ class EnhancedDashboard(tk.Tk):
         """Setup the data table"""
         # Column definitions: (title, key, width_chars, anchor, is_numeric)
         self.COLUMNS = [
-            ("Node ID", "id", 10, "w", False),
+            ("Node ID", "id", 11, "w", False),
             ("Name", "long", 18, "w", False), 
             ("Short", "short", 8, "center", False),
             ("Status", "status", 12, "center", False),
@@ -2373,7 +2373,7 @@ class EnhancedDashboard(tk.Tk):
             
             # Change SNR bars to 10pt to match other row 2 text
             bar_font = tkfont.Font(family="Consolas" if sys.platform.startswith("win") else "Courier New", 
-                                  size=10)  # Match other row 2 text
+                                  size=11)  # Match other row 2 text
             
             # Create each bar with its own color - NO spacing between bars
             # Labels packed side-by-side naturally share baseline

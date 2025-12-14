@@ -104,13 +104,13 @@ class MessageViewer:
         
         # Header: From/To
         header_frame = tk.Frame(content_frame, bg=self.colors['bg_frame'])
-        header_frame.pack(fill="x", pady=(0, 10))
+        header_frame.pack(fill="x", pady=(0, 11))
         
         if self.direction == 'sent':
             # Sent message: show "To:"
             to_label = tk.Label(header_frame, text="To:",
                               bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                              font=("Liberation Sans", 10))
+                              font=("Liberation Sans", 11))
             to_label.pack(side="left")
             
             if self.is_bulletin:
@@ -123,39 +123,39 @@ class MessageViewer:
             
             to_name_label = tk.Label(header_frame, text=f" {to_value}",
                                     bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                                    font=("Liberation Sans", 10, "bold"))
+                                    font=("Liberation Sans", 11, "bold"))
             to_name_label.pack(side="left")
         else:
             # Received message: show "From:"
             from_label = tk.Label(header_frame, text="From:",
                                 bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                                font=("Liberation Sans", 10))
+                                font=("Liberation Sans", 11))
             from_label.pack(side="left")
             
             from_name_label = tk.Label(header_frame, text=f" {self.from_name}",
                                       bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                                      font=("Liberation Sans", 10, "bold"))
+                                      font=("Liberation Sans", 11, "bold"))
             from_name_label.pack(side="left")
         
         # Timestamp
         timestamp_frame = tk.Frame(content_frame, bg=self.colors['bg_frame'])
-        timestamp_frame.pack(fill="x", pady=(0, 10))
+        timestamp_frame.pack(fill="x", pady=(0, 11))
         
         ts_label = tk.Label(timestamp_frame, text="Received:" if self.direction == 'received' else "Sent:",
                           bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                          font=("Liberation Sans", 10))
+                          font=("Liberation Sans", 11))
         ts_label.pack(side="left")
         
         dt = datetime.fromtimestamp(self.timestamp)
         ts_value = tk.Label(timestamp_frame, text=f" {dt.strftime('%Y-%m-%d %H:%M:%S')}",
                           bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                          font=("Liberation Sans", 10))
+                          font=("Liberation Sans", 11))
         ts_value.pack(side="left")
         
         # Message text area (scrollable)
         text_label = tk.Label(content_frame, text="Message:",
                             bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                            font=("Liberation Sans", 10))
+                            font=("Liberation Sans", 11))
         text_label.pack(anchor="w", pady=(10, 5))
         
         text_frame = tk.Frame(content_frame, bg=self.colors['bg_frame'], height=80)
@@ -186,7 +186,7 @@ class MessageViewer:
             
             receipt_label = tk.Label(receipt_frame, text="Read receipts:",
                                    bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                                   font=("Liberation Sans", 10))
+                                   font=("Liberation Sans", 11))
             receipt_label.pack(anchor="w")
             
             for node_id, receipt_data in self.read_receipts.items():
@@ -200,7 +200,7 @@ class MessageViewer:
                     
                     status_label = tk.Label(receipt_frame, text=status_text,
                                           bg=self.colors['bg_frame'], fg=self.colors['fg_good'],
-                                          font=("Liberation Sans", 10))
+                                          font=("Liberation Sans", 11))
                     status_label.pack(anchor="w")
         
         # Button bar at bottom
@@ -212,31 +212,31 @@ class MessageViewer:
             mark_read_btn = tk.Button(button_frame, text="Mark as Read", width=12,
                                      command=self._on_mark_read,
                                      bg='#2e7d32', fg='white',
-                                     font=("Liberation Sans", 10))
-            mark_read_btn.pack(side="left", padx=(0, 10))
+                                     font=("Liberation Sans", 11))
+            mark_read_btn.pack(side="left", padx=(0, 11))
         
         # Reply button
         if self.on_reply_callback:
             reply_btn = tk.Button(button_frame, text="Reply", width=10,
                                  command=self._on_reply,
                                  bg='#0d47a1', fg='white',
-                                 font=("Liberation Sans", 10))
-            reply_btn.pack(side="left", padx=(0, 10))
+                                 font=("Liberation Sans", 11))
+            reply_btn.pack(side="left", padx=(0, 11))
         
         # Archive button (only if not already archived)
         if not self.archived and self.on_archive_callback:
             archive_btn = tk.Button(button_frame, text="Archive", width=10,
                                    command=self._on_archive,
                                    bg='#f57c00', fg='white',
-                                   font=("Liberation Sans", 10))
-            archive_btn.pack(side="left", padx=(0, 10))
+                                   font=("Liberation Sans", 11))
+            archive_btn.pack(side="left", padx=(0, 11))
         
         # Delete button
         if self.on_delete_callback:
             delete_btn = tk.Button(button_frame, text="Delete...", width=10,
                                   command=self._on_delete,
                                   bg='#c62828', fg='white',
-                                  font=("Liberation Sans", 10))
+                                  font=("Liberation Sans", 11))
             delete_btn.pack(side="left")
     
     def _on_mark_read(self):
