@@ -802,46 +802,51 @@ class EnhancedDashboard(tk.Tk):
         
         tk.Button(controls_frame, text="Settings", command=self.open_settings,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                 width=10, height=2).pack(side="left", padx=(0, 5))
+                 width=9, height=2).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Refresh", command=self.force_refresh,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                 width=10, height=2).pack(side="left", padx=(0, 5))
+                 width=9, height=2).pack(side="left", padx=(0, 5))
         # Button shows action (where you'll go) - starts as "Table" since default is cards
         self.view_btn = tk.Button(controls_frame, text="Table", command=self.toggle_view,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                 width=10, height=2)
+                 width=9, height=2)
         self.view_btn.pack(side="left", padx=(0, 5))
         
         # Messages button with unread count badge
         self.messages_btn = tk.Button(controls_frame, text="Messages", command=self.open_messages,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                 width=12, height=2)
+                 width=11, height=2)
         self.messages_btn.pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Plot", command=self.show_plot,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                 width=10, height=2).pack(side="left", padx=(0, 5))
+                 width=9, height=2).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Node Alerts", command=self.open_node_alerts,
                  bg=self.colors['fg_warning'], fg='white',
-                 width=12, height=2).pack(side="left", padx=(0, 5))
+                 width=11, height=2).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Debug Log", command=self.open_debug_log,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                 width=11, height=2).pack(side="left", padx=(0, 5))
+                 width=10, height=2).pack(side="left", padx=(0, 5))
         self.btn_logs = tk.Button(controls_frame, text="Open Logs", command=self.open_logs_folder, state="disabled",
                                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                                 width=11, height=2)
+                                 width=10, height=2)
         self.btn_logs.pack(side="left", padx=(0, 5))
         self.btn_csv = tk.Button(controls_frame, text="Today's CSV", command=self.open_today_csv, state="disabled",
                                 bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                                width=12, height=2)
+                                width=11, height=2)
         self.btn_csv.pack(side="left", padx=(0, 5))
         
         # Fullscreen toggle button (right side) for touch-screen interface
         # Text shows the action it will perform (where you'll go)
         self.fullscreen_button = tk.Button(controls_frame, text="", command=self._toggle_fullscreen_button,
                  bg=self.colors['fg_bad'], fg='white',
-                 width=14, height=2)
-        self.fullscreen_button.pack(side="right")
+                 width=13, height=2)
+        self.fullscreen_button.pack(side="right", padx=(5, 0))
         self._update_fullscreen_button_text()  # Set initial text based on state
+        
+        # Quit button (right side, before fullscreen)
+        tk.Button(controls_frame, text="Quit", command=self.quit_app,
+                 bg=self.colors['fg_bad'], fg='white',
+                 width=9, height=2).pack(side="right", padx=(0, 5))
         
         # Table container with horizontal scrollbar (initially hidden since default is cards)
         self.table_container = tk.Frame(self, bg=self.colors['bg_frame'])
@@ -3856,6 +3861,11 @@ class EnhancedDashboard(tk.Tk):
         # This method is kept for compatibility but doesn't remove individual notifications
         # The banner will scroll through recent messages automatically
         pass
+    
+    def quit_app(self):
+        """Quit the application"""
+        self.on_closing()
+        self.destroy()
     
     def on_closing(self):
         """Handle application closing"""
