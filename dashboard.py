@@ -1095,18 +1095,6 @@ class EnhancedDashboard(tk.Tk):
         # Track active menu for dismissal
         self.active_menu = None
         
-        # Global click handler to dismiss menus
-        def dismiss_menu(event):
-            if self.active_menu:
-                try:
-                    self.active_menu.unpost()
-                    self.active_menu = None
-                except:
-                    pass
-        
-        # Bind to main window and card container
-        self.bind('<Button-1>', dismiss_menu)
-        
         # Create scrollable canvas for cards
         self.card_canvas = tk.Canvas(self.card_container, bg=self.colors['bg_main'], highlightthickness=0)
         # Vertical scrollbar - widened for touch input (24px)
@@ -2017,20 +2005,8 @@ class EnhancedDashboard(tk.Tk):
         # Menu button removed - entire card is now clickable to show context menu
         menu_button = None  # Keep variable for compatibility
         
-        # Bind card click to show menu
-        def on_card_click(event):
-            # Dismiss any active menu first
-            if self.active_menu:
-                try:
-                    self.active_menu.unpost()
-                    self.active_menu = None
-                except:
-                    pass
-            # Show menu for this card
-            show_card_menu(event)
-            return "break"
-        
-        card_frame.bind('<Button-1>', on_card_click)
+        # Bind card click to show menu (show_card_menu handles dismissing old menu)
+        card_frame.bind('<Button-1>', show_card_menu)
         
         # Message indicator (always create it, show/hide based on message time)
         msg_indicator = tk.Label(right_header, text="📧 ",
@@ -2039,13 +2015,20 @@ class EnhancedDashboard(tk.Tk):
         
         # Add click handler to message indicator to open message viewer
         def on_message_click(event):
-            # Get most recent unread message for this node
-            if node_id in self.unread_messages and len(self.unread_messages[node_id]) > 0:
-                # Open most recent unread message
-                message_data = self.unread_messages[node_id][0]  # Already sorted newest first
-                message_id = message_data.get('message_id')
-                if message_id:
-                    self._view_message_by_id(message_id)
+            try:
+                logger.info(f"Message indicator clicked for node {node_id}")
+                # Get most recent unread message for this node
+                if node_id in self.unread_messages and len(self.unread_messages[node_id]) > 0:
+                    # Open most recent unread message
+                    message_data = self.unread_messages[node_id][0]  # Already sorted newest first
+                    message_id = message_data.get('message_id')
+                    logger.info(f"Opening message {message_id} from indicator click")
+                    if message_id:
+                        self._view_message_by_id(message_id)
+                else:
+                    logger.warning(f"No unread messages for {node_id} when clicking indicator")
+            except Exception as e:
+                logger.error(f"Error opening message from indicator: {e}", exc_info=True)
             return "break"  # Stop event propagation
         
         msg_indicator.bind('<Button-1>', on_message_click)
@@ -2911,6 +2894,10 @@ class EnhancedDashboard(tk.Tk):
         if not lastheard_frame or not lastheard_frame.winfo_exists():
             logger.warning(f"_update_card_line2: lastheard_frame missing or destroyed for {node_id}")
             return
+        
+        # Calculate background color based on whether this is local node
+        local_node_id = self._get_local_node_id()
+        normal_bg = self.colors['bg_local_node'] if (node_id == local_node_id) else self.colors['bg_frame']
         
         # Get current background color (preserves flash state)
         bg_color = lastheard_frame.cget('bg')
