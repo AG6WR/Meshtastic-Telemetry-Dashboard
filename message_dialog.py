@@ -10,8 +10,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Meshtastic maximum payload length is 233 bytes
-# But text messages should be conservative to allow for encoding overhead
-MAX_MESSAGE_LENGTH = 200
+# Protocol overhead: [MSG:a20a0de0_1765667875991] = 28 bytes
+# Available for user text: 233 - 28 = 205 bytes
+# Using 180 bytes to leave margin for safety
+MAX_MESSAGE_LENGTH = 180
 
 class MessageDialog:
     """Dialog for composing and sending text messages to Meshtastic nodes"""
@@ -32,12 +34,25 @@ class MessageDialog:
         self.send_callback = send_callback
         self.result = None
         
+        # Get colors from parent (dark theme)
+        self.colors = getattr(parent, 'colors', {
+            'bg_frame': '#2b2b2b',
+            'bg_main': '#1e1e1e',
+            'fg_normal': '#e0e0e0',
+            'fg_secondary': '#b0b0b0',
+            'button_bg': '#0d47a1',
+            'fg_good': '#228B22',
+            'fg_bad': '#FF6B9D'
+        })
+        
         # Create dialog window
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(f"Send Message to {node_name}")
-        self.dialog.geometry("500x300")
+        self.dialog.geometry("630x240")
+        self.dialog.resizable(True, True)  # Allow resizing
         self.dialog.transient(parent)
         self.dialog.grab_set()
+        self.dialog.configure(bg=self.colors['bg_frame'])
         
         # Center on parent
         self.dialog.update_idletasks()
@@ -53,29 +68,34 @@ class MessageDialog:
     def _create_widgets(self):
         """Create dialog widgets"""
         # Header
-        header_frame = tk.Frame(self.dialog)
+        header_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
         header_frame.pack(fill="x", padx=10, pady=(10, 5))
         
         tk.Label(header_frame, text=f"To: {self.node_name} ({self.node_id})", 
-                font=("Courier New", 11, "bold")).pack(anchor="w")
+                font=("Segoe UI", 11, "bold"),
+                bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(anchor="w")
         
         # Message text area with scrollbar
-        text_frame = tk.Frame(self.dialog)
-        text_frame.pack(fill="both", expand=True, padx=10, pady=5)
+        text_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
+        text_frame.pack(fill="x", padx=10, pady=5)
         
-        tk.Label(text_frame, text="Message:", font=("Courier New", 10)).pack(anchor="w")
+        tk.Label(text_frame, text="Message:", font=("Segoe UI", 10),
+                bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(anchor="w")
         
-        text_container = tk.Frame(text_frame)
-        text_container.pack(fill="both", expand=True)
+        text_container = tk.Frame(text_frame, bg=self.colors['bg_frame'])
+        text_container.pack(fill="x")
         
-        scrollbar = tk.Scrollbar(text_container)
+        scrollbar = tk.Scrollbar(text_container, bg=self.colors['bg_frame'])
         scrollbar.pack(side="right", fill="y")
         
         self.text_area = tk.Text(text_container, 
                                  wrap="word", 
-                                 font=("Courier New", 10),
+                                 font=("Segoe UI", 10),
+                                 height=3,  # 3 lines tall (enough for 180 chars)
+                                 bg=self.colors['bg_main'], fg=self.colors['fg_normal'],
+                                 insertbackground=self.colors['fg_normal'],
                                  yscrollcommand=scrollbar.set)
-        self.text_area.pack(side="left", fill="both", expand=True)
+        self.text_area.pack(side="left", fill="x", expand=True)
         scrollbar.config(command=self.text_area.yview)
         
         # Bind text change event
@@ -83,12 +103,13 @@ class MessageDialog:
         self.text_area.bind('<KeyRelease>', self._on_text_change)
         
         # Character counter
-        counter_frame = tk.Frame(self.dialog)
+        counter_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
         counter_frame.pack(fill="x", padx=10, pady=5)
         
         self.char_count_label = tk.Label(counter_frame, 
                                          text=f"0/{MAX_MESSAGE_LENGTH}",
-                                         font=("Courier New", 9))
+                                         font=("Segoe UI", 9),
+                                         bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'])
         self.char_count_label.pack(side="right")
         
         # Bell character option
@@ -96,17 +117,23 @@ class MessageDialog:
         bell_check = tk.Checkbutton(counter_frame, 
                                     text="Send bell character (\\a) to alert",
                                     variable=self.send_bell_var,
-                                    font=("Courier New", 9))
+                                    font=("Segoe UI", 9),
+                                    bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
+                                    selectcolor=self.colors['bg_main'],
+                                    activebackground=self.colors['bg_frame'],
+                                    activeforeground=self.colors['fg_normal'])
         bell_check.pack(side="left")
         
         # Buttons - enlarged for touch input
-        button_frame = tk.Frame(self.dialog)
+        button_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
         button_frame.pack(fill="x", padx=10, pady=10)
         
         tk.Button(button_frame, text="Send", command=self._send_message,
-                 width=12, height=2, font=("Courier New", 10, "bold")).pack(side="right", padx=5)
+                 width=12, height=2, font=("Segoe UI", 10, "bold"),
+                 bg=self.colors['fg_good'], fg='white').pack(side="right", padx=5)
         tk.Button(button_frame, text="Cancel", command=self._cancel,
-                 width=12, height=2, font=("Courier New", 10)).pack(side="right")
+                 width=12, height=2, font=("Segoe UI", 10),
+                 bg=self.colors['button_bg'], fg='white').pack(side="right")
         
         # Bind Enter key (Ctrl+Enter to send)
         self.dialog.bind('<Control-Return>', lambda e: self._send_message())
@@ -124,7 +151,7 @@ class MessageDialog:
         
         # Change color if approaching/exceeding limit
         if byte_count > MAX_MESSAGE_LENGTH:
-            self.char_count_label.config(fg="red")
+            self.char_count_label.config(fg="#FF6B9D")  # Coral pink for error
             # Delete excess characters
             while byte_count > MAX_MESSAGE_LENGTH:
                 # Remove last character
@@ -137,9 +164,9 @@ class MessageDialog:
             self.text_area.insert("1.0", text)
             self.text_area.mark_set("insert", "end")
         elif byte_count > MAX_MESSAGE_LENGTH * 0.9:
-            self.char_count_label.config(fg="orange")
+            self.char_count_label.config(fg="#FFA500")  # Orange for warning
         else:
-            self.char_count_label.config(fg="black")
+            self.char_count_label.config(fg=self.colors['fg_secondary'])  # Grey for normal
         
         # Reset modified flag
         self.text_area.edit_modified(False)

@@ -45,6 +45,8 @@ from data_collector import DataCollector
 from plotter import TelemetryPlotter
 from node_detail_window import NodeDetailWindow
 from message_dialog import MessageDialog
+from message_manager import MessageManager
+from message_viewer import MessageViewer
 from card_field_registry import CardFieldRegistry
 
 logger = logging.getLogger(__name__)
@@ -631,6 +633,7 @@ class EnhancedDashboard(tk.Tk):
         
         # Initialize configuration
         self.config_manager = ConfigManager()
+        self.message_manager = MessageManager(self.config_manager)
         self.data_collector = None
         self.plotter = TelemetryPlotter(self, self.config_manager)
         self.field_registry = CardFieldRegistry(self)  # Field update registry
@@ -647,8 +650,14 @@ class EnhancedDashboard(tk.Tk):
         self.current_cards_per_row = 0  # Track current column count for resize detection
         
         # Message tracking
-        self.active_message_notifications = {}  # {node_id: notification_frame}
+        self.recent_messages = []  # List of (from_name, to_name, text) tuples - last 3
+        self.notification_banner = None  # Single banner frame at bottom
+        self.notification_label = None  # Label showing scrolling messages
+        self.notification_index = 0  # Current message being displayed
+        self.notification_timer = None  # Timer for rotating messages
         self.message_timers = {}  # {node_id: timer_id}
+        self.unread_messages = {}  # node_id -> list of unread messages
+        self.message_flash_state = {}  # node_id -> True/False for blue/grey flash
         
         # Subscribe to critical connection errors
         pub.subscribe(self._on_critical_error, "meshtastic.connection.critical_error")
@@ -664,12 +673,18 @@ class EnhancedDashboard(tk.Tk):
         self.setup_gui()
         self.start_data_collection()
         
+        # Load unread messages from storage
+        self._load_unread_messages()
+        
         # Initial display update
         self.after(1000, self.refresh_display)
         
         # Start periodic refresh timer (every 15 minutes) to catch status changes
         # This ensures nodes transition to offline even when no new telemetry arrives
         self.start_periodic_refresh()
+        
+        # Start message flash animation timer (1 second cycle)
+        self._start_message_flash_timer()
         
         # Start log cleanup timer (daily)
         self.after(60000, self.cleanup_old_logs)  # Start after 1 minute, then runs daily
@@ -783,6 +798,12 @@ class EnhancedDashboard(tk.Tk):
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
                  width=10, height=2)
         self.view_btn.pack(side="left", padx=(0, 5))
+        
+        # Messages button with unread count badge
+        self.messages_btn = tk.Button(controls_frame, text="Messages", command=self.open_messages,
+                 bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                 width=12, height=2)
+        self.messages_btn.pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Plot", command=self.show_plot,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
                  width=10, height=2).pack(side="left", padx=(0, 5))
@@ -841,6 +862,30 @@ class EnhancedDashboard(tk.Tk):
         # Protocol for window close
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
     
+    def _generate_message_id(self) -> str:
+        """Generate a unique message ID in format <sender_short>_<timestamp_ms>.
+        
+        Returns:
+            Message ID string (e.g., '0de0_1734112345678')
+        """
+        import time
+        local_node_id = self.config_manager.get('meshtastic.local_node_id')
+        if local_node_id and local_node_id.startswith('!'):
+            short_id = local_node_id[1:]  # Remove '!' prefix
+        else:
+            short_id = 'unknown'
+        
+        timestamp_ms = int(time.time() * 1000)
+        return f"{short_id}_{timestamp_ms}"
+    
+    def _get_local_node_id(self) -> str:
+        """Get the local node ID.
+        
+        Returns:
+            Local node ID string (e.g., '!a20a0de0') or empty string if not available
+        """
+        return self.config_manager.get('meshtastic.local_node_id') or ''
+    
     def _toggle_fullscreen(self, event=None):
         """Toggle fullscreen mode (F11 key)"""
         self.is_fullscreen = not self.is_fullscreen
@@ -862,6 +907,48 @@ class EnhancedDashboard(tk.Tk):
             self.fullscreen_button.config(text="Exit Fullscreen")
         else:
             self.fullscreen_button.config(text="Fullscreen")
+    
+    def _load_unread_messages(self):
+        """Load unread messages from storage and populate cache.
+        
+        Triggers card line 2 update if unread count changes.
+        """
+        try:
+            local_node_id = self._get_local_node_id()
+            if not local_node_id:
+                logger.warning("Cannot load unread messages: local node ID not available yet")
+                return
+            
+            # Track previous count to detect changes
+            prev_count = len(self.unread_messages.get(local_node_id, []))
+            
+            # Get unread messages for local node
+            unread = self.message_manager.get_unread_messages(local_node_id)
+            
+            logger.info(f"_load_unread_messages: local_node_id={local_node_id}, prev_count={prev_count}, new_count={len(unread) if unread else 0}")
+            
+            if unread:
+                self.unread_messages[local_node_id] = unread
+                new_count = len(unread)
+                logger.info(f"Loaded {new_count} unread message(s) for local node {local_node_id}")
+                
+                # If count changed and card exists, update line 2
+                if new_count != prev_count and local_node_id in self.card_widgets:
+                    logger.info(f"Unread count changed ({prev_count} -> {new_count}), updating card line 2")
+                    self._update_card_line2(local_node_id)
+            else:
+                # No unread messages - clear cache if needed
+                if prev_count > 0:
+                    self.unread_messages[local_node_id] = []
+                    logger.info("No unread messages found, clearing cache")
+                    # Update line 2 to remove message display
+                    if local_node_id in self.card_widgets:
+                        self._update_card_line2(local_node_id)
+                else:
+                    logger.debug("No unread messages found")
+                
+        except Exception as e:
+            logger.error(f"Error loading unread messages: {e}", exc_info=True)
     
     def convert_temperature(self, temp_c, to_unit=None):
         """Convert temperature from Celsius to the configured unit
@@ -892,9 +979,9 @@ class EnhancedDashboard(tk.Tk):
     # =========================================================================
     
     def format_temperature(self, temp_c):
-        """Format temperature value with unit conversion"""
+        """Format temperature value (number only, unit is separate label)"""
         temp_value, temp_unit_str, _ = self.convert_temperature(temp_c)
-        return f"{temp_value:.0f}{temp_unit_str}"
+        return f"{temp_value:.0f}"
     
     def get_temperature_color(self, temp_c):
         """Get color based on temperature thresholds"""
@@ -918,8 +1005,8 @@ class EnhancedDashboard(tk.Tk):
             return self.colors['fg_good']
     
     def format_pressure(self, pressure):
-        """Format pressure value"""
-        return f"{pressure:.1f} hPa"
+        """Format pressure value (number only, unit is separate label)"""
+        return f"{pressure:.1f}"
     
     def get_pressure_color(self, pressure):
         """Get color based on pressure (always normal for now)"""
@@ -1074,6 +1161,57 @@ class EnhancedDashboard(tk.Tk):
         self.last_node_data.clear()
         self.refresh_display()
         self.after(300000, self.start_periodic_refresh)  # 5 minutes
+    
+    def _start_message_flash_timer(self):
+        """Start periodic timer to toggle message flash state (1 second cycle)
+        
+        Also checks for new messages every 5 seconds to pick up externally injected messages.
+        """
+        try:
+            # Check for new messages periodically (every 5 seconds)
+            current_time = time.time()
+            if not hasattr(self, '_last_message_check') or current_time - self._last_message_check >= 5.0:
+                self._last_message_check = current_time
+                # Only log if in debug mode - too chatty otherwise
+                logger.debug("Flash timer: Checking for new messages (5-second interval)")
+                self._load_unread_messages()
+            
+            # Check if any local node has unread messages
+            local_node_id = self._get_local_node_id()
+            has_unread = local_node_id and local_node_id in self.unread_messages and len(self.unread_messages[local_node_id]) > 0
+            
+            if has_unread:
+                # Only log flash toggle at debug level - happens every second
+                logger.debug(f"Flash timer: {local_node_id} has {len(self.unread_messages[local_node_id])} unread messages - toggling flash")
+                # Toggle flash state
+                current_state = self.message_flash_state.get(local_node_id, True)
+                self.message_flash_state[local_node_id] = not current_state
+                
+                # Update card border for flash effect (toggle between blue and green)
+                if self.view_mode == "cards" and local_node_id in self.card_widgets:
+                    card_info = self.card_widgets[local_node_id]
+                    # Flash border between blue (unread) and green (local node)
+                    # Only change color, not thickness (to prevent size recalculation)
+                    if self.message_flash_state[local_node_id]:
+                        card_info['frame'].config(highlightbackground='#4a90e2')  # Light blue
+                    else:
+                        card_info['frame'].config(highlightbackground='#00AA00')  # Green
+            else:
+                # No unread messages - restore normal green border for local node
+                if local_node_id and local_node_id in self.message_flash_state:
+                    del self.message_flash_state[local_node_id]
+                    
+                    # Restore normal green border (only color, not thickness)
+                    if self.view_mode == "cards" and local_node_id in self.card_widgets:
+                        card_info = self.card_widgets[local_node_id]
+                        card_info['frame'].config(highlightbackground='#00AA00')
+        
+        except Exception as e:
+            logger.error(f"Error in flash timer: {e}", exc_info=True)
+        
+        finally:
+            # Always reschedule next flash toggle (1000ms = 1 second)
+            self.after(1000, self._start_message_flash_timer)
     
     def cleanup_old_logs(self):
         """Clean up old application log files based on retention settings"""
@@ -1488,7 +1626,15 @@ class EnhancedDashboard(tk.Tk):
         self.force_refresh()
     
     def force_refresh(self):
-        """Force an immediate refresh"""
+        """Force an immediate refresh by rebuilding all cards
+        
+        This is the "hammer" approach - rebuilds the entire card structure.
+        Generally prefer targeted container updates (_update_card_line2, etc.)
+        for efficiency. Use force_refresh() only when:
+        - Changing view modes (table <-> cards)
+        - Node list changes (new nodes, nodes removed)
+        - Complete UI reset needed
+        """
         self.refresh_display()
     
     def open_settings(self):
@@ -1656,16 +1802,22 @@ class EnhancedDashboard(tk.Tk):
                 widget.destroy()
             self.card_widgets.clear()
             
-            # Calculate grid layout - cards are 368px wide (20% reduction from 460px)
+            # Calculate grid layout - cards are 345px wide (25% reduction from 460px)
             # Window width calculation: 1400 - 24 (scrollbar) - 20 (padding) = 1356 available
-            # 1356 / 376 = 3.6, so 3 cards per row (376 = 368 card + 8px padding)
+            # 1356 / 353 = 3.8, so 3 cards per row (353 = 345 card + 8px padding)
             window_width = self.winfo_width()
-            card_width = 368  # Current card width (20% reduction)
-            card_width_with_padding = 376  # Card + padding (4px each side)
+            card_width = 345  # Current card width (25% reduction)
+            card_width_with_padding = 353  # Card + padding (4px each side)
             cards_per_row = max(1, window_width // card_width_with_padding)
             
             # Store current column count for resize detection
             self.current_cards_per_row = cards_per_row
+            
+            # CRITICAL: Configure grid columns to fixed width to prevent resizing
+            # Without this, grid auto-sizes columns on ANY widget update (border color, text, etc.)
+            # causing all cards to resize/"dance" during updates. Must set minsize and weight=0.
+            for col_idx in range(cards_per_row):
+                self.card_scrollable_frame.grid_columnconfigure(col_idx, minsize=card_width_with_padding, weight=0)
             
             # Create cards using grid layout with local node in upper left
             # Don't flash cards during full rebuild - only flash on data updates
@@ -1726,25 +1878,40 @@ class EnhancedDashboard(tk.Tk):
         telemetry_diff = current_time - last_telemetry if last_telemetry else float('inf')
         telemetry_stale = telemetry_diff > 960  # 16 minutes = 960 seconds
         
-        # Main card frame - start with flash color if changed, or local node color if local
-        if is_local and not is_changed:
-            bg_color = self.colors['bg_local_node']  # Dark green tint for local node
-        elif is_changed:
-            bg_color = self.colors['bg_selected']  # Flash with very dark blue
-        else:
-            bg_color = self.colors['bg_frame']  # Normal dark grey
+        # Check if this node has unread messages (only flash local node)
+        has_unread_messages = is_local and node_id in self.unread_messages and len(self.unread_messages[node_id]) > 0
         
-        # Add green border for local node
-        border_config = {}
+        # Main card background - local node gets green tint, others get normal grey
+        # (Border will flash for unread messages, not background)
         if is_local:
-            border_config = {
-                'highlightbackground': '#00AA00',
-                'highlightthickness': 3
-            }
+            bg_color = self.colors['bg_local_node']  # Dark green tint for local node
+        else:
+            bg_color = self.colors['bg_frame']  # Normal dark grey for all other nodes
         
-        card_frame = tk.Frame(parent, bg=bg_color, relief='raised', bd=2, width=card_width, **border_config)
+        # All cards get a 3px border (to maintain consistent size)
+        # Local node: green border (or blue/green flash for unread messages)
+        # Other nodes: dark grey border (invisible against background)
+        if is_local:
+            # Start with appropriate border color for local node
+            if has_unread_messages:
+                # Start with light blue if we have unread messages
+                flash_blue = self.message_flash_state.get(node_id, True)
+                border_color = '#4a90e2' if flash_blue else '#00AA00'  # Light blue or green
+            else:
+                border_color = '#00AA00'  # Green for local node
+        else:
+            # Non-local nodes get dark grey border (matches bg_frame)
+            border_color = self.colors['bg_frame']
+        
+        border_config = {
+            'highlightbackground': border_color,
+            'highlightthickness': 3
+        }
+        
+        card_frame = tk.Frame(parent, bg=bg_color, relief='raised', bd=2, **border_config)
         card_frame.grid(row=row, column=col, padx=4, pady=3, sticky="nsew")
-        card_frame.grid_propagate(True)
+        card_frame.grid_propagate(False)  # Lock size to prevent resize during updates
+        card_frame.config(width=card_width, height=1)  # Fixed width, minimal height (will expand to content)
         
         # Header row - Name and Status only (short name moved to line 2)
         header_frame = tk.Frame(card_frame, bg=bg_color)
@@ -1852,16 +2019,56 @@ class EnhancedDashboard(tk.Tk):
         lastheard_frame.pack_propagate(False)
         
         # short_name was already looked up above with long_name from cache
+        shortname_label = None  # Short name display removed but variable needed for widget dict
         
         heard_label = None
         motion_label = None
+        message_label = None
         last_motion = node_data.get('Last Motion')
         
+        # Check for unread messages (highest priority for line 2)
+        unread_msgs = self.unread_messages.get(node_id, [])
+        has_unread = len(unread_msgs) > 0
+        
+        if has_unread:
+            # Show most recent unread message
+            newest_msg = unread_msgs[0]  # Already sorted newest first
+            msg_text = newest_msg.get('text', '')
+            msg_from = newest_msg.get('from_name', 'Unknown')
+            
+            # Shorten sender name if too long (use first word or first 15 chars)
+            if len(msg_from) > 15:
+                msg_from = msg_from.split()[0] if ' ' in msg_from else msg_from[:15]
+            
+            # Calculate available space: 368px card width - 12px padding - icon space
+            # ~50 chars fits comfortably
+            max_preview = 50
+            preview = msg_text[:max_preview] + '...' if len(msg_text) > max_preview else msg_text
+            
+            # Show count if multiple unread
+            count_badge = f" [{len(unread_msgs)}]" if len(unread_msgs) > 1 else ""
+            
+            # Format: [MSG] From: preview text... [count]
+            display_text = f"[MSG] {msg_from}: {preview}{count_badge}"
+            
+            message_label = tk.Label(lastheard_frame, text=display_text,
+                                   bg=bg_color, fg=self.colors['fg_normal'],
+                                   font=self.font_card_line2, cursor="hand2", anchor="w")
+            message_label.pack(anchor="w", side="left", fill="x")
+            
+            # Make clickable to open message viewer
+            # Note: This label will be excluded from bind_click_recursive below
+            def open_viewer(event):
+                self._open_message_viewer(node_id)
+                return "break"  # Stop event propagation to prevent card menu
+            
+            message_label.bind('<Button-1>', open_viewer)
+            message_label._is_message_label = True  # Mark for exclusion from card click binding
+            
         # Line 2 reserved for temporary status messages only (motion, last heard, messages)
         # Short name removed from here (was on right side)
-        shortname_label = None
-        
-        if status == "Offline" and last_heard:
+        # Messages take highest priority, then motion, then last heard
+        elif status == "Offline" and last_heard:
             # For offline nodes, show static last heard timestamp
             heard_dt = datetime.fromtimestamp(last_heard)
             heard_text = f"Last: {heard_dt.strftime('%m-%d %H:%M')}"
@@ -2266,10 +2473,13 @@ class EnhancedDashboard(tk.Tk):
             show_card_menu(event)
         
         # Bind left-click to card frame and all children recursively
+        # Skip message labels (they have their own click handler)
         def bind_click_recursive(widget):
-            widget.bind("<Button-1>", on_card_click)
-            for child in widget.winfo_children():
-                bind_click_recursive(child)
+            # Skip widgets marked as message labels
+            if not hasattr(widget, '_is_message_label'):
+                widget.bind("<Button-1>", on_card_click)
+                for child in widget.winfo_children():
+                    bind_click_recursive(child)
         
         bind_click_recursive(card_frame)
         
@@ -2413,11 +2623,25 @@ class EnhancedDashboard(tk.Tk):
         # Get color
         color = self.field_registry.get_field_color(self, field_name, value, is_stale)
         
-        # Container is a Frame with one Label child (simple fields)
-        # Update the first child label
+        # Container is a Frame with child labels
+        # For most fields, update the value label (which might be first or second child)
+        # Temperature: children[0] is value, children[1] is unit
+        # Humidity: children[0] is "Humidity:" label, children[1] is value
+        # Pressure: children[0] is unit, children[1] is value
         children = container.winfo_children()
-        if children and isinstance(children[0], tk.Label):
-            children[0].config(text=formatted_text, fg=color)
+        if not children:
+            return
+        
+        # Find the value label (the one that should be updated)
+        # For pressure and humidity, it's the second child; for temperature it's the first
+        if field_name in ['Pressure', 'Humidity']:
+            # Value is second child (index 1)
+            if len(children) > 1 and isinstance(children[1], tk.Label):
+                children[1].config(text=formatted_text, fg=color)
+        else:
+            # Value is first child (index 0) - temperature and others
+            if isinstance(children[0], tk.Label):
+                children[0].config(text=formatted_text, fg=color)
     
     def update_snr_composite(self, node_id: str, node_data: Dict[str, Any], is_stale: bool):
         """Update SNR bar colors without recreating widget
@@ -2591,6 +2815,134 @@ class EnhancedDashboard(tk.Tk):
             children[1].config(text=f"{air_util:.1f}", fg=display_color)  # Value colored
             children[2].config(fg=self.colors['fg_secondary'])  # Unit always grey
     
+    # =========================================================================
+    # Targeted Container Update Methods
+    # These methods surgically update individual containers without rebuilding
+    # the entire card. Each method clears the container's children and recreates
+    # the content based on current state. This is more efficient than force_refresh().
+    # =========================================================================
+    
+    def _update_messages_button(self):
+        """Update Messages button text to show unread count"""
+        if not hasattr(self, 'messages_btn'):
+            return
+        
+        # Count total unread messages across all nodes
+        total_unread = sum(len(msgs) for msgs in self.unread_messages.values())
+        
+        # Update button text and color
+        if total_unread > 0:
+            self.messages_btn.config(text=f"Messages ({total_unread})", 
+                                    bg=self.colors['fg_warning'])  # Orange when unread
+        else:
+            self.messages_btn.config(text="Messages", 
+                                    bg=self.colors['button_bg'])  # Normal grey
+    
+    def _update_card_line2(self, node_id: str):
+        """Surgically update line 2 (lastheard_frame) content
+        
+        Shows unread message, motion detected, or last heard based on priority.
+        Destroys existing children and recreates appropriate label(s).
+        
+        Args:
+            node_id: Node ID to update
+        """
+        logger.info(f"_update_card_line2 called for {node_id}")
+        
+        if node_id not in self.card_widgets:
+            logger.warning(f"_update_card_line2: {node_id} not in card_widgets")
+            return
+        
+        card_info = self.card_widgets[node_id]
+        lastheard_frame = card_info.get('lastheard_frame')
+        
+        if not lastheard_frame or not lastheard_frame.winfo_exists():
+            logger.warning(f"_update_card_line2: lastheard_frame missing or destroyed for {node_id}")
+            return
+        
+        # Get current background color (preserves flash state)
+        bg_color = lastheard_frame.cget('bg')
+        
+        # Clear existing children
+        for child in lastheard_frame.winfo_children():
+            child.destroy()
+        
+        # Get current node data
+        nodes_data = self.data_collector.get_nodes_data()
+        node_data = nodes_data.get(node_id, {})
+        
+        # Determine what to show (priority order)
+        unread_msgs = self.unread_messages.get(node_id, [])
+        has_unread = len(unread_msgs) > 0
+        
+        logger.info(f"_update_card_line2: {node_id} has {len(unread_msgs)} unread messages")
+        
+        if has_unread:
+            # Show most recent unread message
+            newest_msg = unread_msgs[0]  # Already sorted newest first
+            msg_text = newest_msg.get('text', '')
+            msg_from = newest_msg.get('from_name', 'Unknown')
+            
+            # Shorten sender name if too long
+            if len(msg_from) > 15:
+                msg_from = msg_from.split()[0] if ' ' in msg_from else msg_from[:15]
+            
+            # Preview text (50 chars)
+            max_preview = 50
+            preview = msg_text[:max_preview] + '...' if len(msg_text) > max_preview else msg_text
+            
+            # Show count if multiple unread
+            count_badge = f" [{len(unread_msgs)}]" if len(unread_msgs) > 1 else ""
+            
+            # Format: [MSG] From: preview text... [count]
+            display_text = f"[MSG] {msg_from}: {preview}{count_badge}"
+            
+            message_label = tk.Label(lastheard_frame, text=display_text,
+                                   bg=bg_color, fg=self.colors['fg_normal'],
+                                   font=self.font_card_line2, cursor="hand2", anchor="w")
+            message_label.pack(anchor="w", side="left", fill="x")
+            
+            # Make clickable to open message viewer
+            def open_viewer(event):
+                self._open_message_viewer(node_id)
+                return "break"  # Stop event propagation
+            
+            message_label.bind('<Button-1>', open_viewer)
+            message_label._is_message_label = True  # Exclude from card click binding
+            
+            # Update widget reference
+            card_info['message_label'] = message_label
+            
+        else:
+            # No unread messages - check motion or last heard
+            status = node_data.get('Status', 'Unknown')
+            last_heard = node_data.get('Last Heard')
+            last_motion = node_data.get('Last Motion')
+            current_time = time.time()
+            
+            if status == "Offline" and last_heard:
+                # Show static last heard timestamp
+                heard_dt = datetime.fromtimestamp(last_heard)
+                heard_text = f"Last: {heard_dt.strftime('%m-%d %H:%M')}"
+                heard_label = tk.Label(lastheard_frame, text=heard_text,
+                                      bg=bg_color, fg=self.colors['fg_bad'],
+                                      font=self.font_card_line2)
+                heard_label.pack(anchor="w", side="left")
+                card_info['heard_label'] = heard_label
+                
+            elif status == "Online" and last_motion:
+                # Show motion if recent enough
+                motion_display_duration = self.config_manager.get('dashboard.motion_display_seconds', 900)
+                time_since_motion = current_time - last_motion
+                
+                if time_since_motion <= motion_display_duration:
+                    motion_text = "Motion detected"
+                    motion_label = tk.Label(lastheard_frame, text=motion_text,
+                                          bg=bg_color, fg=self.colors['fg_warning'],
+                                          font=self.font_card_line2)
+                    motion_label.pack(anchor="w", side="left")
+                    card_info['motion_label'] = motion_label
+    
     def update_node_card(self, node_id: str, node_data: Dict[str, Any], current_time: float, is_changed: bool = False):
         """Update existing card without recreating it (prevents flickering)
         
@@ -2611,96 +2963,7 @@ class EnhancedDashboard(tk.Tk):
         card_info = self.card_widgets[node_id]
         card_frame = card_info['frame']
         
-        # Normal background is always bg_frame
-        normal_bg = self.colors['bg_frame']
-        
-        # Apply blue flash if data changed
-        if is_changed:
-            # Cancel any pending flash restore for this card
-            if node_id in self.flash_timers:
-                try:
-                    self.after_cancel(self.flash_timers[node_id])
-                except:
-                    pass
-            
-            flash_color = self.colors['bg_selected']  # Very dark blue (#1a237e)
-            
-            # Apply flash to card frame and all child frames (3-row layout)
-            card_frame.config(bg=flash_color)
-            for key in ['header_frame', 'left_header', 'right_header', 
-                       'lastheard_frame',
-                       'metrics1_frame', 'metrics2_frame', 'metrics3_frame',
-                       'row2_col1_frame', 'row2_col2_frame', 'row2_col3_frame',
-                       'row3_col1_frame', 'row3_col2_frame', 'row3_col3_frame']:
-                if key in card_info and card_info[key]:
-                    card_info[key].config(bg=flash_color)
-            
-            # Apply flash to all labels
-            for key in ['name_label', 'shortname_label', 'status_label', 'menu_button', 'heard_label',
-                       'battery_label', 'int_battery_label', 'temp_label', 'snr_label', 'util_label',
-                       'air_util_label', 'motion_label', 'current_label', 'humidity_label', 'pressure_label']:
-                if key in card_info and card_info[key]:
-                    card_info[key].config(bg=flash_color)
-                    # Flash children of container labels
-                    try:
-                        for child in card_info[key].winfo_children():
-                            if isinstance(child, (tk.Label, tk.Frame)):
-                                child.config(bg=flash_color)
-                                # Flash grandchildren too (for nested containers)
-                                for grandchild in child.winfo_children():
-                                    if isinstance(grandchild, tk.Label):
-                                        grandchild.config(bg=flash_color)
-                    except:
-                        pass
-            
-            def restore_colors():
-                """Restore all to normal background"""
-                # Check if card_frame still exists before restoring
-                if not card_frame.winfo_exists():
-                    return
-                
-                try:
-                    card_frame.config(bg=normal_bg)
-                except tk.TclError:
-                    return
-                
-                for key in ['header_frame', 'left_header', 'right_header', 
-                           'lastheard_frame',
-                           'metrics1_frame', 'metrics2_frame', 'metrics3_frame',
-                           'row2_col1_frame', 'row2_col2_frame', 'row2_col3_frame',
-                           'row3_col1_frame', 'row3_col2_frame', 'row3_col3_frame']:
-                    if key in card_info and card_info[key]:
-                        try:
-                            if card_info[key].winfo_exists():
-                                card_info[key].config(bg=normal_bg)
-                        except tk.TclError:
-                            pass
-                
-                for key in ['name_label', 'shortname_label', 'status_label', 'menu_button', 'heard_label',
-                           'battery_label', 'int_battery_label', 'temp_label', 'snr_label', 'util_label',
-                           'air_util_label', 'motion_label', 'current_label', 'humidity_label', 'pressure_label']:
-                    if key in card_info and card_info[key]:
-                        try:
-                            if card_info[key].winfo_exists():
-                                card_info[key].config(bg=normal_bg)
-                                # Restore children of container labels
-                                for child in card_info[key].winfo_children():
-                                    if isinstance(child, (tk.Label, tk.Frame)):
-                                        child.config(bg=normal_bg)
-                                        # Restore grandchildren too
-                                        for grandchild in child.winfo_children():
-                                            if isinstance(grandchild, tk.Label):
-                                                grandchild.config(bg=normal_bg)
-                        except tk.TclError:
-                            pass
-                
-                # Clear timer reference
-                if node_id in self.flash_timers:
-                    del self.flash_timers[node_id]
-            
-            # Schedule flash restoration after 2 seconds (2000ms)
-            timer_id = self.after(2000, restore_colors)
-            self.flash_timers[node_id] = timer_id
+        # Note: Data change flash has been removed - using border flash for messages only
         
         # Update node name if it changed (e.g., from "Unknown Node" to actual name)
         long_name = node_data.get('Node LongName', 'Unknown')
@@ -3044,6 +3307,274 @@ class EnhancedDashboard(tk.Tk):
         # Force a refresh to update the display
         self.force_refresh()
     
+    def open_messages(self):
+        """Open the message list window"""
+        from message_list_window import MessageListWindow
+        MessageListWindow(self, self.message_manager, 
+                         on_view_message=self._view_message_by_id,
+                         on_send_message=self._send_message_to_node)
+    
+    def _view_message_by_id(self, message_id: str):
+        """Open message viewer for a specific message ID
+        
+        Args:
+            message_id: Message ID to view
+        """
+        message_data = self.message_manager.get_message_by_id(message_id)
+        if not message_data:
+            logger.warning(f"Message {message_id} not found")
+            return
+        
+        # Determine node_id for updating UI after actions
+        if message_data.get('direction') == 'received':
+            node_id = message_data.get('from_node_id')
+        else:
+            # For sent messages, use first recipient or None
+            to_ids = message_data.get('to_node_ids', [])
+            node_id = to_ids[0] if to_ids else None
+        
+        def on_reply(reply_to_id: str, reply_to_name: str):
+            """Callback when user clicks Reply in viewer"""
+            self._send_message_to_node(reply_to_id)
+        
+        def on_delete(msg_id: str):
+            """Callback when user clicks Delete in viewer"""
+            try:
+                self.message_manager.delete_message(msg_id)
+                logger.info(f"Deleted message {msg_id}")
+                
+                # Remove from unread cache if present
+                for nid in list(self.unread_messages.keys()):
+                    self.unread_messages[nid] = [
+                        msg for msg in self.unread_messages[nid]
+                        if msg.get('message_id') != msg_id
+                    ]
+                
+                # Update all cards that might show this message
+                self._update_all_message_indicators()
+            except Exception as e:
+                logger.error(f"Error deleting message: {e}")
+        
+        def on_close(msg_id: str, direction: str):
+            """Callback when viewer closes - mark as read and send receipt"""
+            if direction == 'received':
+                try:
+                    self.message_manager.mark_as_read(msg_id)
+                    logger.info(f"Marked message {msg_id} as read")
+                    
+                    # Send read receipt if structured
+                    if message_data.get('structured', True):
+                        receipt_text = f"[RECEIPT:{msg_id}]"
+                        sender_id = message_data.get('from_node_id')
+                        if sender_id:
+                            self.data_collector.connection_manager.send_message(sender_id, receipt_text)
+                    
+                    # Remove from unread cache
+                    if node_id and node_id in self.unread_messages:
+                        self.unread_messages[node_id] = [
+                            msg for msg in self.unread_messages[node_id]
+                            if msg.get('message_id') != msg_id
+                        ]
+                    
+                    # Update card display
+                    if node_id:
+                        self._update_card_line2(node_id)
+                    self._update_messages_button()  # Update button badge
+                    
+                except Exception as e:
+                    logger.error(f"Error marking message as read: {e}")
+        
+        def on_mark_read(msg_id: str):
+            """Callback when user clicks Mark as Read in viewer"""
+            try:
+                self.message_manager.mark_as_read(msg_id)
+                logger.info(f"Marked message {msg_id} as read")
+                
+                # Send read receipt if structured
+                if message_data.get('structured', True):
+                    receipt_text = f"[RECEIPT:{msg_id}]"
+                    sender_id = message_data.get('from_node_id')
+                    if sender_id:
+                        self.data_collector.connection_manager.send_message(sender_id, receipt_text)
+                
+                # Remove from unread cache
+                if node_id and node_id in self.unread_messages:
+                    self.unread_messages[node_id] = [
+                        msg for msg in self.unread_messages[node_id]
+                        if msg.get('message_id') != msg_id
+                    ]
+                
+                # Update card display
+                if node_id:
+                    self._update_card_line2(node_id)
+            except Exception as e:
+                logger.error(f"Error marking message as read: {e}")
+        
+        def on_archive(msg_id: str):
+            """Callback when user clicks Archive in viewer"""
+            try:
+                message = self.message_manager.get_message(msg_id)
+                if message:
+                    message['archived'] = True
+                    self.message_manager.save_message(message)
+                    logger.info(f"Archived message {msg_id}")
+                    
+                    # Remove from unread cache
+                    if node_id and node_id in self.unread_messages:
+                        self.unread_messages[node_id] = [
+                            msg for msg in self.unread_messages[node_id]
+                            if msg.get('message_id') != msg_id
+                        ]
+                    
+                    # Update card display
+                    if node_id:
+                        self._update_card_line2(node_id)
+            except Exception as e:
+                logger.error(f"Error archiving message: {e}")
+        
+        # Open the viewer
+        from message_viewer import MessageViewer
+        MessageViewer(self, message_data, 
+                     on_reply=on_reply,
+                     on_delete=on_delete,
+                     on_close=on_close,
+                     on_mark_read=on_mark_read,
+                     on_archive=on_archive)
+    
+    def _update_all_message_indicators(self):
+        """Update message indicators on all cards"""
+        for node_id in list(self.card_widgets.keys()):
+            self._update_card_line2(node_id)
+        self._update_messages_button()  # Update button badge
+    
+    def _open_message_viewer(self, node_id: str):
+        """Open message viewer for the oldest unread message for a node
+        
+        Args:
+            node_id: Node ID to view messages for
+        """
+        # Get unread messages for this node
+        unread_msgs = self.unread_messages.get(node_id, [])
+        if not unread_msgs:
+            logger.warning(f"No unread messages for {node_id}")
+            return
+        
+        # Show the oldest unread message (last in list since sorted newest first)
+        message_data = unread_msgs[-1]
+        
+        def on_reply(reply_to_id: str, reply_to_name: str):
+            """Callback when user clicks Reply in viewer"""
+            self._send_message_to_node(reply_to_id)
+        
+        def on_delete(message_id: str):
+            """Callback when user clicks Delete in viewer"""
+            try:
+                self.message_manager.delete_message(message_id)
+                logger.info(f"Deleted message {message_id}")
+                
+                # Remove from unread cache
+                if node_id in self.unread_messages:
+                    self.unread_messages[node_id] = [
+                        msg for msg in self.unread_messages[node_id]
+                        if msg.get('message_id') != message_id
+                    ]
+                
+                # Surgically update line 2 to remove message label
+                self._update_card_line2(node_id)
+            except Exception as e:
+                logger.error(f"Error deleting message: {e}")
+        
+        def on_close(message_id: str, direction: str):
+            """Callback when viewer closes - mark as read and send receipt"""
+            if direction == 'received':
+                try:
+                    # Mark message as read
+                    self.message_manager.mark_as_read(message_id)
+                    logger.info(f"Marked message {message_id} as read")
+                    
+                    # Send read receipt back to sender
+                    receipt_text = f"[RECEIPT:{message_id}]"
+                    sender_id = message_data.get('from_node_id')
+                    if sender_id:
+                        success = self.data_collector.connection_manager.send_message(sender_id, receipt_text)
+                        if success:
+                            logger.info(f"Sent read receipt for {message_id} to {sender_id}")
+                        else:
+                            logger.warning(f"Failed to send read receipt for {message_id}")
+                    
+                    # Remove from unread cache
+                    if node_id in self.unread_messages:
+                        self.unread_messages[node_id] = [
+                            msg for msg in self.unread_messages[node_id]
+                            if msg.get('message_id') != message_id
+                        ]
+                    
+                    # Surgically update line 2 to remove message label and stop flash
+                    self._update_card_line2(node_id)
+                    
+                except Exception as e:
+                    logger.error(f"Error marking message as read: {e}")
+        
+        def on_mark_read(message_id: str):
+            """Callback when user clicks Mark as Read in viewer"""
+            try:
+                # Mark message as read
+                self.message_manager.mark_as_read(message_id)
+                logger.info(f"Marked message {message_id} as read")
+                
+                # Send read receipt if structured message
+                if message_data.get('structured', True):
+                    receipt_text = f"[RECEIPT:{message_id}]"
+                    sender_id = message_data.get('from_node_id')
+                    if sender_id:
+                        success = self.data_collector.connection_manager.send_message(sender_id, receipt_text)
+                        if success:
+                            logger.info(f"Sent read receipt for {message_id} to {sender_id}")
+                        else:
+                            logger.warning(f"Failed to send read receipt for {message_id}")
+                
+                # Remove from unread cache
+                if node_id in self.unread_messages:
+                    self.unread_messages[node_id] = [
+                        msg for msg in self.unread_messages[node_id]
+                        if msg.get('message_id') != message_id
+                    ]
+                
+                # Update card to remove message indicator and stop flash
+                self._update_card_line2(node_id)
+            except Exception as e:
+                logger.error(f"Error marking message as read: {e}")
+        
+        def on_archive(message_id: str):
+            """Callback when user clicks Archive in viewer"""
+            try:
+                # Set archived flag in message
+                message = self.message_manager.get_message(message_id)
+                if message:
+                    message['archived'] = True
+                    self.message_manager.save_message(message)
+                    logger.info(f"Archived message {message_id}")
+                    
+                    # Remove from unread cache
+                    if node_id in self.unread_messages:
+                        self.unread_messages[node_id] = [
+                            msg for msg in self.unread_messages[node_id]
+                            if msg.get('message_id') != message_id
+                        ]
+                    
+                    # Update card to remove message indicator
+                    self._update_card_line2(node_id)
+            except Exception as e:
+                logger.error(f"Error archiving message: {e}")
+        
+        # Open the viewer
+        MessageViewer(self, message_data, 
+                     on_reply=on_reply,
+                     on_delete=on_delete,
+                     on_close=on_close,
+                     on_mark_read=on_mark_read,
+                     on_archive=on_archive)
+    
     def _send_message_to_node(self, node_id: str):
         """Open dialog to send a message to a node"""
         nodes_data = self.data_collector.get_nodes_data() if self.data_collector else {}
@@ -3052,24 +3583,58 @@ class EnhancedDashboard(tk.Tk):
         
         def send_callback(dest_id: str, message: str, send_bell: bool):
             """Callback when user confirms message send"""
+            import time
+            
             # Add bell character if requested
             if send_bell:
                 message = '\a' + message
             
+            # Generate message ID
+            message_id = self._generate_message_id()
+            
+            # Format message with protocol: [MSG:id]text
+            formatted_text = f"[MSG:{message_id}]{message}"
+            
             # Send the message
-            success = self.data_collector.connection_manager.send_message(dest_id, message)
+            success = self.data_collector.connection_manager.send_message(dest_id, formatted_text)
             
             if success:
-                logger.info(f"Message sent to {node_name} ({dest_id}): {repr(message)}")
+                logger.info(f"Message sent to {node_name} ({dest_id}): {repr(message)} [ID: {message_id}]")
+                
+                # Save to message_manager
+                local_node_id = self._get_local_node_id()
+                local_node_data = nodes_data.get(local_node_id, {})
+                local_node_name = local_node_data.get('Node LongName', 'Local')
+                
+                message_obj = {
+                    'message_id': message_id,
+                    'structured': True,  # All sent messages use our protocol
+                    'from_node_id': local_node_id,
+                    'from_name': local_node_name,
+                    'to_node_ids': [dest_id],
+                    'is_bulletin': False,
+                    'text': message,  # Store original text without protocol prefix
+                    'timestamp': time.time(),
+                    'direction': 'sent',
+                    'delivery_status': 'pending',  # Will be updated by ACK handler
+                    'archived': False
+                }
+                
+                self.message_manager.save_message(message_obj)
+                logger.info(f"Saved sent message to storage: {message_id}")
             else:
                 logger.error(f"Failed to send message to {node_name} ({dest_id})")
                 messagebox.showerror("Send Failed", f"Failed to send message to {node_name}")
         
         # Open the message dialog
-        MessageDialog(self, node_id, node_name, send_callback)
+        dialog = MessageDialog(self, node_id, node_name, send_callback)
+        dialog.show()
     
     def _on_message_received(self, message_data: Dict[str, Any]):
         """Handle received message notification"""
+        import time
+        import re
+        
         from_id = message_data.get('from')
         to_id = message_data.get('to')
         text = message_data.get('text', '')
@@ -3081,52 +3646,144 @@ class EnhancedDashboard(tk.Tk):
         
         from_name = from_data.get('Node LongName', from_id)
         to_name = to_data.get('Node LongName', to_id)
+        local_node_id = self._get_local_node_id()
         
-        # Show notification (15 seconds)
-        self._show_message_notification(from_id, from_name, to_name, text)
+        # Check if this is a read receipt: [RECEIPT:msg_id]
+        receipt_match = re.match(r'^\[RECEIPT:([^\]]+)\]', text)
+        if receipt_match:
+            message_id = receipt_match.group(1)
+            logger.info(f"Received read receipt for message {message_id} from {from_name}")
+            
+            # Update read receipt in message_manager
+            self.message_manager.add_read_receipt(message_id, from_id)
+            return  # Don't show notification for receipts
         
-        logger.info(f"Received message from {from_name} to {to_name}: {repr(text)}")
+        # Check if this is a protocol-formatted message: [MSG:id]text
+        msg_match = re.match(r'^\[MSG:([^\]]+)\](.*)$', text, re.DOTALL)
+        if msg_match:
+            message_id = msg_match.group(1)
+            message_text = msg_match.group(2)
+            logger.info(f"Received protocol message {message_id} from {from_name}: {repr(message_text)}")
+            
+            # Save to message_manager
+            message_obj = {
+                'message_id': message_id,
+                'structured': True,  # Flag to indicate this uses our protocol
+                'from_node_id': from_id,
+                'from_name': from_name,
+                'to_node_ids': [to_id] if to_id else [],
+                'is_bulletin': not to_id or to_id == '^all',  # Bulletin if no specific recipient
+                'text': message_text,  # Store without protocol prefix
+                'timestamp': time.time(),
+                'direction': 'received',
+                'read': False,
+                'archived': False
+            }
+            
+            self.message_manager.save_message(message_obj)
+            
+            # Update unread messages cache for local node if this message is for us
+            if to_id == local_node_id or not to_id:
+                if local_node_id not in self.unread_messages:
+                    self.unread_messages[local_node_id] = []
+                self.unread_messages[local_node_id].append(message_obj)
+                logger.info(f"Added to unread messages for local node (total: {len(self.unread_messages[local_node_id])})")
+                self._update_messages_button()  # Update button badge
+            
+            # Show notification
+            self._show_message_notification(from_id, from_name, to_name, message_text)
+        else:
+            # Non-protocol message (from other client like mobile app)
+            logger.info(f"Received unstructured message from {from_name} to {to_name}: {repr(text)}")
+            
+            # Generate message_id for local tracking
+            message_id = f"{from_id.strip('!')}_{int(time.time() * 1000)}"
+            
+            # Save as unstructured message
+            message_obj = {
+                'message_id': message_id,
+                'structured': False,  # Flag to indicate this is from external client
+                'from_node_id': from_id,
+                'from_name': from_name,
+                'to_node_ids': [to_id] if to_id else [],
+                'is_bulletin': not to_id or to_id == '^all',
+                'text': text,
+                'timestamp': time.time(),
+                'direction': 'received',
+                'read': False,
+                'archived': False
+            }
+            
+            self.message_manager.save_message(message_obj)
+            
+            # Update unread messages cache for local node if this message is for us
+            if to_id == local_node_id or not to_id:
+                if local_node_id not in self.unread_messages:
+                    self.unread_messages[local_node_id] = []
+                self.unread_messages[local_node_id].append(message_obj)
+                logger.info(f"Added unstructured message to unread (total: {len(self.unread_messages[local_node_id])})")
+                self._update_messages_button()  # Update button badge
+            
+            # Show notification
+            self._show_message_notification(from_id, from_name, to_name, text)
     
     def _show_message_notification(self, from_id: str, from_name: str, to_name: str, text: str):
-        """Display message notification banner for 15 seconds"""
-        # Remove existing notification for this node if any
-        self._remove_message_notification(from_id)
+        """Add message to scrolling notification banner at bottom"""
+        # Add to recent messages (keep last 3)
+        message_tuple = (from_name, to_name, text)
+        self.recent_messages.append(message_tuple)
+        if len(self.recent_messages) > 3:
+            self.recent_messages.pop(0)  # Remove oldest
         
-        # Create notification frame at the top of the window
-        notification_frame = tk.Frame(self, bg='#FFA500', relief="raised", borderwidth=2)
-        notification_frame.pack(side="top", fill="x", padx=8, pady=(8, 0))
+        # Create banner if it doesn't exist
+        if self.notification_banner is None:
+            self.notification_banner = tk.Frame(self, bg='#FFA500', relief="raised", borderwidth=2, height=35)
+            self.notification_banner.pack(side="bottom", fill="x", padx=0, pady=0)
+            self.notification_banner.pack_propagate(False)  # Keep fixed height
+            
+            self.notification_label = tk.Label(
+                self.notification_banner,
+                text="",
+                font=self.font_bold,
+                bg='#FFA500',
+                fg='#000000',
+                padx=10,
+                pady=5,
+                anchor="w"
+            )
+            self.notification_label.pack(fill="both", expand=True)
         
-        # Create message label
-        message_label = tk.Label(
-            notification_frame,
-            text=f"📨 Message From {from_name} To {to_name}: {text}",
-            font=self.font_bold,
-            bg='#FFA500',
-            fg='#000000',
-            padx=10,
-            pady=5
-        )
-        message_label.pack(fill="x")
+        # Reset to first message and start scrolling
+        self.notification_index = 0
+        self._update_notification_display()
+    
+    def _update_notification_display(self):
+        """Update notification banner to show current message and schedule next"""
+        # Cancel any existing timer
+        if self.notification_timer is not None:
+            self.after_cancel(self.notification_timer)
+            self.notification_timer = None
         
-        # Store the notification
-        self.active_message_notifications[from_id] = notification_frame
+        if not self.recent_messages or self.notification_label is None:
+            return
         
-        # Schedule removal after 15 seconds
-        timer_id = self.after(15000, lambda: self._remove_message_notification(from_id))
-        self.message_timers[from_id] = timer_id
+        # Show current message
+        from_name, to_name, text = self.recent_messages[self.notification_index]
+        display_text = f"📨 From {from_name} To {to_name}: {text}"
+        self.notification_label.config(text=display_text)
+        
+        # If we have multiple messages, schedule rotation
+        if len(self.recent_messages) > 1:
+            # Advance to next message (wrap around)
+            self.notification_index = (self.notification_index + 1) % len(self.recent_messages)
+            # Rotate every 5 seconds
+            self.notification_timer = self.after(5000, self._update_notification_display)
     
     def _remove_message_notification(self, from_id: str):
-        """Remove message notification for a node"""
-        # Cancel any pending timer
-        if from_id in self.message_timers:
-            self.after_cancel(self.message_timers[from_id])
-            del self.message_timers[from_id]
-        
-        # Destroy the notification frame
-        if from_id in self.active_message_notifications:
-            frame = self.active_message_notifications[from_id]
-            frame.destroy()
-            del self.active_message_notifications[from_id]
+        """Remove message notification for a node (legacy method - now using scrolling banner)"""
+        # This method is kept for compatibility but doesn't remove individual notifications
+        # The banner will scroll through recent messages automatically
+        pass
     
     def on_closing(self):
         """Handle application closing"""
