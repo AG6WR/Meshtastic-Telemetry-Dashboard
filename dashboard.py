@@ -76,6 +76,10 @@ class SettingsDialog:
     
     def create_widgets(self):
         """Create dialog widgets"""
+        # Configure tab style with larger font
+        style = ttk.Style()
+        style.configure('TNotebook.Tab', font=("Liberation Sans", 12))
+        
         notebook = ttk.Notebook(self.dialog)
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
         
