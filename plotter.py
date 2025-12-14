@@ -218,7 +218,8 @@ class TelemetryPlotter:
         select_all_var = tk.BooleanVar(value=select_all_default)
         select_all_cb = tk.Checkbutton(node_frame, text="All Nodes", variable=select_all_var,
                                       bg='#2d2d2d', fg='white', selectcolor='#404040',
-                                      activebackground='#2d2d2d', activeforeground='white')
+                                      activebackground='#2d2d2d', activeforeground='white',
+                                      font=("Liberation Sans", 12))
         select_all_cb.pack(anchor="w", padx=10, pady=3)
         
         # Individual node checkboxes
@@ -256,7 +257,8 @@ class TelemetryPlotter:
             display_name = f"{node_info['long_name']} ({node_info['short_name']})"
             cb = tk.Checkbutton(scrollable_frame, text=display_name, variable=var,
                                bg='#2d2d2d', fg='white', selectcolor='#404040',
-                               activebackground='#2d2d2d', activeforeground='white')
+                               activebackground='#2d2d2d', activeforeground='white',
+                               font=("Liberation Sans", 12))
             cb.pack(anchor="w", padx=10, pady=2)
             node_checkboxes.append(cb)
         

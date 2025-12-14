@@ -388,14 +388,17 @@ class MessageListWindow:
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
                 font=("Liberation Sans", 11), anchor="w", justify="left").pack(fill="x")
         
-        # Make content frame clickable to view message
+        # Make entire row clickable to view message (except checkbox)
         def on_click(event):
             if self.on_view_message_callback:
                 self.on_view_message_callback(message_id)
                 self.after(500, self._refresh_all_tabs)
         
+        # Bind to the entire row and all its children except checkbox
+        row_frame.bind('<Button-1>', on_click)
         content_frame.bind('<Button-1>', on_click)
         for child in content_frame.winfo_children():
+            child.bind('<Button-1>', on_click)
             for subchild in child.winfo_children():
                 subchild.bind('<Button-1>', on_click)
         
