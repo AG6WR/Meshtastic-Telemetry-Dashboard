@@ -79,6 +79,7 @@ class MessageListWindow:
         close_btn = tk.Button(title_frame, text="✕ Close", 
                              command=self._on_close,
                              bg='#c62828', fg='white',
+                             width=10, height=2,
                              font=("Liberation Sans", 12))
         close_btn.pack(side="right", padx=(5, 0))
         
@@ -86,6 +87,7 @@ class MessageListWindow:
         refresh_btn = tk.Button(title_frame, text="🔄 Refresh", 
                                command=self._refresh_all_tabs,
                                bg='#404040', fg='white',
+                               width=10, height=2,
                                font=("Liberation Sans", 12))
         refresh_btn.pack(side="right", padx=(5, 0))
         
@@ -93,7 +95,8 @@ class MessageListWindow:
         compose_btn = tk.Button(title_frame, text="✉ Compose", 
                                command=self._on_compose,
                                bg='#2e7d32', fg='white',
-                               font=("Liberation Sans", 12, "bold"))
+                               width=10, height=2,
+                               font=("Liberation Sans", 12))
         compose_btn.pack(side="right")
         
         # Tab notebook
