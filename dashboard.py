@@ -1095,6 +1095,18 @@ class EnhancedDashboard(tk.Tk):
         # Track active menu for dismissal
         self.active_menu = None
         
+        # Global click handler to dismiss menus
+        def dismiss_menu(event):
+            if self.active_menu:
+                try:
+                    self.active_menu.unpost()
+                    self.active_menu = None
+                except:
+                    pass
+        
+        # Bind to main window and card container
+        self.bind('<Button-1>', dismiss_menu)
+        
         # Create scrollable canvas for cards
         self.card_canvas = tk.Canvas(self.card_container, bg=self.colors['bg_main'], highlightthickness=0)
         # Vertical scrollbar - widened for touch input (24px)
@@ -2005,10 +2017,38 @@ class EnhancedDashboard(tk.Tk):
         # Menu button removed - entire card is now clickable to show context menu
         menu_button = None  # Keep variable for compatibility
         
+        # Bind card click to show menu
+        def on_card_click(event):
+            # Dismiss any active menu first
+            if self.active_menu:
+                try:
+                    self.active_menu.unpost()
+                    self.active_menu = None
+                except:
+                    pass
+            # Show menu for this card
+            show_card_menu(event)
+            return "break"
+        
+        card_frame.bind('<Button-1>', on_card_click)
+        
         # Message indicator (always create it, show/hide based on message time)
         msg_indicator = tk.Label(right_header, text="📧 ",
                                 bg=bg_color, fg=self.colors['fg_normal'],
                                 font=self.font_card_header)
+        
+        # Add click handler to message indicator to open message viewer
+        def on_message_click(event):
+            # Get most recent unread message for this node
+            if node_id in self.unread_messages and len(self.unread_messages[node_id]) > 0:
+                # Open most recent unread message
+                message_data = self.unread_messages[node_id][0]  # Already sorted newest first
+                message_id = message_data.get('message_id')
+                if message_id:
+                    self._view_message_by_id(message_id)
+            return "break"  # Stop event propagation
+        
+        msg_indicator.bind('<Button-1>', on_message_click)
         
         last_message_time = node_data.get('Last Message Time')
         if last_message_time:
