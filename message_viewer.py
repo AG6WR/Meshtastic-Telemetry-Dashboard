@@ -69,7 +69,6 @@ class MessageViewer:
         self.dialog.geometry("1125x350")
         self.dialog.resizable(True, True)
         self.dialog.transient(parent)
-        self.dialog.grab_set()
         
         # Get colors from parent
         self.colors = getattr(parent, 'colors', {
@@ -83,6 +82,10 @@ class MessageViewer:
         self.dialog.configure(bg=self.colors['bg_frame'])
         
         self._create_widgets()
+        
+        # Set grab after window is created and visible (fixes Linux timing issue)
+        self.dialog.update_idletasks()
+        self.dialog.grab_set()
         
         # Handle window close
         self.dialog.protocol("WM_DELETE_WINDOW", self._on_window_close)
