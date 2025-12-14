@@ -2061,7 +2061,8 @@ class EnhancedDashboard(tk.Tk):
                           bg=self.colors['bg_frame'],
                           fg=self.colors['fg_normal'],
                           activebackground=self.colors['bg_selected'],
-                          activeforeground=self.colors['fg_normal'])
+                          activeforeground=self.colors['fg_normal'],
+                          font=self.font_ui_context_menu)
             menu.add_command(label="View Details", command=dismiss_after(lambda: self.show_node_detail(node_id)))
             menu.add_command(label="Show Logs", command=dismiss_after(lambda: self.open_logs_folder(node_id)))
             menu.add_command(label="Open CSV", command=dismiss_after(lambda: self.open_today_csv(node_id)))
