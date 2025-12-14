@@ -2023,25 +2023,28 @@ class EnhancedDashboard(tk.Tk):
                 except:
                     pass
             
-            # Create wrapper functions that dismiss menu after action
-            def dismiss_after(action):
-                def wrapper():
-                    try:
-                        action()
-                    finally:
-                        if self.active_menu:
-                            try:
-                                self.active_menu.unpost()
-                                self.active_menu = None
-                            except:
-                                pass
-                return wrapper
-            
+            # Create menu
             menu = tk.Menu(self, tearoff=0,
                           bg=self.colors['bg_frame'],
                           fg=self.colors['fg_normal'],
                           activebackground=self.colors['bg_selected'],
                           activeforeground=self.colors['fg_normal'])
+            
+            # Create wrapper functions that dismiss menu after action
+            # Capture menu reference in closure
+            def dismiss_after(action):
+                def wrapper():
+                    try:
+                        action()
+                    finally:
+                        try:
+                            menu.unpost()
+                            if self.active_menu == menu:
+                                self.active_menu = None
+                        except:
+                            pass
+                return wrapper
+            
             menu.add_command(label="View Details", command=dismiss_after(lambda: self.show_node_detail(node_id)))
             menu.add_command(label="Show Logs", command=dismiss_after(lambda: self.open_logs_folder(node_id)))
             menu.add_command(label="Open CSV", command=dismiss_after(lambda: self.open_today_csv(node_id)))
@@ -2599,6 +2602,7 @@ class EnhancedDashboard(tk.Tk):
             'status_label': status_label,
             'menu_button': menu_button,
             'msg_indicator': msg_indicator,
+            'message_label': message_label if unread_msgs else None,
             'heard_label': heard_label,
             'motion_label': motion_label,
             'battery_label': battery_label,
