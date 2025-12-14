@@ -879,11 +879,23 @@ class EnhancedDashboard(tk.Tk):
         return f"{short_id}_{timestamp_ms}"
     
     def _get_local_node_id(self) -> str:
-        """Get the local node ID.
+        """Get the local node ID from the connected interface.
         
         Returns:
             Local node ID string (e.g., '!a20a0de0') or empty string if not available
         """
+        # First try to get it from the active connection
+        if self.data_collector and self.data_collector.connection_manager:
+            node_id = self.data_collector.connection_manager.get_local_node_id()
+            if node_id:
+                # Update config if it changed
+                cached_id = self.config_manager.get('meshtastic.local_node_id')
+                if cached_id != node_id:
+                    logger.info(f"Local node changed from {cached_id} to {node_id}")
+                    self.config_manager.set('meshtastic.local_node_id', node_id)
+                return node_id
+        
+        # Fall back to cached value if no active connection
         return self.config_manager.get('meshtastic.local_node_id') or ''
     
     def _toggle_fullscreen(self, event=None):

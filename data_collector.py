@@ -135,11 +135,22 @@ class DataCollector:
         logger.info("Data collection system started")
     
     def _on_local_node_detected(self, node_id, node_name):
-        """Handle local node detection event - store in config"""
+        """Handle local node detection event - store in config and notify dashboard"""
         logger.info(f"Storing local node info: {node_id} ({node_name})")
+        
+        # Check if local node changed
+        old_node_id = self.config_manager.get('meshtastic.local_node_id')
+        node_changed = old_node_id != node_id
+        
+        # Update config
         self.config_manager.set('meshtastic.local_node_id', node_id)
         self.config_manager.set('meshtastic.local_node_name', node_name)
         self.config_manager.save_config()
+        
+        # If local node changed, notify dashboard to rebuild cards
+        if node_changed and old_node_id:
+            logger.info(f"Local node changed from {old_node_id} to {node_id} - triggering card rebuild")
+            self._notify_data_changed()
     
     def stop(self):
         """Stop the data collection system"""
