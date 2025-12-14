@@ -163,7 +163,8 @@ class TelemetryPlotter:
             parent = left_col if i < 3 else right_col
             rb = tk.Radiobutton(parent, text=text, variable=param_var, value=value,
                                bg='#2d2d2d', fg='white', selectcolor='#404040',
-                               activebackground='#2d2d2d', activeforeground='white')
+                               activebackground='#2d2d2d', activeforeground='white',
+                               font=("Liberation Sans", 12))
             rb.pack(anchor="w", pady=2)
         
         # Time window selection - two column layout
@@ -199,13 +200,15 @@ class TelemetryPlotter:
         for text, value in left_options:
             rb = tk.Radiobutton(col1, text=text, variable=time_var, value=value,
                                bg='#2d2d2d', fg='white', selectcolor='#404040',
-                               activebackground='#2d2d2d', activeforeground='white')
+                               activebackground='#2d2d2d', activeforeground='white',
+                               font=("Liberation Sans", 12))
             rb.pack(anchor="w", padx=10, pady=2)
         
         for text, value in right_options:
             rb = tk.Radiobutton(col2, text=text, variable=time_var, value=value,
                                bg='#2d2d2d', fg='white', selectcolor='#404040',
-                               activebackground='#2d2d2d', activeforeground='white')
+                               activebackground='#2d2d2d', activeforeground='white',
+                               font=("Liberation Sans", 12))
             rb.pack(anchor="w", padx=10, pady=2)
         
         # Node selection - restored to original height
