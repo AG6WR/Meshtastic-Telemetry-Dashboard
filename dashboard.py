@@ -867,7 +867,7 @@ class EnhancedDashboard(tk.Tk):
         
         # Quit button (right side, before fullscreen)
         tk.Button(controls_frame, text="Quit", command=self.quit_app,
-                 bg=self.colors['fg_bad'], fg='white',
+                 bg='#424242', fg='white',
                  width=9, height=2).pack(side="right", padx=(0, 5))
         
         # Table container with horizontal scrollbar (initially hidden since default is cards)

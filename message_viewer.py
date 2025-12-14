@@ -147,7 +147,7 @@ class MessageViewer:
         ts_label.pack(side="left")
         
         dt = datetime.fromtimestamp(self.timestamp)
-        ts_value = tk.Label(timestamp_frame, text=f" {dt.strftime('%Y-%m-%d %H:%M:%S')}",
+        ts_value = tk.Label(timestamp_frame, text=f"{dt.strftime('%Y-%m-%d %H:%M:%S')}",
                           bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
                           font=("Liberation Sans", 12))
         ts_value.pack(side="left")
@@ -156,7 +156,7 @@ class MessageViewer:
         text_label = tk.Label(content_frame, text="Message:",
                             bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
                             font=("Liberation Sans", 12))
-        text_label.pack(anchor="w", pady=(10, 5))
+        text_label.pack(anchor="w", pady=(0, 5))
         
         text_frame = tk.Frame(content_frame, bg=self.colors['bg_frame'], height=80)
         text_frame.pack(fill="x", expand=False)

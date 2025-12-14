@@ -78,7 +78,7 @@ class MessageListWindow:
         # Close button (rightmost)
         close_btn = tk.Button(title_frame, text="✕ Close", 
                              command=self._on_close,
-                             bg='#c62828', fg='white',
+                             bg='#424242', fg='white',
                              width=10, height=2,
                              font=("Liberation Sans", 12))
         close_btn.pack(side="right", padx=(5, 0))
