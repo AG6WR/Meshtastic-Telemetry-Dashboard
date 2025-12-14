@@ -710,7 +710,9 @@ class EnhancedDashboard(tk.Tk):
             if self.is_fullscreen:
                 self.is_fullscreen = False
                 self.attributes('-fullscreen', False)
+                self.attributes('-zoomed', False)  # Unset zoomed state on Linux
                 self.state('normal')
+                self.wm_geometry('')  # Clear geometry to reset window manager state
                 geometry = self.config_manager.get('dashboard.window_geometry', '1200x660')
                 self.geometry(geometry)
                 self._update_fullscreen_button_text()
@@ -916,7 +918,9 @@ class EnhancedDashboard(tk.Tk):
         
         # When exiting fullscreen, restore to normal window (not maximized)
         if not self.is_fullscreen:
+            self.attributes('-zoomed', False)  # Unset zoomed state on Linux
             self.state('normal')
+            self.wm_geometry('')  # Clear geometry to reset window manager state
             # Restore saved geometry or use default
             geometry = self.config_manager.get('dashboard.window_geometry', '1200x660')
             self.geometry(geometry)
@@ -931,7 +935,9 @@ class EnhancedDashboard(tk.Tk):
         
         # When exiting fullscreen, restore to normal window (not maximized)
         if not self.is_fullscreen:
+            self.attributes('-zoomed', False)  # Unset zoomed state on Linux
             self.state('normal')
+            self.wm_geometry('')  # Clear geometry to reset window manager state
             # Restore saved geometry or use default
             geometry = self.config_manager.get('dashboard.window_geometry', '1200x660')
             self.geometry(geometry)
