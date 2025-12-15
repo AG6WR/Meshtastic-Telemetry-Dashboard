@@ -79,8 +79,10 @@ class MessageDialog:
         self.dialog.bind_all('<FocusIn>', self._on_focus_event, add='+')
         self.dialog.bind_all('<Button-1>', self._on_click_event, add='+')
         
-        # Set focus to text area
+        # Set focus to text area and show keyboard after dialog is visible
+        self.dialog.update_idletasks()
         self.text_area.focus_set()
+        self.dialog.after(100, self.virtual_keyboard.show)  # Show keyboard after dialog renders
         
     def _create_widgets(self):
         """Create dialog widgets"""
