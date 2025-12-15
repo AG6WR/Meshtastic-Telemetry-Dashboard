@@ -303,9 +303,13 @@ class TelemetryPlotter:
         
         # Buttons - enlarged for touch input
         tk.Button(button_frame, text="Cancel", command=on_cancel,
-                 bg='#404040', fg='white', width=12, height=2).pack(side="right", padx=(10, 0))
+                 bg='#404040', fg='white', 
+                 font=("Liberation Sans Narrow", 12),
+                 width=12, height=2).pack(side="right", padx=(10, 0))
         tk.Button(button_frame, text="Plot", command=on_ok,
-                 bg='#404040', fg='white', width=12, height=2).pack(side="right")
+                 bg='#404040', fg='white', 
+                 font=("Liberation Sans Narrow", 12),
+                 width=12, height=2).pack(side="right")
         
         # Wait for dialog to close
         dialog.wait_window()

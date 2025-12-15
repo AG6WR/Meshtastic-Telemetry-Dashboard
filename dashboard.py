@@ -76,9 +76,9 @@ class SettingsDialog:
     
     def create_widgets(self):
         """Create dialog widgets"""
-        # Configure tab style with larger font
+        # Configure tab style with narrower font to prevent button growth
         style = ttk.Style()
-        style.configure('TNotebook.Tab', font=("Liberation Sans", 12))
+        style.configure('TNotebook.Tab', font=("Liberation Sans Narrow", 12))
         
         notebook = ttk.Notebook(self.dialog)
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
@@ -767,36 +767,12 @@ class EnhancedDashboard(tk.Tk):
         self.font_title = tkfont.Font(family=base_family, size=18, weight="bold")
         
         # Global UI fonts - Liberation Sans family for windows/dialogs
-        self.font_ui_button = tkfont.Font(family="Liberation Sans Narrow", size=11)  # All buttons
-        self.font_ui_tab = tkfont.Font(family="Liberation Sans Narrow", size=11)  # Notebook tabs
+        self.font_ui_button = tkfont.Font(family="Liberation Sans Narrow", size=12)  # All buttons
+        self.font_ui_tab = tkfont.Font(family="Liberation Sans Narrow", size=12)  # Notebook tabs
         self.font_ui_section_title = tkfont.Font(family="Liberation Sans", size=12, weight="bold")  # Section headers, LabelFrame titles
         self.font_ui_window_title = tkfont.Font(family="Liberation Sans", size=14, weight="bold")  # Window/dialog main titles
-        self.font_ui_body = tkfont.Font(family="Liberation Sans", size=11)  # Message text, labels, general content
-        self.font_ui_notes = tkfont.Font(family="Liberation Sans Narrow", size=10)  # Timestamps, help text, descriptions
-        self.font_ui_context_menu = tkfont.Font(family="Liberation Sans", size=12)  # Context menus (larger for touch)
-        self.font_ui_input = tkfont.Font(family="Liberation Sans", size=11)  # Text entry, comboboxes, listboxes
-        
-        # Card view fonts - monospace for compact card display (unchanged)
-        base_family = "Consolas" if sys.platform.startswith("win") else "Courier New"
-        self.font_base = tkfont.Font(family=base_family, size=11)
-        self.font_bold = tkfont.Font(family=base_family, size=11, weight="bold")
-        self.font_data = tkfont.Font(family=base_family, size=12)  # Card view data font
-        self.font_data_bold = tkfont.Font(family=base_family, size=12, weight="bold")  # Card view bold data
-        self.font_card_header = tkfont.Font(family=base_family, size=14, weight="bold")  # Card header 14pt
-        self.font_card_line2 = tkfont.Font(family=base_family, size=11)  # Card line 2 (Motion/Last Heard) 10pt - matches line 4
-        self.font_card_line3 = tkfont.Font(family=base_family, size=14, weight="bold")  # Card line 3 (V/I/T) 14pt
-        self.font_card_label = tkfont.Font(family=base_family, size=8)  # Card labels 8pt small (for "ICP Batt:", "Ch:", etc.)
-        self.font_card_value = tkfont.Font(family=base_family, size=11, weight="bold")  # Card values 11pt bold (for data values)
-        self.font_italic = tkfont.Font(family=base_family, size=11, slant="italic")
-        self.font_title = tkfont.Font(family=base_family, size=18, weight="bold")
-        
-        # Global UI fonts - Liberation Sans family for windows/dialogs
-        self.font_ui_button = tkfont.Font(family="Liberation Sans Narrow", size=11)  # All buttons
-        self.font_ui_tab = tkfont.Font(family="Liberation Sans Narrow", size=11)  # Notebook tabs
-        self.font_ui_section_title = tkfont.Font(family="Liberation Sans", size=12, weight="bold")  # Section headers, LabelFrame titles
-        self.font_ui_window_title = tkfont.Font(family="Liberation Sans", size=14, weight="bold")  # Window/dialog main titles
-        self.font_ui_body = tkfont.Font(family="Liberation Sans", size=11)  # Message text, labels, general content
-        self.font_ui_notes = tkfont.Font(family="Liberation Sans Narrow", size=10)  # Timestamps, help text, descriptions
+        self.font_ui_body = tkfont.Font(family="Liberation Sans", size=12)  # Message text, labels, general content
+        self.font_ui_notes = tkfont.Font(family="Liberation Sans Narrow", size=11)  # Timestamps, help text, descriptions
         self.font_ui_context_menu = tkfont.Font(family="Liberation Sans", size=12)  # Context menus (larger for touch)
         self.font_ui_input = tkfont.Font(family="Liberation Sans", size=11)  # Text entry, comboboxes, listboxes
         
@@ -848,36 +824,45 @@ class EnhancedDashboard(tk.Tk):
         
         tk.Button(controls_frame, text="Settings", command=self.open_settings,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                 font=("Liberation Sans Narrow", 12),
                  width=9, height=2).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Refresh", command=self.force_refresh,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                 font=("Liberation Sans Narrow", 12),
                  width=9, height=2).pack(side="left", padx=(0, 5))
         # Button shows action (where you'll go) - starts as "Table" since default is cards
         self.view_btn = tk.Button(controls_frame, text="Table", command=self.toggle_view,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                 font=("Liberation Sans Narrow", 12),
                  width=9, height=2)
         self.view_btn.pack(side="left", padx=(0, 5))
         
         # Messages button with unread count badge
         self.messages_btn = tk.Button(controls_frame, text="Messages", command=self.open_messages,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                 font=("Liberation Sans Narrow", 12),
                  width=11, height=2)
         self.messages_btn.pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Plot", command=self.show_plot,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                 font=("Liberation Sans Narrow", 12),
                  width=9, height=2).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Node Alerts", command=self.open_node_alerts,
                  bg=self.colors['fg_warning'], fg='white',
+                 font=("Liberation Sans Narrow", 12),
                  width=11, height=2).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Debug Log", command=self.open_debug_log,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                 font=("Liberation Sans Narrow", 12),
                  width=10, height=2).pack(side="left", padx=(0, 5))
         self.btn_logs = tk.Button(controls_frame, text="Open Logs", command=self.open_logs_folder, state="disabled",
                                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                                 font=("Liberation Sans Narrow", 12),
                                  width=10, height=2)
         self.btn_logs.pack(side="left", padx=(0, 5))
         self.btn_csv = tk.Button(controls_frame, text="Today's CSV", command=self.open_today_csv, state="disabled",
                                 bg=self.colors['button_bg'], fg=self.colors['button_fg'],
+                                font=("Liberation Sans Narrow", 12),
                                 width=11, height=2)
         self.btn_csv.pack(side="left", padx=(0, 5))
         
@@ -885,6 +870,7 @@ class EnhancedDashboard(tk.Tk):
         # Text shows the action it will perform (where you'll go)
         self.fullscreen_button = tk.Button(controls_frame, text="", command=self._toggle_fullscreen_button,
                  bg=self.colors['fg_bad'], fg='white',
+                 font=("Liberation Sans Narrow", 12),
                  width=13, height=2)
         self.fullscreen_button.pack(side="right", padx=(5, 0))
         self._update_fullscreen_button_text()  # Set initial text based on state
@@ -892,6 +878,7 @@ class EnhancedDashboard(tk.Tk):
         # Quit button (right side, before fullscreen)
         tk.Button(controls_frame, text="Quit", command=self.quit_app,
                  bg='#424242', fg='white',
+                 font=("Liberation Sans Narrow", 12),
                  width=9, height=2).pack(side="right", padx=(0, 5))
         
         # Table container with horizontal scrollbar (initially hidden since default is cards)

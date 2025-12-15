@@ -210,7 +210,7 @@ class NodeAlertConfigDialog:
                                   text="Enable All",
                                   command=self.enable_all_alerts,
                                   bg='#28a745', fg='white',
-                                  font=("Arial", 9),
+                                  font=("Liberation Sans Narrow", 12),
                                   width=12, height=2)
         enable_all_btn.pack(side='left')
         
@@ -222,7 +222,7 @@ class NodeAlertConfigDialog:
                               text="Cancel",
                               command=self.cancel,
                               bg='#6c757d', fg='white',
-                              font=("Arial", 10),
+                              font=("Liberation Sans Narrow", 12),
                               width=12, height=2)
         cancel_btn.pack(side='right', padx=(10, 0))
         
@@ -230,7 +230,7 @@ class NodeAlertConfigDialog:
                             text="Save",
                             command=self.save_settings,
                             bg='#007bff', fg='white',
-                            font=("Arial", 10, "bold"),
+                            font=("Liberation Sans Narrow", 12, "bold"),
                             width=12, height=2)
         save_btn.pack(side='right')
     

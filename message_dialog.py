@@ -49,6 +49,11 @@ class MessageDialog:
             'fg_bad': '#FF6B9D'
         })
         
+        # Get fonts from parent (global UI fonts)
+        self.font_ui_body = getattr(parent, 'font_ui_body', None)
+        self.font_ui_section_title = getattr(parent, 'font_ui_section_title', None)
+        self.font_ui_button = getattr(parent, 'font_ui_button', None)
+        
         # Create dialog window
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(f"Send Message to {node_name}")
@@ -97,14 +102,18 @@ class MessageDialog:
         header_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
         header_frame.pack(fill="x", padx=10, pady=(5, 5))
         
-        tk.Label(header_frame, text=f"To: {self.node_name} ({self.node_id})", 
-                font=("Liberation Sans", 12, "bold"),
+        tk.Label(header_frame, text="To:", 
+                font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
+                bg=self.colors['bg_frame'], fg=self.colors['fg_secondary']).pack(side="left", anchor="w")
+        
+        tk.Label(header_frame, text=f" {self.node_name} ({self.node_id})", 
+                font=self.font_ui_section_title if self.font_ui_section_title else ("Liberation Sans", 12, "bold"),
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(side="left", anchor="w")
         
         # Close button in header
         tk.Button(header_frame, text='✕', 
                  bg='#c62828', fg='#ffffff',
-                 font=("Liberation Sans", 14, "bold"),
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans Narrow", 11),
                  relief='flat', bd=0, padx=8, pady=0,
                  command=self._cancel).pack(side="right")
         
@@ -112,8 +121,9 @@ class MessageDialog:
         text_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
         text_frame.pack(fill="x", padx=10, pady=5)
         
-        tk.Label(text_frame, text="Message:", font=("Liberation Sans", 12),
-                bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(anchor="w")
+        tk.Label(text_frame, text="Message:", 
+                font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
+                bg=self.colors['bg_frame'], fg=self.colors['fg_secondary']).pack(anchor="w")
         
         text_container = tk.Frame(text_frame, bg=self.colors['bg_frame'])
         text_container.pack(fill="x")
@@ -123,7 +133,7 @@ class MessageDialog:
         
         self.text_area = tk.Text(text_container, 
                                  wrap="word", 
-                                 font=("Liberation Sans", 12),
+                                 font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                  height=3,  # 3 lines tall (enough for 180 chars)
                                  bg=self.colors['bg_main'], fg=self.colors['fg_normal'],
                                  insertbackground='white',  # White cursor for visibility
@@ -151,7 +161,7 @@ class MessageDialog:
         
         self.char_count_label = tk.Label(counter_frame, 
                                          text=f"0/{MAX_MESSAGE_LENGTH}",
-                                         font=("Liberation Sans", 12),
+                                         font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                          bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'])
         self.char_count_label.pack(side="right")
         
@@ -160,7 +170,7 @@ class MessageDialog:
         bell_check = tk.Checkbutton(counter_frame, 
                                     text="Send bell character (\\a) to alert",
                                     variable=self.send_bell_var,
-                                    font=("Liberation Sans", 12),
+                                    font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                     bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
                                     selectcolor=self.colors['bg_main'],
                                     activebackground=self.colors['bg_frame'],
@@ -172,10 +182,12 @@ class MessageDialog:
         button_frame.pack(fill="x", padx=10, pady=10)
         
         tk.Button(button_frame, text="Send", command=self._send_message,
-                 width=12, height=2, font=("Liberation Sans", 12, "bold"),
+                 width=12, height=2, 
+                 font=self.font_ui_section_title if self.font_ui_section_title else ("Liberation Sans", 12, "bold"),
                  bg=self.colors['fg_good'], fg='white').pack(side="right", padx=5)
         tk.Button(button_frame, text="Cancel", command=self._cancel,
-                 width=12, height=2, font=("Liberation Sans", 12),
+                 width=12, height=2, 
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans Narrow", 11),
                  bg=self.colors['button_bg'], fg='white').pack(side="right")
         
         # Bind Enter key (Ctrl+Enter to send)
