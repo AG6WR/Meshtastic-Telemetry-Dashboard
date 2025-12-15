@@ -113,7 +113,7 @@ class MessageDialog:
         # Close button in header
         tk.Button(header_frame, text='✕', 
                  bg='#c62828', fg='#ffffff',
-                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans Narrow", 11),
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
                  relief='flat', bd=0, padx=8, pady=0,
                  command=self._cancel).pack(side="right")
         
@@ -183,11 +183,11 @@ class MessageDialog:
         
         tk.Button(button_frame, text="Send", command=self._send_message,
                  width=12, height=2, 
-                 font=self.font_ui_section_title if self.font_ui_section_title else ("Liberation Sans", 12, "bold"),
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
                  bg=self.colors['fg_good'], fg='white').pack(side="right", padx=5)
         tk.Button(button_frame, text="Cancel", command=self._cancel,
                  width=12, height=2, 
-                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans Narrow", 11),
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
                  bg=self.colors['button_bg'], fg='white').pack(side="right")
         
         # Bind Enter key (Ctrl+Enter to send)

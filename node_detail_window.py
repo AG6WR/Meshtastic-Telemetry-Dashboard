@@ -130,7 +130,7 @@ class NodeDetailWindow:
         btn_config = {
             'bg': self.colors['button_bg'],
             'fg': self.colors['button_fg'],
-            'font': ("Liberation Sans Narrow", 12),
+            'font': ("Liberation Sans", 12),
             'width': 10,
             'height': 2
         }

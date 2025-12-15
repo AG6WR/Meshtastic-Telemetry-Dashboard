@@ -215,7 +215,7 @@ class MessageViewer:
             mark_read_btn = tk.Button(button_frame, text="Mark as Read", width=12, height=2,
                                      command=self._on_mark_read,
                                      bg='#2e7d32', fg='white',
-                                     font=self.font_ui_button if self.font_ui_button else ("Liberation Sans Narrow", 11))
+                                     font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
             mark_read_btn.pack(side="left", padx=(0, 11))
         
         # Reply button
@@ -223,7 +223,7 @@ class MessageViewer:
             reply_btn = tk.Button(button_frame, text="Reply", width=10, height=2,
                                  command=self._on_reply,
                                  bg='#0d47a1', fg='white',
-                                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans Narrow", 11))
+                                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
             reply_btn.pack(side="left", padx=(0, 11))
         
         # Archive button (only if not already archived)
@@ -231,7 +231,7 @@ class MessageViewer:
             archive_btn = tk.Button(button_frame, text="Archive", width=10, height=2,
                                    command=self._on_archive,
                                    bg='#f57c00', fg='white',
-                                   font=self.font_ui_button if self.font_ui_button else ("Liberation Sans Narrow", 11))
+                                   font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
             archive_btn.pack(side="left", padx=(0, 11))
         
         # Delete button
@@ -239,14 +239,14 @@ class MessageViewer:
             delete_btn = tk.Button(button_frame, text="Delete...", width=10, height=2,
                                   command=self._on_delete,
                                   bg='#c62828', fg='white',
-                                  font=self.font_ui_button if self.font_ui_button else ("Liberation Sans Narrow", 11))
+                                  font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
             delete_btn.pack(side="left", padx=(0, 11))
         
         # Close button (always present on right side)
         close_btn = tk.Button(button_frame, text="Close", width=10, height=2,
                              command=self._on_window_close,
                              bg='#424242', fg='white',
-                             font=self.font_ui_button if self.font_ui_button else ("Liberation Sans Narrow", 11))
+                             font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
         close_btn.pack(side="right")
     
     def _on_mark_read(self):
