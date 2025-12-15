@@ -58,7 +58,8 @@ class VirtualKeyboard:
         self.window.title("Keyboard")
         self.window.configure(bg=self.colors['bg_frame'])
         
-        # Remove window border to prevent focus flash
+        # Use overrideredirect for precise positioning (bypasses window manager)
+        # Acceptable for touch keyboard - no decorations needed
         self.window.overrideredirect(True)
         
         # Don't show at instantiation - start withdrawn (StackOverflow pattern)
@@ -364,27 +365,38 @@ class VirtualKeyboard:
             self.window.update_idletasks()
             parent = self.window.master
             
-            # Get screen height and keyboard height
+            # Get screen dimensions and keyboard size
+            screen_width = self.window.winfo_screenwidth()
             screen_height = self.window.winfo_screenheight()
+            kb_width = self.window.winfo_reqwidth()
             kb_height = self.window.winfo_reqheight()
             
-            # Calculate position below parent
+            # Calculate Y position (above or below parent)
             parent_bottom = parent.winfo_rooty() + parent.winfo_height()
             space_below = screen_height - parent_bottom
             
-            # Position above if not enough space below (need ~1/3 screen for keyboard)
             if space_below < kb_height + 20:
                 # Position above parent
-                x = parent.winfo_rootx()
                 y = parent.winfo_rooty() - kb_height - 5
                 logger.info(f"Insufficient space below ({space_below}px), positioning above")
             else:
                 # Position below parent
-                x = parent.winfo_rootx()
                 y = parent_bottom + 5
                 logger.info(f"Sufficient space below ({space_below}px), positioning below")
             
-            logger.info(f"Positioning keyboard at ({x}, {y})")
+            # Center keyboard horizontally relative to parent
+            parent_center_x = parent.winfo_rootx() + (parent.winfo_width() // 2)
+            x = parent_center_x - (kb_width // 2)
+            
+            # Ensure keyboard doesn't go off-screen
+            if x < 0:
+                x = 0
+                logger.info(f"Adjusted X to 0 (would have been off left edge)")
+            elif x + kb_width > screen_width:
+                x = screen_width - kb_width
+                logger.info(f"Adjusted X to {x} (would have been off right edge)")
+            
+            logger.info(f"Positioning keyboard at ({x}, {y}), centered on parent")
             self.window.geometry(f"+{x}+{y}")
             self._positioned = True
         
