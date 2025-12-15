@@ -301,6 +301,128 @@ The alert threshold and offline status threshold can be set independently:
 
 ---
 
+## Virtual Keyboard System (v1.2.2b)
+
+### Why a Custom Virtual Keyboard?
+
+**Problem:** Raspberry Pi running Wayland compositor cannot use standard on-screen keyboards like `onboard` or `squeekboard` that work under X11. The Wayland security model prevents third-party input applications from injecting keystrokes into focused windows.
+
+**Alternatives Considered:**
+- `onboard` - X11 only, doesn't work on Wayland
+- `squeekboard` - Designed for GNOME/Phosh, integration issues on Pi
+- `wvkbd` - Wayland-native but requires compositor configuration
+- PiOS built-in keyboard - Not available on all Pi configurations
+
+**Solution:** Custom Tkinter-based virtual keyboard (`virtual_keyboard.py`) that:
+1. Runs as a Toplevel window within the same Tk application
+2. Directly inserts characters into the target Text widget via `widget.insert()`
+3. Bypasses Wayland's input method restrictions entirely
+4. Provides consistent behavior across X11 and Wayland
+
+### Implementation Architecture
+
+**Window Positioning:**
+- Uses `overrideredirect(True)` to bypass window manager positioning
+- Fixed position at bottom of screen (keyboard) or top of screen (compose dialog)
+- Wayland window managers ignore geometry hints; overrideredirect forces exact placement
+
+**Focus Management:**
+- `bind_all('<FocusIn>')` detects when Text/Entry widgets receive focus
+- Automatically shows keyboard when text input is focused
+- `bind_all('<Button-1>')` on regular buttons hides keyboard
+- Critical: Check if event widget is inside keyboard window to avoid hiding on key press
+
+**Layout:**
+- Two frames: lowercase and uppercase, toggled via Caps key
+- No symbols layout (removed for simplicity - use phone for complex input)
+- 5-color coding: dark letters, blue/indigo modifiers, green Caps, coral delete, gray space
+- Touch-friendly key sizes: 48px tall, variable width
+
+**Key Press Handling:**
+```python
+def _on_key_press(self, char, button=None):
+    if char == 'Caps':
+        self._caps_enabled = not self._caps_enabled
+        (self.uppercase_frame if self._caps_enabled else self.lowercase_frame).tkraise()
+    elif char == '⌫':  # Backspace
+        self.target_widget.delete('insert-1c', 'insert')
+    elif char == '↵':  # Enter
+        self.target_widget.insert('insert', '\n')
+    else:
+        self.target_widget.insert('insert', char)
+```
+
+### Known Issues and Solutions
+
+**Issue:** Whole keyboard window flashes on key press (not individual keys)
+- **Cause:** Tkinter redraws can cascade when modifying Text widget content
+- **Status:** Cosmetic issue, does not affect functionality
+- **Workaround:** Disabled individual key flash animation
+
+**Issue:** Cursor not visible in text areas
+- **Solution:** Use high-contrast cursor color (white, not red), solid cursor (`insertofftime=0`)
+- **Config:** `insertbackground='white', insertwidth=2, insertontime=1000, insertofftime=0`
+
+---
+
+## Global Font System (v1.2.2b)
+
+### Why Global Font References?
+
+**Problem:** Hardcoded font specifications scattered across 8+ files made font changes labor-intensive and error-prone. Changing the button font required editing every file individually.
+
+**Discovery:** Testing on Raspberry Pi 7" touchscreen revealed Liberation Sans Narrow was too compressed for comfortable reading. Needed to switch to Liberation Sans (regular width).
+
+### Font Architecture
+
+**Central Definition (dashboard.py __init__):**
+```python
+self.font_ui_body = tkfont.Font(family="Liberation Sans", size=12)
+self.font_ui_notes = tkfont.Font(family="Liberation Sans Narrow", size=11)  # Intentionally narrow
+self.font_ui_tab = tkfont.Font(family="Liberation Sans", size=12)
+self.font_ui_button = tkfont.Font(family="Liberation Sans", size=12)
+self.font_ui_section_title = tkfont.Font(family="Liberation Sans", size=12, weight="bold")
+self.font_ui_window_title = tkfont.Font(family="Liberation Sans", size=14, weight="bold")
+```
+
+**Child Window Pattern:**
+```python
+# In child window __init__:
+self.font_ui_button = getattr(parent, 'font_ui_button', None)
+
+# In widget creation:
+font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12)
+```
+
+**Rationale for Fallback Tuples:**
+- TTK styles require tuples, not Font objects
+- Some windows may be created without dashboard parent
+- Fallback ensures graceful degradation
+
+### Font Choices
+
+| Font Variable | Family | Size | Weight | Purpose |
+|--------------|--------|------|--------|---------|
+| font_ui_body | Liberation Sans | 12 | normal | General text, labels |
+| font_ui_notes | Liberation Sans Narrow | 11 | normal | Timestamps, secondary info |
+| font_ui_tab | Liberation Sans | 12 | normal | Tab labels |
+| font_ui_button | Liberation Sans | 12 | normal | Button text |
+| font_ui_section_title | Liberation Sans | 12 | bold | Section headers |
+| font_ui_window_title | Liberation Sans | 14 | bold | Window/dialog titles |
+
+**Why Liberation Sans?**
+- Pre-installed on Raspberry Pi OS
+- Good Unicode coverage (including technical symbols)
+- Clear letterforms at small sizes
+- Regular width readable on 7" touchscreen (Narrow was too compressed)
+
+**Why Keep Narrow for Notes?**
+- Timestamps and secondary info benefit from compact display
+- Less visual prominence than primary content
+- 11pt Narrow still readable for non-critical info
+
+---
+
 ## Future Considerations
 
 ### Configurable Thresholds

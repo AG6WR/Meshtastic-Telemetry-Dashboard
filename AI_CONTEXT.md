@@ -20,119 +20,100 @@ This applies especially to:
 ---
 
 ## Current Session Context
-**Date Started:** 2025-11-17  
-**Current Version:** v1.0.14  
-**Active Branch:** feature/messaging  
+**Date Started:** 2025-11-17
+**Current Version:** v1.2.2b
+**Active Branch:** main (feature/messaging merged)
 **Last Updated:** 2025-12-14
 
 ---
 
-## 🔥 CRITICAL VIRTUAL KEYBOARD BUGS (2025-12-14)
+## 📝 CRITICAL LESSONS LEARNED (2025-12-14)
 
-### Current State Summary
-Virtual keyboard implementation has three critical issues that need investigation in fresh session:
+### Virtual Keyboard Implementation
 
-**Issue 1: WHOLE KEYBOARD FLASHES (Not Individual Keys)**
-- **Status:** NOT FIXED - Flash disabled but keyboard still flashes
-- **Expected:** Only individual key should flash white briefly when pressed
-- **Actual:** Entire keyboard window flashes on ANY key press
-- **Attempted Fixes:**
-  - Moved flash after tkraise (Caps key)
-  - Changed `self.window.after()` to `button.after()`
-  - **DISABLED flash entirely** - keyboard STILL flashes (proves flash code is NOT the cause)
-- **Hypothesis:** Window redraw triggered by something else (not button color change)
-- **Next Steps:** Investigate what's causing window-level redraw on key press
-  - Check if `_insert_char()` triggers redraw
-  - Check if event_generate causes redraw
-  - May need double-buffering or different rendering approach
+**Context:** Dashboard runs on Raspberry Pi with 7" touchscreen running Wayland. Standard on-screen keyboards (onboard, squeekboard) don't work on Wayland.
 
-**Issue 2: NO CURSOR VISIBLE (User Colorblind)**
-- **Status:** NOT FIXED despite correct configuration
-- **User Accessibility:** Red/green colorblind - red invisible on dark grey (#1e1e1e)
-- **Verified Working:** Simple test shows red cursor (5px, always-on)
-  ```python
-  python -c "import tkinter as tk; root = tk.Tk(); t = tk.Text(root, insertbackground='red', insertwidth=5, insertontime=1000, insertofftime=0); t.pack(); t.focus_set(); root.mainloop()"
-  ```
-- **Current Config:** `test_keyboard.py` text area
-  ```python
-  insertbackground='red',  # Same as working test
-  insertwidth=5,           # Same as working test  
-  insertontime=1000,       # Same as working test
-  insertofftime=0          # Always on
-  ```
-- **Actual:** User sees NO cursor in test_keyboard.py window
-- **Hypothesis:** Focus lost when keyboard window appears, or FocusIn event interferes
-- **Next Steps:** 
-  - Check if keyboard.show() steals focus from text area
-  - Try focus_force() instead of focus_set()
-  - Add focus event logging to debug
-  - Check if bind_all FocusIn event causes issues
+**Solution:** Custom Tkinter virtual keyboard (`virtual_keyboard.py`) that inserts characters directly into Text widgets.
 
-**Issue 3: Keyboard Flash Code Commented Out**
-- **Location:** `virtual_keyboard.py` lines ~240-250
-- **Current State:** Flash calls commented out for testing
-- **Action Required:** Re-enable once whole-keyboard flash root cause found
+**Key Technical Decisions:**
 
-### Working Features (DO NOT BREAK)
-- ✅ Caps lock toggle (fixed - removed conditional tkraise)
-- ✅ Text entry (fixed - removed Map binding, fixed elif/if bug)
-- ✅ Auto-show/hide keyboard (bind_all FocusIn/Button-1)
-- ✅ Layout positioning (space bar, gaps, staggers all correct)
-- ✅ 2-layout system (lowercase/uppercase, symbols removed)
-- ✅ Color scheme (5-color coding)
+1. **overrideredirect(True) for all message windows**
+   - Wayland window managers ignore geometry hints
+   - Only way to get exact window positioning is to bypass WM entirely
+   - Compose dialog at top of screen (y=10) leaves room for keyboard below
+   - Keyboard fixed at bottom of screen
 
-### Files Modified This Session
-- `virtual_keyboard.py` - Caps toggle fix, flash disabled for testing
-- `test_keyboard.py` - Cursor config changed to red (matching simple test)
-- `message_dialog.py` - Cursor config attempts (currently yellow 6px)
+2. **Focus management with bind_all**
+   - `bind_all('<FocusIn>')` to auto-show keyboard when Text/Entry focused
+   - `bind_all('<Button-1>')` to hide keyboard when clicking buttons
+   - **CRITICAL:** Must check if event widget is inside keyboard window before hiding
+   - Walk up parent chain: `parent = w.master` until reaching keyboard window or None
 
-### Critical Code References
+3. **Direct character insertion**
+   - `target_widget.insert('insert', char)` - bypasses Wayland input restrictions
+   - Backspace: `target_widget.delete('insert-1c', 'insert')`
+   - No event_generate needed (avoids focus issues)
 
-**Caps Toggle (WORKING):**
+4. **Two-layout system (lowercase/uppercase)**
+   - Simpler than three-layout (no symbols)
+   - Use tkraise() to switch between frames
+   - **BUG FIX:** Don't use conditional tkraise - always raise the target frame
+
+### Global Font System
+
+**Context:** User tested on Pi and found Liberation Sans Narrow "really narrow" - too compressed for touchscreen use.
+
+**Solution:** Global font variables in dashboard.py, referenced by child windows via getattr().
+
+**Pattern:**
 ```python
-# virtual_keyboard.py line ~234
-if key == 'Caps':
-    if hasattr(self, '_caps_enabled') and self._caps_enabled:
-        self._caps_enabled = False
-        self.lowercase_frame.tkraise()  # No conditional - always raise
-    else:
-        self._caps_enabled = True
-        self.uppercase_frame.tkraise()  # No conditional - always raise
-    return
+# In dashboard.py __init__:
+self.font_ui_button = tkfont.Font(family="Liberation Sans", size=12)
+
+# In child window __init__:
+self.font_ui_button = getattr(parent, 'font_ui_button', None)
+
+# In widget creation:
+font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12)
 ```
 
-**Cursor Config (NOT WORKING):**
-```python
-# test_keyboard.py - SAME as simple test but doesn't show
-insertbackground='red',
-insertwidth=5,
-insertontime=1000,
-insertofftime=0
-# text_area.focus_set() called after pack
-```
+**Why fallback tuples?**
+- TTK styles require tuples, not Font objects
+- Graceful degradation if parent doesn't have fonts defined
 
-**Flash Code (DISABLED):**
-```python
-# virtual_keyboard.py line ~248-251
-# Flash AFTER tkraise - DISABLED for testing
-#if button:
-#    self._flash_key(button)
-```
+**Font choices:**
+- Liberation Sans 12pt for buttons, tabs, body text (readable on touchscreen)
+- Liberation Sans Narrow 11pt ONLY for timestamps/notes (compact, less important)
+- Liberation Sans Bold for section titles and window titles
 
-### Next Session Action Plan
-1. **Investigate whole-keyboard flash** (highest priority)
-   - Add print statements to track what triggers redraw
-   - Check if it's event_generate, widget updates, or something else
-   - Test without any text insertion to isolate cause
-   
-2. **Fix cursor visibility** 
-   - Add focus debugging (print when focus changes)
-   - Try different focus strategies
-   - Check if multiple windows interfere
-   
-3. **Re-enable individual key flash** (only after fixing whole-keyboard flash)
+### Files Modified in v1.2.2b Font/Keyboard Work
 
-4. **Commit working state** before conversation restart
+| File | Changes |
+|------|---------|
+| dashboard.py | Global font definitions, button bar cleanup |
+| virtual_keyboard.py | Focus handling, layout positioning, key press logic |
+| message_dialog.py | overrideredirect, fonts, keyboard integration |
+| message_list_window.py | Removed emoji icons, font references |
+| message_viewer.py | Font references |
+| node_detail_window.py | Font references |
+| plotter.py | Gets fonts from parent |
+| node_alert_config.py | Gets fonts from parent, removed Arial |
+
+### Common Pitfalls to Avoid
+
+1. **Don't use conditional tkraise for Caps toggle** - causes flicker/stuck state
+2. **Don't bind Map event to show keyboard** - interferes with window creation
+3. **Check if click is inside keyboard before hiding** - prevents keyboard dismissal on key press
+4. **Use white cursor, not red** - user is red/green colorblind
+5. **TTK styles need tuples for fonts** - Font objects don't work
+
+### Known Cosmetic Issues (Low Priority)
+
+**Whole keyboard window flashes on key press:**
+- Cosmetic issue, does not affect functionality
+- Likely caused by Tkinter redraw when modifying Text widget
+- Individual key flash code disabled as workaround
+- Not worth fixing unless it becomes a user complaint
 
 ---
 
