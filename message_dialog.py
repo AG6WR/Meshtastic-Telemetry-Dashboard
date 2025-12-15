@@ -195,6 +195,7 @@ class MessageDialog:
     def _on_focus_event(self, event):
         """Handle FocusIn events to show keyboard for text widgets"""
         w = event.widget
+        logger.info(f"FocusIn event: widget={w}, class={w.winfo_class()}")
         
         # CRITICAL: Don't process events from keyboard's own widgets
         # Walk up the parent chain to check if widget is inside keyboard
@@ -202,6 +203,7 @@ class MessageDialog:
             parent = w
             while parent:
                 if parent == self.virtual_keyboard.window:
+                    logger.info(f"Ignoring keyboard widget: {w}")
                     return  # Ignore keyboard's own widgets
                 try:
                     parent = parent.master
@@ -211,17 +213,22 @@ class MessageDialog:
             # Show keyboard when Text or Entry gets focus
             if w.winfo_class() in ('Text', 'Entry'):
                 # Only show if currently hidden
-                if self.virtual_keyboard.window.state() == 'withdrawn':
+                kb_state = self.virtual_keyboard.window.state()
+                logger.info(f"Text/Entry focused, keyboard state: {kb_state}")
+                if kb_state == 'withdrawn':
+                    logger.info(f"Showing keyboard for widget: {w}")
                     self.virtual_keyboard.target_widget = w
                     self.virtual_keyboard.show()
                 else:
                     # Already visible, just update target if needed
                     if self.virtual_keyboard.target_widget != w:
+                        logger.info(f"Updating keyboard target: {w}")
                         self.virtual_keyboard.target_widget = w
     
     def _on_click_event(self, event):
         """Handle Button-1 events to hide keyboard when clicking buttons"""
         w = event.widget
+        logger.info(f"Button-1 event: widget={w}, class={w.winfo_class()}")
         
         # CRITICAL: Don't process events from keyboard's own widgets
         # Walk up the parent chain to check if widget is inside keyboard
@@ -229,6 +236,7 @@ class MessageDialog:
             parent = w
             while parent:
                 if parent == self.virtual_keyboard.window:
+                    logger.info(f"Ignoring keyboard widget click: {w}")
                     return  # Ignore keyboard's own widgets
                 try:
                     parent = parent.master
@@ -237,6 +245,7 @@ class MessageDialog:
             
             # Hide keyboard when clicking buttons (but not keyboard's buttons!)
             if w.winfo_class() == 'Button':
+                logger.info(f"Hiding keyboard due to button click: {w}")
                 self.virtual_keyboard.hide()
                 # Give focus back to the clicked button
                 w.focus_force()

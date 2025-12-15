@@ -358,20 +358,25 @@ class VirtualKeyboard:
     
     def show(self):
         """Show the keyboard"""
+        logger.info(f"show() called, current state: {self.window.state()}")
         # Position below parent on first show
         if not self._positioned:
             self.window.update_idletasks()
             parent = self.window.master
             x = parent.winfo_x()
             y = parent.winfo_y() + parent.winfo_height() + 5
+            logger.info(f"Positioning keyboard at ({x}, {y})")
             self.window.geometry(f"+{x}+{y}")
             self._positioned = True
         
         self.window.deiconify()
+        logger.info(f"Keyboard shown, new state: {self.window.state()}")
     
     def hide(self):
         """Hide the keyboard"""
+        logger.info(f"hide() called, current state: {self.window.state()}")
         self.window.withdraw()
+        logger.info(f"Keyboard hidden, new state: {self.window.state()}")
     
     def destroy(self):
         """Destroy the keyboard"""
