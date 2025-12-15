@@ -309,11 +309,11 @@ class TelemetryPlotter:
         
         # Buttons - enlarged for touch input
         tk.Button(button_frame, text="Cancel", command=on_cancel,
-                 bg='#404040', fg='white', 
+                 bg='#424242', fg='white', 
                  font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
                  width=12, height=2).pack(side="right", padx=(10, 0))
         tk.Button(button_frame, text="Plot", command=on_ok,
-                 bg='#404040', fg='white', 
+                 bg='#2e7d32', fg='white', 
                  font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
                  width=12, height=2).pack(side="right")
         

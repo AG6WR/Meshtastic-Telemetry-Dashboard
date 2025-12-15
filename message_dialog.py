@@ -188,7 +188,7 @@ class MessageDialog:
         tk.Button(button_frame, text="Cancel", command=self._cancel,
                  width=12, height=2, 
                  font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
-                 bg=self.colors['button_bg'], fg='white').pack(side="right")
+                 bg='#424242', fg='white').pack(side="right")
         
         # Bind Enter key (Ctrl+Enter to send)
         self.dialog.bind('<Control-Return>', lambda e: self._send_message())

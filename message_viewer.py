@@ -222,7 +222,7 @@ class MessageViewer:
         if self.on_reply_callback:
             reply_btn = tk.Button(button_frame, text="Reply", width=10, height=2,
                                  command=self._on_reply,
-                                 bg='#0d47a1', fg='white',
+                                 bg='#2e7d32', fg='white',
                                  font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
             reply_btn.pack(side="left", padx=(0, 11))
         

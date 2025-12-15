@@ -11,38 +11,6 @@
   - Investigation needed: Test alternative emoji fonts or use ASCII alternative
   - Font options on Pi: Check `fc-list` for available emoji/symbol fonts
   - Consider: Switch to text "(LOCAL)" or test different pin emoji (📌)
-  
-- [ ] **Investigate font system and emoji support** (Issue #a)
-  - Document current font family in use (appears to be Liberation Sans on Pi)
-  - List available font variants (Regular, Bold, Condensed, etc.)
-  - Test emoji rendering capabilities
-  - Establish guidelines for mixing fonts/glyphs in UI
-
-#### Touch Target Improvements
-- [ ] **Enlarge context menu font sizes** (Issue #b)
-  - Location: Card right-click menu (View Details, Show Logs, etc.)
-  - Current: Too small for confident finger/touch selection at 1280x720
-  - Action: Increase menu item font size and padding
-  - Test: Verify minimum 48x48px touch targets
-
-- [ ] **Standardize message recipient selection** (Issue #g)
-  - Location: MessageDialog recipient picker
-  - Current: Small text list, unclear multi-select, hard to tap
-  - Proposal: Use card-based layout with checkboxes (similar to message list)
-  - Design: Narrower cards showing just node name + checkbox
-  - Benefit: Consistent with message inbox UX, larger touch targets
-
-#### Button Standardization
-- [ ] **Unify button sizes across all windows** (Issue #c)
-  - Audit all buttons: dashboard, detail view, message windows
-  - Target size: Match dashboard main buttons (current width is good)
-  - Height: Slightly reduce from current (a little bigger than needed)
-  - Apply consistently to: detail view, message viewer, message list, compose dialog
-  
-- [ ] **Standardize button colors** (Issue #c)
-  - Close buttons: Match "Quit" button color (red/fg_bad)
-  - Action buttons: Maintain current color scheme
-  - Apply to: all close buttons across detail view, message windows
 
 #### Window Layout Improvements
 - [ ] **Move Close button to upper right in Node Detail window** (Issue #d)
@@ -51,18 +19,9 @@
   - Also move: "Forget Node" button to upper right, aligned with Close
   - Increase font sizes: Detail view has plenty of room, increase by 2 sizes
 
-- [ ] **Add Close button to Message List window** (Issue #f)
-  - Location: Upper right corner
-  - Current: Requires using tiny window X button
-  - Style: Match standardized button appearance
-
-#### Font Family Consolidation
-- [ ] **Switch to standard sans-serif for readability** (Issue #e)
-  - Current: Using narrow/condensed font family
-  - Keep narrow font: For buttons only (saves space)
-  - Change to wider sans-serif: All other UI text (labels, values, window content)
-  - Research: Check Liberation Sans family on Pi for available weights
-  - Rationale: Better readability in non-space-constrained areas
+- [ ] **Scrub button colors for consistency** (Issue #c - partial)
+  - Close buttons: Should match "Quit" button color (red/fg_bad)
+  - Quick pass needed to ensure all close buttons are same color
 
 ### Code Quality & Technical Debt
 
@@ -75,6 +34,18 @@
 - [ ] Test fullscreen exit window state on Pi (ongoing issue - has workaround with Quit button)
 - [ ] Verify message list click-to-open on Pi (View button works as alternative)
 
+### Hardware Integration Features
+- [ ] **Current Sense Scaling** (New Feature)
+  - Location: Ch3 Current telemetry display (ICP Main Batt current)
+  - Use case: Modified current sense resistor for higher current measurement
+  - Problem: INA sensor reports voltage, firmware assumes standard R to calculate I
+  - If sense resistor reduced by 50x or 100x, reported current needs scaling
+  - Implementation options:
+    - Per-node configuration in app_config.json (scale factor)
+    - Or global setting if all nodes use same modified hardware
+  - Affects: Card display, node detail window, plotter, CSV logging
+  - Consider: Store raw value + scaled value? Or just apply scaling at display?
+
 ---
 
 ## Completed (Previous Sprint)
@@ -86,6 +57,20 @@
 - [x] Window sizing for Pi (1200x660)
 - [x] Quit button added
 - [x] CHANGELOG.md updated for v1.2.0/v1.2.0b
+
+## Completed (v1.2.2b - 2025-12-14)
+- [x] Virtual keyboard improvements for Wayland/Pi touchscreen
+- [x] Font standardization - Liberation Sans 12pt for buttons/tabs (was Narrow)
+- [x] Global font references instead of hardcoded fonts across codebase
+- [x] Dashboard button cleanup (renamed Alerts, Logs; removed Debug Log, Today's CSV)
+- [x] Message Center button cleanup (removed emoji icons)
+- [x] overrideredirect for message windows (precise positioning on Wayland)
+- [x] Documentation updates (DESIGN.md, AI_CONTEXT.md)
+- [x] Context menu font sizes enlarged for touch
+- [x] Message recipient selection with checkboxes
+- [x] Button sizes and fonts unified across windows
+- [x] Close button added to Message List window
+- [x] Font family consolidation (Liberation Sans for UI)
 
 ---
 
