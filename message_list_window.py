@@ -48,6 +48,12 @@ class MessageListWindow:
             'fg_bad': '#FF6B9D'
         })
         
+        # Get fonts from parent (global UI fonts)
+        self.font_ui_body = getattr(parent, 'font_ui_body', None)
+        self.font_ui_section_title = getattr(parent, 'font_ui_section_title', None)
+        self.font_ui_context_menu = getattr(parent, 'font_ui_context_menu', None)
+        self.font_ui_window_title = getattr(parent, 'font_ui_window_title', None)
+        
         # Create window
         self.window = tk.Toplevel(parent)
         self.window.title("Messages")
@@ -373,20 +379,20 @@ class MessageListWindow:
         
         tk.Label(top_line, text=f"{icon} {dir_label}", 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                font=("Liberation Sans", 12, "bold")).pack(side="left")
+                font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 11)).pack(side="left")
         
         tk.Label(top_line, text=from_to, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                font=("Liberation Sans", 12)).pack(side="left", padx=(10, 0))
+                font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 11)).pack(side="left", padx=(10, 0))
         
         tk.Label(top_line, text=time_str, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                font=("Liberation Sans", 12)).pack(side="right")
+                font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 11)).pack(side="right")
         
         # Bottom line: preview
         tk.Label(content_frame, text=preview, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                font=("Liberation Sans", 12), anchor="w", justify="left").pack(fill="x")
+                font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 11), anchor="w", justify="left").pack(fill="x")
         
         # Make entire row clickable to view message (except checkbox)
         def on_click(event):
@@ -545,7 +551,7 @@ class MessageListWindow:
         selector.configure(bg=self.colors['bg_frame'])
         
         tk.Label(selector, text="Select recipient(s):", 
-                font=("Liberation Sans", 12, "bold"),
+                font=self.font_ui_section_title if self.font_ui_section_title else ("Liberation Sans", 12, "bold"),
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(pady=10)
         
         # Create scrollable frame for checkboxes
@@ -578,7 +584,7 @@ class MessageListWindow:
                                selectcolor=self.colors['bg_main'],
                                activebackground=self.colors['bg_frame'], 
                                activeforeground=self.colors['fg_normal'],
-                               font=("Liberation Sans", 12),
+                               font=self.font_ui_context_menu if self.font_ui_context_menu else ("Liberation Sans", 12),
                                highlightthickness=0)
             cb.pack(anchor="w", padx=10, pady=2)
         
