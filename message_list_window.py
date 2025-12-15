@@ -578,7 +578,7 @@ class MessageListWindow:
                                selectcolor=self.colors['bg_main'],
                                activebackground=self.colors['bg_frame'], 
                                activeforeground=self.colors['fg_normal'],
-                               font=("Liberation Sans", 11),
+                               font=("Liberation Sans", 12),
                                highlightthickness=0)
             cb.pack(anchor="w", padx=10, pady=2)
         
