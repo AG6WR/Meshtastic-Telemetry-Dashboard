@@ -116,8 +116,8 @@ class MessageDialog:
         # Set focus to text area so cursor is visible
         self.text_area.focus_set()
         
-        # Character counter (updates on FocusOut to avoid IME interference)
-        self.text_area.bind('<FocusOut>', self._on_text_change, add='+')
+        # Character counter will update when Send is clicked (no bindings to avoid Wayland IME issues)
+
         
         # Character counter
         counter_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
