@@ -53,6 +53,17 @@ class MessageViewer:
         self.on_mark_read_callback = on_mark_read
         self.on_archive_callback = on_archive
         
+        # Get colors from parent (dark theme)
+        self.colors = getattr(parent, 'colors', {
+            'bg_frame': '#2b2b2b',
+            'bg_main': '#1e1e1e',
+            'fg_normal': '#e0e0e0',
+            'fg_secondary': '#b0b0b0',
+            'fg_good': '#228B22',
+            'fg_warning': '#FFA500',
+            'fg_bad': '#FF6B9D'
+        })
+        
         # Extract message details
         self.message_id = message_data.get('message_id', 'unknown')
         self.from_id = message_data.get('from_node_id', '')
@@ -68,7 +79,7 @@ class MessageViewer:
         
         # Create dialog
         self.dialog = tk.Toplevel(parent)
-        self.dialog.title(f"Message from {node_name}")
+        self.dialog.title(f"Message from {self.from_name}")
         self.dialog.geometry("650x500")
         self.dialog.resizable(True, True)
         self.dialog.transient(parent)
