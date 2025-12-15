@@ -84,6 +84,13 @@ class MessageViewer:
         
         self.dialog.configure(bg=self.colors['bg_frame'])
         
+        # Position relative to positioning_parent (10px offset to keep near top-left)
+        self.dialog.update_idletasks()
+        if self.positioning_parent:
+            x = self.positioning_parent.winfo_rootx() + 10
+            y = self.positioning_parent.winfo_rooty() + 10
+            self.dialog.geometry(f"+{x}+{y}")
+        
         self._create_widgets()
         
         # Set grab after window is created and visible (fixes Linux timing issue)

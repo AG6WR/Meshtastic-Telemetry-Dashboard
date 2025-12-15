@@ -58,11 +58,11 @@ class MessageDialog:
         self.dialog.grab_set()
         self.dialog.configure(bg=self.colors['bg_frame'])
         
-        # Position relative to positioning_parent (50px down and right)
+        # Position relative to positioning_parent (10px offset to keep near top-left)
         self.dialog.update_idletasks()
-        x = self.positioning_parent.winfo_x() + 50
-        y = self.positioning_parent.winfo_y() + 50
-        self.dialog.geometry(f"+{x}+{y}")
+        x = self.positioning_parent.winfo_rootx() + 10
+        y = self.positioning_parent.winfo_rooty() + 10
+        self.dialog.geometry(f"630x240+{x}+{y}")
         
         self._create_widgets()
         

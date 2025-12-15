@@ -363,8 +363,27 @@ class VirtualKeyboard:
         if not self._positioned:
             self.window.update_idletasks()
             parent = self.window.master
-            x = parent.winfo_x()
-            y = parent.winfo_y() + parent.winfo_height() + 5
+            
+            # Get screen height and keyboard height
+            screen_height = self.window.winfo_screenheight()
+            kb_height = self.window.winfo_reqheight()
+            
+            # Calculate position below parent
+            parent_bottom = parent.winfo_rooty() + parent.winfo_height()
+            space_below = screen_height - parent_bottom
+            
+            # Position above if not enough space below (need ~1/3 screen for keyboard)
+            if space_below < kb_height + 20:
+                # Position above parent
+                x = parent.winfo_rootx()
+                y = parent.winfo_rooty() - kb_height - 5
+                logger.info(f"Insufficient space below ({space_below}px), positioning above")
+            else:
+                # Position below parent
+                x = parent.winfo_rootx()
+                y = parent_bottom + 5
+                logger.info(f"Sufficient space below ({space_below}px), positioning below")
+            
             logger.info(f"Positioning keyboard at ({x}, {y})")
             self.window.geometry(f"+{x}+{y}")
             self._positioned = True
