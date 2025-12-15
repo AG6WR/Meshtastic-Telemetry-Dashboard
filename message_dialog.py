@@ -130,7 +130,8 @@ class MessageDialog:
         # Set focus to text area so cursor is visible
         self.text_area.focus_set()
         
-        # Character counter will update when Send is clicked (no bindings to avoid Wayland IME issues)
+        # Bind character counter update using Modified event (safer than KeyRelease on Wayland)
+        self.text_area.bind('<<Modified>>', self._on_text_change)
 
         
         # Character counter
