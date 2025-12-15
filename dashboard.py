@@ -78,7 +78,7 @@ class SettingsDialog:
         """Create dialog widgets"""
         # Configure tab style with narrower font to prevent button growth
         style = ttk.Style()
-        style.configure('TNotebook.Tab', font=("Liberation Sans Narrow", 12))
+        style.configure('TNotebook.Tab', font=("Liberation Sans", 12))
         
         notebook = ttk.Notebook(self.dialog)
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
@@ -767,8 +767,8 @@ class EnhancedDashboard(tk.Tk):
         self.font_title = tkfont.Font(family=base_family, size=18, weight="bold")
         
         # Global UI fonts - Liberation Sans family for windows/dialogs
-        self.font_ui_button = tkfont.Font(family="Liberation Sans Narrow", size=12)  # All buttons
-        self.font_ui_tab = tkfont.Font(family="Liberation Sans Narrow", size=12)  # Notebook tabs
+        self.font_ui_button = tkfont.Font(family="Liberation Sans", size=12)  # All buttons
+        self.font_ui_tab = tkfont.Font(family="Liberation Sans", size=12)  # Notebook tabs
         self.font_ui_section_title = tkfont.Font(family="Liberation Sans", size=12, weight="bold")  # Section headers, LabelFrame titles
         self.font_ui_window_title = tkfont.Font(family="Liberation Sans", size=14, weight="bold")  # Window/dialog main titles
         self.font_ui_body = tkfont.Font(family="Liberation Sans", size=12)  # Message text, labels, general content
@@ -824,61 +824,52 @@ class EnhancedDashboard(tk.Tk):
         
         tk.Button(controls_frame, text="Settings", command=self.open_settings,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                 font=("Liberation Sans Narrow", 12),
+                 font=self.font_ui_button,
                  width=9, height=2).pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Refresh", command=self.force_refresh,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                 font=("Liberation Sans Narrow", 12),
+                 font=self.font_ui_button,
                  width=9, height=2).pack(side="left", padx=(0, 5))
         # Button shows action (where you'll go) - starts as "Table" since default is cards
         self.view_btn = tk.Button(controls_frame, text="Table", command=self.toggle_view,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                 font=("Liberation Sans Narrow", 12),
+                 font=self.font_ui_button,
                  width=9, height=2)
         self.view_btn.pack(side="left", padx=(0, 5))
         
         # Messages button with unread count badge
         self.messages_btn = tk.Button(controls_frame, text="Messages", command=self.open_messages,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                 font=("Liberation Sans Narrow", 12),
+                 font=self.font_ui_button,
                  width=11, height=2)
         self.messages_btn.pack(side="left", padx=(0, 5))
         tk.Button(controls_frame, text="Plot", command=self.show_plot,
                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                 font=("Liberation Sans Narrow", 12),
+                 font=self.font_ui_button,
                  width=9, height=2).pack(side="left", padx=(0, 5))
-        tk.Button(controls_frame, text="Node Alerts", command=self.open_node_alerts,
+        tk.Button(controls_frame, text="Alerts", command=self.open_node_alerts,
                  bg=self.colors['fg_warning'], fg='white',
-                 font=("Liberation Sans Narrow", 12),
-                 width=11, height=2).pack(side="left", padx=(0, 5))
-        tk.Button(controls_frame, text="Debug Log", command=self.open_debug_log,
-                 bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                 font=("Liberation Sans Narrow", 12),
-                 width=10, height=2).pack(side="left", padx=(0, 5))
-        self.btn_logs = tk.Button(controls_frame, text="Open Logs", command=self.open_logs_folder, state="disabled",
+                 font=self.font_ui_button,
+                 width=9, height=2).pack(side="left", padx=(0, 5))
+        self.btn_logs = tk.Button(controls_frame, text="Logs", command=self.open_logs_folder, state="disabled",
                                  bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                                 font=("Liberation Sans Narrow", 12),
-                                 width=10, height=2)
+                                 font=self.font_ui_button,
+                                 width=9, height=2)
         self.btn_logs.pack(side="left", padx=(0, 5))
-        self.btn_csv = tk.Button(controls_frame, text="Today's CSV", command=self.open_today_csv, state="disabled",
-                                bg=self.colors['button_bg'], fg=self.colors['button_fg'],
-                                font=("Liberation Sans Narrow", 12),
-                                width=11, height=2)
-        self.btn_csv.pack(side="left", padx=(0, 5))
         
         # Fullscreen toggle button (right side) for touch-screen interface
         # Text shows the action it will perform (where you'll go)
         self.fullscreen_button = tk.Button(controls_frame, text="", command=self._toggle_fullscreen_button,
                  bg=self.colors['fg_bad'], fg='white',
-                 font=("Liberation Sans Narrow", 12),
-                 width=13, height=2)
+                 font=self.font_ui_button,
+                 width=16, height=2)
         self.fullscreen_button.pack(side="right", padx=(5, 0))
         self._update_fullscreen_button_text()  # Set initial text based on state
         
         # Quit button (right side, before fullscreen)
         tk.Button(controls_frame, text="Quit", command=self.quit_app,
                  bg='#424242', fg='white',
-                 font=("Liberation Sans Narrow", 12),
+                 font=self.font_ui_button,
                  width=9, height=2).pack(side="right", padx=(0, 5))
         
         # Table container with horizontal scrollbar (initially hidden since default is cards)

@@ -17,6 +17,13 @@ class NodeAlertConfigDialog:
         self.nodes_data = nodes_data
         self.result = None
         
+        # Get fonts from parent (global UI fonts)
+        self.font_ui_button = getattr(parent, 'font_ui_button', None)
+        self.font_ui_body = getattr(parent, 'font_ui_body', None)
+        self.font_ui_section_title = getattr(parent, 'font_ui_section_title', None)
+        self.font_ui_window_title = getattr(parent, 'font_ui_window_title', None)
+        self.font_ui_notes = getattr(parent, 'font_ui_notes', None)
+        
         # Alert types that can be configured per node
         self.alert_types = [
             ("voltage", "Low Voltage (Ch3)"),
@@ -46,7 +53,7 @@ class NodeAlertConfigDialog:
         # Title
         title_label = tk.Label(self.dialog, 
                               text="Configure Node Alert Settings",
-                              font=("Arial", 16, "bold"),
+                              font=self.font_ui_window_title if self.font_ui_window_title else ("Liberation Sans", 14, "bold"),
                               bg='#2d2d2d', fg='white')
         title_label.pack(pady=15)
         
@@ -56,7 +63,7 @@ class NodeAlertConfigDialog:
         
         instruction_label = tk.Label(self.dialog,
                                    text=instruction_text,
-                                   font=("Arial", 10),
+                                   font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                    bg='#2d2d2d', fg='#cccccc',
                                    justify='center')
         instruction_label.pack(pady=10)
@@ -102,7 +109,7 @@ class NodeAlertConfigDialog:
         # Node frame
         node_frame = tk.LabelFrame(parent,
                                  text=f"{node_name} ({short_name})",
-                                 font=("Arial", 11, "bold"),
+                                 font=self.font_ui_section_title if self.font_ui_section_title else ("Liberation Sans", 12, "bold"),
                                  bg='#4d4d4d', fg='white',
                                  bd=2)
         node_frame.pack(fill='x', padx=10, pady=5)
@@ -126,7 +133,7 @@ class NodeAlertConfigDialog:
             status_text += "Voltage: No Ch3 sensor configured  "
         
         status_label = tk.Label(node_frame, text=status_text,
-                              font=("Arial", 9),
+                              font=self.font_ui_notes if self.font_ui_notes else ("Liberation Sans Narrow", 11),
                               bg='#4d4d4d', fg='#cccccc')
         status_label.pack(anchor='w', padx=10, pady=(5, 10))
         
@@ -145,7 +152,7 @@ class NodeAlertConfigDialog:
             checkbox = tk.Checkbutton(checkboxes_frame,
                                     text=alert_name,
                                     variable=var,
-                                    font=("Arial", 10),
+                                    font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                     bg='#4d4d4d', fg='white',
                                     selectcolor='#2d2d2d',
                                     activebackground='#4d4d4d',
@@ -184,7 +191,7 @@ class NodeAlertConfigDialog:
                 if warning_text:
                     info_label = tk.Label(checkboxes_frame,
                                         text=warning_text,
-                                        font=("Arial", 8),
+                                        font=self.font_ui_notes if self.font_ui_notes else ("Liberation Sans Narrow", 11),
                                         bg='#4d4d4d', fg=warning_color)
                     info_label.grid(row=i//2, column=2, sticky='w', padx=5)
             
@@ -202,7 +209,7 @@ class NodeAlertConfigDialog:
         # Remove the bulk disable button - let user decide manually
         info_label = tk.Label(bulk_frame,
                              text="Configure nodes based on hardware",
-                             font=("Arial", 9, "italic"),
+                             font=self.font_ui_notes if self.font_ui_notes else ("Liberation Sans Narrow", 11),
                              bg='#2d2d2d', fg='#888888')
         info_label.pack(side='left', padx=(0, 10))
         
@@ -210,7 +217,7 @@ class NodeAlertConfigDialog:
                                   text="Enable All",
                                   command=self.enable_all_alerts,
                                   bg='#28a745', fg='white',
-                                  font=("Liberation Sans Narrow", 12),
+                                  font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
                                   width=12, height=2)
         enable_all_btn.pack(side='left')
         
@@ -222,7 +229,7 @@ class NodeAlertConfigDialog:
                               text="Cancel",
                               command=self.cancel,
                               bg='#6c757d', fg='white',
-                              font=("Liberation Sans Narrow", 12),
+                              font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
                               width=12, height=2)
         cancel_btn.pack(side='right', padx=(10, 0))
         
@@ -230,7 +237,7 @@ class NodeAlertConfigDialog:
                             text="Save",
                             command=self.save_settings,
                             bg='#007bff', fg='white',
-                            font=("Liberation Sans Narrow", 12, "bold"),
+                            font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
                             width=12, height=2)
         save_btn.pack(side='right')
     
