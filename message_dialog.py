@@ -126,8 +126,8 @@ class MessageDialog:
                                  font=("Liberation Sans", 12),
                                  height=3,  # 3 lines tall (enough for 180 chars)
                                  bg='#808080', fg='#ffffff',  # Grey background, white text - testing cursor visibility
-                                 insertbackground='red',  # Bright red - maximum visibility
-                                 insertwidth=8,  # Even wider cursor
+                                 insertbackground='white',  # White cursor for visibility on grey
+                                 insertwidth=2,  # Standard cursor width
                                  insertontime=1000,  # On longer
                                  insertofftime=0,  # Solid cursor - no blink off
                                  yscrollcommand=scrollbar.set)
