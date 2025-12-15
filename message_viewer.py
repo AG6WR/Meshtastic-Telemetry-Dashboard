@@ -90,8 +90,8 @@ class MessageViewer:
         self.dialog.update_idletasks()
         self.dialog.grab_set()
         
-        # Handle window close
-        self.dialog.protocol("WM_DELETE_WINDOW", self._on_window_close)
+        # Note: WM_DELETE_WINDOW doesn't work with overrideredirect
+        # Close button calls self._on_window_close directly
     
     def _create_widgets(self):
         """Create dialog widgets"""
@@ -108,7 +108,7 @@ class MessageViewer:
                  bg='#c62828', fg='#ffffff',
                  font=("Liberation Sans", 16, "bold"),
                  relief='flat', bd=0, padx=8, pady=0,
-                 command=self.close).pack(side="right")
+                 command=self._on_window_close).pack(side="right")
         
         # Main content area (scrollable)
         content_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])

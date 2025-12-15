@@ -69,8 +69,8 @@ class MessageListWindow:
         # Load initial data
         self._refresh_all_tabs()
         
-        # Handle window close
-        self.window.protocol("WM_DELETE_WINDOW", self._on_close)
+        # Note: WM_DELETE_WINDOW doesn't work with overrideredirect
+        # Close button calls self.close directly
     
     def _create_widgets(self):
         """Create window widgets"""
@@ -87,7 +87,7 @@ class MessageListWindow:
                  bg='#c62828', fg='#ffffff',
                  font=("Liberation Sans", 16, "bold"),
                  relief='flat', bd=0, padx=8, pady=0,
-                 command=self.close).pack(side="right")
+                 command=self._on_close).pack(side="right")
         
         # Refresh button
         refresh_btn = tk.Button(title_frame, text="🔄 Refresh", 
