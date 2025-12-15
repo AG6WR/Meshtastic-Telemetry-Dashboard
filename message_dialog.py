@@ -117,8 +117,12 @@ class MessageDialog:
         self.text_area.focus_set()
         
         # Bind text change event
-        self.text_area.bind('<<Modified>>', self._on_text_change)
-        self.text_area.bind('<KeyRelease>', self._on_text_change)
+        # TEMPORARILY DISABLED TO TEST WAYLAND KEYBOARD INPUT
+        # self.text_area.bind('<<Modified>>', self._on_text_change)
+        # self.text_area.bind('<KeyRelease>', self._on_text_change)
+        
+        # Manual update for character counter (call it periodically or on button click)
+        # For now, we'll just not enforce the limit to test input
         
         # Character counter
         counter_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
@@ -167,11 +171,14 @@ class MessageDialog:
         text_bytes = text.encode('utf-8')
         byte_count = len(text_bytes)
         
+        logger.info(f"_on_text_change called: event={event}, text='{text}', bytes={byte_count}")
+        
         # Update counter
         self.char_count_label.config(text=f"{byte_count}/{MAX_MESSAGE_LENGTH}")
         
         # Change color if approaching/exceeding limit
         if byte_count > MAX_MESSAGE_LENGTH:
+            logger.info(f"Exceeded limit, trimming from {byte_count} to {MAX_MESSAGE_LENGTH}")
             self.char_count_label.config(fg="#FF6B9D")  # Coral pink for error
             # Delete excess characters
             while byte_count > MAX_MESSAGE_LENGTH:
@@ -181,6 +188,7 @@ class MessageDialog:
                 byte_count = len(text_bytes)
             
             # Update text area
+            logger.info(f"Rewriting text area with trimmed text: '{text}'")
             self.text_area.delete("1.0", "end")
             self.text_area.insert("1.0", text)
             self.text_area.mark_set("insert", "end")
