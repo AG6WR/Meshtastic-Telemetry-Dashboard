@@ -117,12 +117,8 @@ class MessageDialog:
         self.text_area.focus_set()
         
         # Bind text change event
-        # TEMPORARILY DISABLED TO TEST WAYLAND KEYBOARD INPUT
-        # self.text_area.bind('<<Modified>>', self._on_text_change)
-        # self.text_area.bind('<KeyRelease>', self._on_text_change)
-        
-        # Manual update for character counter (call it periodically or on button click)
-        # For now, we'll just not enforce the limit to test input
+        self.text_area.bind('<<Modified>>', self._on_text_change)
+        self.text_area.bind('<KeyRelease>', self._on_text_change)
         
         # Character counter
         counter_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
