@@ -88,6 +88,11 @@ class MessageViewer:
         # Position relative to positioning_parent (10px offset to keep near top-left)
         self.dialog.update_idletasks()
         if self.positioning_parent:
+            # Force normal window type for Wayland (dialogs get centered)
+            try:
+                self.dialog.attributes('-type', 'normal')
+            except tk.TclError:
+                pass  # Not all platforms support this
             x = self.positioning_parent.winfo_rootx() + 10
             y = self.positioning_parent.winfo_rooty() + 10
             self.dialog.geometry(f"+{x}+{y}")

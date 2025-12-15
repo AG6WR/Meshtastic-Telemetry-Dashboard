@@ -60,6 +60,11 @@ class MessageListWindow:
         # Position near top-left of screen (10px offset from parent)
         parent.update_idletasks()  # Ensure parent has valid coordinates
         self.window.update_idletasks()
+        # Force normal window type for Wayland (dialogs get centered)
+        try:
+            self.window.attributes('-type', 'normal')
+        except tk.TclError:
+            pass  # Not all platforms support this
         x = parent.winfo_rootx() + 10
         y = parent.winfo_rooty() + 10
         logger.info(f"Message Center positioning: parent at ({parent.winfo_rootx()}, {parent.winfo_rooty()}), window at ({x}, {y})")
