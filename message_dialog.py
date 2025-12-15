@@ -54,7 +54,8 @@ class MessageDialog:
         self.dialog.title(f"Send Message to {node_name}")
         self.dialog.geometry("630x240")
         self.dialog.resizable(True, True)  # Allow resizing
-        self.dialog.transient(parent)
+        # Don't use transient - Wayland window managers ignore positioning for transient windows
+        # self.dialog.transient(parent)
         self.dialog.grab_set()
         self.dialog.configure(bg=self.colors['bg_frame'])
         

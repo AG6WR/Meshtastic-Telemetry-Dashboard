@@ -53,7 +53,8 @@ class MessageListWindow:
         self.window.title("Messages")
         self.window.geometry("630x600")
         self.window.resizable(True, True)
-        self.window.transient(parent)
+        # Don't use transient - Wayland window managers ignore positioning for transient windows
+        # self.window.transient(parent)
         self.window.configure(bg=self.colors['bg_frame'])
         
         # Position near top-left of screen (10px offset from parent)
@@ -549,7 +550,8 @@ class MessageListWindow:
         selector = tk.Toplevel(self.window)
         selector.title("Select Recipient")
         selector.geometry("400x500")
-        selector.transient(self.window)
+        # Don't use transient - Wayland window managers ignore positioning for transient windows
+        # selector.transient(self.window)
         selector.configure(bg=self.colors['bg_frame'])
         
         # Position relative to message center (10px offset)

@@ -69,9 +69,10 @@ class MessageViewer:
         # Create dialog
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("Message")
-        self.dialog.geometry("630x280")
+        self.dialog.geometry("650x500")
         self.dialog.resizable(True, True)
-        self.dialog.transient(parent)
+        # Don't use transient - Wayland window managers ignore positioning for transient windows  
+        # self.dialog.transient(parent)
         
         # Get colors from parent
         self.colors = getattr(parent, 'colors', {
