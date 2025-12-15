@@ -57,9 +57,11 @@ class MessageListWindow:
         self.window.configure(bg=self.colors['bg_frame'])
         
         # Position near top-left of screen (10px offset from parent)
+        parent.update_idletasks()  # Ensure parent has valid coordinates
         self.window.update_idletasks()
         x = parent.winfo_rootx() + 10
         y = parent.winfo_rooty() + 10
+        logger.info(f"Message Center positioning: parent at ({parent.winfo_rootx()}, {parent.winfo_rooty()}), window at ({x}, {y})")
         self.window.geometry(f"630x600+{x}+{y}")
         
         # Create widgets
