@@ -546,15 +546,37 @@ class MessageListWindow:
         # Create simple node selector dialog
         selector = tk.Toplevel(self.window)
         selector.title("Select Recipient")
-        selector.geometry("400x500")
-        selector.transient(self.window)  # Wayland-native way for relative positioning
         selector.configure(bg=self.colors['bg_frame'])
         
-        # Wayland places transient windows automatically
+        # Use overrideredirect for precise positioning (bypasses window manager)
+        selector.overrideredirect(True)
         
-        tk.Label(selector, text="Select a node to send message:", 
+        # Position at top of screen, centered horizontally
+        selector.update_idletasks()
+        screen_width = selector.winfo_screenwidth()
+        dialog_width = 400
+        dialog_height = 540  # Increased to fit close button
+        x = (screen_width - dialog_width) // 2
+        y = 10  # Near top of screen
+        selector.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
+        
+        # Make it stay on top
+        selector.attributes('-topmost', True)
+        
+        # Header with close button
+        header_frame = tk.Frame(selector, bg=self.colors['bg_frame'])
+        header_frame.pack(fill="x", padx=10, pady=(5, 5))
+        
+        tk.Label(header_frame, text="Select Recipient", 
                 font=("Liberation Sans", 12, "bold"),
-                bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(pady=10)
+                bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(side="left")
+        
+        # Close button
+        tk.Button(header_frame, text='✕', 
+                 bg='#c62828', fg='#ffffff',
+                 font=("Liberation Sans", 14, "bold"),
+                 relief='flat', bd=0, padx=8, pady=0,
+                 command=selector.destroy).pack(side="right")
         
         # Create listbox with scrollbar
         list_frame = tk.Frame(selector, bg=self.colors['bg_frame'])
