@@ -116,9 +116,9 @@ class MessageDialog:
         # Set focus to text area so cursor is visible
         self.text_area.focus_set()
         
-        # Bind text change event
-        self.text_area.bind('<<Modified>>', self._on_text_change)
-        self.text_area.bind('<KeyRelease>', self._on_text_change)
+        # Update character counter using periodic timer instead of KeyRelease
+        # This avoids interfering with Wayland virtual keyboard IME input
+        self._start_counter_update_timer()
         
         # Character counter
         counter_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
@@ -195,6 +195,32 @@ class MessageDialog:
         
         # Reset modified flag
         self.text_area.edit_modified(False)
+    
+    def _start_counter_update_timer(self):
+        """Start periodic character counter updates (avoids Wayland keyboard interference)"""
+        self._update_counter_timer()
+    
+    def _update_counter_timer(self):
+        """Update character counter periodically using timer (500ms)"""
+        if hasattr(self, 'dialog') and self.dialog.winfo_exists():
+            # Update the counter
+            text = self.text_area.get("1.0", "end-1c")
+            text_bytes = text.encode('utf-8')
+            byte_count = len(text_bytes)
+            
+            # Update counter display
+            self.char_count_label.config(text=f"{byte_count}/{MAX_MESSAGE_LENGTH}")
+            
+            # Change color if approaching/exceeding limit
+            if byte_count > MAX_MESSAGE_LENGTH:
+                self.char_count_label.config(fg="#FF6B9D")  # Coral pink for error
+            elif byte_count > MAX_MESSAGE_LENGTH * 0.9:
+                self.char_count_label.config(fg="#FFA500")  # Orange for warning
+            else:
+                self.char_count_label.config(fg=self.colors['fg_secondary'])  # Grey for normal
+            
+            # Schedule next update
+            self.dialog.after(500, self._update_counter_timer)
     
     def _on_focus_event(self, event):
         """Handle FocusIn events to show keyboard for text widgets"""
