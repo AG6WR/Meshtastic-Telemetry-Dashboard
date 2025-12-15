@@ -48,16 +48,20 @@ class MessageListWindow:
             'fg_bad': '#FF6B9D'
         })
         
-        # Create dialog window
+        # Create window
         self.window = tk.Toplevel(parent)
         self.window.title("Messages")
-        self.window.geometry("630x600")
-        self.window.resizable(True, True)
-        self.window.transient(parent)  # Wayland-native way for relative positioning
         self.window.configure(bg=self.colors['bg_frame'])
         
-        # Wayland places transient windows automatically relative to parent
-        # Explicit positioning is ignored on Wayland
+        # Use overrideredirect for precise positioning (bypasses window manager)
+        # Position at top-left of screen
+        self.window.overrideredirect(True)
+        
+        # Position at top-left of screen
+        self.window.update_idletasks()
+        window_width = 630
+        window_height = 640  # Increased to fit close button
+        self.window.geometry(f"{window_width}x{window_height}+10+10")
         
         # Create widgets
         self._create_widgets()
@@ -70,21 +74,20 @@ class MessageListWindow:
     
     def _create_widgets(self):
         """Create window widgets"""
-        # Title bar
+        # Title bar with close button (since overrideredirect removes window decorations)
         title_frame = tk.Frame(self.window, bg=self.colors['bg_frame'])
-        title_frame.pack(fill="x", padx=10, pady=(10, 5))
+        title_frame.pack(fill="x", padx=10, pady=(5, 5))
         
         tk.Label(title_frame, text="Message Center", 
                 font=("Liberation Sans", 16, "bold"),
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(side="left")
         
-        # Close button (rightmost)
-        close_btn = tk.Button(title_frame, text="✕ Close", 
-                             command=self._on_close,
-                             bg='#424242', fg='white',
-                             width=10, height=2,
-                             font=("Liberation Sans", 12))
-        close_btn.pack(side="right", padx=(5, 0))
+        # Close button (rightmost) - more prominent since it's the only way to close
+        tk.Button(title_frame, text='✕', 
+                 bg='#c62828', fg='#ffffff',
+                 font=("Liberation Sans", 16, "bold"),
+                 relief='flat', bd=0, padx=8, pady=0,
+                 command=self.close).pack(side="right")
         
         # Refresh button
         refresh_btn = tk.Button(title_frame, text="🔄 Refresh", 

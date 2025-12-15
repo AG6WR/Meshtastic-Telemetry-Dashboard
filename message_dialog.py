@@ -52,14 +52,22 @@ class MessageDialog:
         # Create dialog window
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(f"Send Message to {node_name}")
-        self.dialog.geometry("630x240")
-        self.dialog.resizable(True, True)
-        self.dialog.transient(parent)  # Wayland-native way for relative positioning
-        self.dialog.grab_set()
         self.dialog.configure(bg=self.colors['bg_frame'])
         
-        # Wayland places transient windows automatically relative to parent
-        # Explicit positioning is ignored on Wayland
+        # Use overrideredirect for precise positioning (bypasses window manager)
+        # Position at top of screen to leave room for keyboard below
+        self.dialog.overrideredirect(True)
+        
+        # Position at top of screen, centered horizontally
+        self.dialog.update_idletasks()
+        screen_width = self.dialog.winfo_screenwidth()
+        dialog_width = 630
+        dialog_height = 280  # Increased to fit close button
+        x = (screen_width - dialog_width) // 2
+        y = 10  # Near top of screen
+        self.dialog.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
+        
+        self.dialog.grab_set()
         
         self._create_widgets()
         
@@ -76,13 +84,20 @@ class MessageDialog:
         
     def _create_widgets(self):
         """Create dialog widgets"""
-        # Header
+        # Header with close button (since overrideredirect removes window decorations)
         header_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
-        header_frame.pack(fill="x", padx=10, pady=(10, 5))
+        header_frame.pack(fill="x", padx=10, pady=(5, 5))
         
         tk.Label(header_frame, text=f"To: {self.node_name} ({self.node_id})", 
                 font=("Liberation Sans", 12, "bold"),
-                bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(anchor="w")
+                bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(side="left", anchor="w")
+        
+        # Close button in header
+        tk.Button(header_frame, text='✕', 
+                 bg='#c62828', fg='#ffffff',
+                 font=("Liberation Sans", 14, "bold"),
+                 relief='flat', bd=0, padx=8, pady=0,
+                 command=self._cancel).pack(side="right")
         
         # Message text area with scrollbar
         text_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])

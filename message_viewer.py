@@ -68,24 +68,21 @@ class MessageViewer:
         
         # Create dialog
         self.dialog = tk.Toplevel(parent)
-        self.dialog.title("Message")
-        self.dialog.geometry("650x500")
-        self.dialog.resizable(True, True)
-        self.dialog.transient(parent)  # Wayland-native way for relative positioning
-        
-        # Get colors from parent
-        self.colors = getattr(parent, 'colors', {
-            'bg_frame': '#2b2b2b',
-            'fg_normal': '#e0e0e0',
-            'fg_secondary': '#b0b0b0',
-            'bg_selected': '#1a237e',
-            'fg_good': '#228B22'
-        })
-        
+        self.dialog.title(f"Message from {node_name}")
         self.dialog.configure(bg=self.colors['bg_frame'])
         
-        # Wayland places transient windows automatically relative to parent
-        # Explicit positioning is ignored on Wayland
+        # Use overrideredirect for precise positioning (bypasses window manager)
+        # Position at top of screen, centered horizontally
+        self.dialog.overrideredirect(True)
+        
+        # Position at top of screen, centered
+        self.dialog.update_idletasks()
+        screen_width = self.dialog.winfo_screenwidth()
+        dialog_width = 650
+        dialog_height = 540  # Increased to fit close button
+        x = (screen_width - dialog_width) // 2
+        y = 10  # Near top of screen
+        self.dialog.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
         
         self._create_widgets()
         
@@ -95,18 +92,27 @@ class MessageViewer:
         
         # Handle window close
         self.dialog.protocol("WM_DELETE_WINDOW", self._on_window_close)
-        
-        # Position relative to positioning_parent (50px down and right)
-        self.dialog.update_idletasks()
-        x = self.positioning_parent.winfo_x() + 50
-        y = self.positioning_parent.winfo_y() + 50
-        self.dialog.geometry(f"+{x}+{y}")
     
     def _create_widgets(self):
         """Create dialog widgets"""
+        # Header with close button (since overrideredirect removes window decorations)
+        header_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
+        header_frame.pack(fill="x", padx=10, pady=(5, 10))
+        
+        tk.Label(header_frame, text=f"Message from {self.node_name}", 
+                font=("Liberation Sans", 14, "bold"),
+                bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(side="left")
+        
+        # Close button in top-right corner
+        tk.Button(header_frame, text='✕', 
+                 bg='#c62828', fg='#ffffff',
+                 font=("Liberation Sans", 16, "bold"),
+                 relief='flat', bd=0, padx=8, pady=0,
+                 command=self.close).pack(side="right")
+        
         # Main content area (scrollable)
         content_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
-        content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        content_frame.pack(fill="both", expand=True, padx=20, pady=(0, 20))
         
         # Header: From/To
         header_frame = tk.Frame(content_frame, bg=self.colors['bg_frame'])
