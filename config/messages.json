@@ -96,7 +96,7 @@
     "timestamp": 1765685808.1265662,
     "direction": "received",
     "read": true,
-    "read_at": 1765692025.791191,
+    "read_at": 1765744648.3397827,
     "delivery_status": "pending",
     "delivered_at": null,
     "read_receipts": {}
@@ -153,7 +153,7 @@
     "direction": "received",
     "read": true,
     "archived": false,
-    "read_at": 1765688848.4706907,
+    "read_at": 1765744632.4549503,
     "delivery_status": "pending",
     "delivered_at": null,
     "read_receipts": {}

@@ -5,6 +5,28 @@ All notable changes to the Meshtastic Telemetry Dashboard will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2b] - 2025-12-14
+
+### Fixed
+- **Virtual Keyboard Improvements**: Enhanced keyboard behavior on Raspberry Pi touchscreens
+  - Fixed keyboard auto-show/hide when focusing text fields
+  - Improved key press handling and focus management
+  - Better integration with compose message dialog
+
+### Changed
+- **Font Standardization**: Changed UI fonts from Liberation Sans Narrow to Liberation Sans 12pt for better readability on touchscreens
+  - Buttons now use Liberation Sans 12pt (was Narrow 11pt)
+  - Tabs now use Liberation Sans 12pt (was Narrow 12pt)  
+  - Implemented global font references instead of hardcoded fonts throughout codebase
+- **Dashboard Button Cleanup**: Simplified main button bar
+  - Renamed "Node Alerts" to "Alerts"
+  - Renamed "Open Logs" to "Logs"
+  - Removed "Debug Log" button (accessible via context menu)
+  - Removed "Today's CSV" button (accessible via node detail window)
+  - Widened "Exit Fullscreen" button for better touch targeting
+- **Message Center UI**: Removed emoji icons from Compose/Refresh/Close buttons for cleaner appearance
+- **Button Style Consistency**: Standardized Send/Cancel/Compose buttons across all dialogs
+
 ## [1.2.0b] - 2025-12-14
 
 ### Fixed
