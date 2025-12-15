@@ -68,7 +68,10 @@ class MessageDialog:
             pass  # Not all platforms support this
         x = self.positioning_parent.winfo_rootx() + 10
         y = self.positioning_parent.winfo_rooty() + 10
+        # Wayland workaround: set geometry after window is mapped
         self.dialog.geometry(f"630x240+{x}+{y}")
+        self.dialog.update()  # Force update
+        self.dialog.geometry(f"+{x}+{y}")  # Set position again
         
         self._create_widgets()
         

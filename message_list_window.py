@@ -68,7 +68,10 @@ class MessageListWindow:
         x = parent.winfo_rootx() + 10
         y = parent.winfo_rooty() + 10
         logger.info(f"Message Center positioning: parent at ({parent.winfo_rootx()}, {parent.winfo_rooty()}), window at ({x}, {y})")
+        # Wayland workaround: set geometry after window is mapped
         self.window.geometry(f"630x600+{x}+{y}")
+        self.window.update()  # Force update
+        self.window.geometry(f"+{x}+{y}")  # Set position again after size is applied
         
         # Create widgets
         self._create_widgets()
@@ -561,9 +564,15 @@ class MessageListWindow:
         
         # Position relative to message center (10px offset)
         selector.update_idletasks()
+        try:
+            selector.attributes('-type', 'normal')
+        except tk.TclError:
+            pass
         x = self.window.winfo_rootx() + 10
         y = self.window.winfo_rooty() + 10
         selector.geometry(f"400x500+{x}+{y}")
+        selector.update()
+        selector.geometry(f"+{x}+{y}")  # Set position again
         
         tk.Label(selector, text="Select a node to send message:", 
                 font=("Liberation Sans", 12, "bold"),
