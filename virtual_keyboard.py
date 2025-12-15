@@ -72,7 +72,7 @@ class VirtualKeyboard:
         # Add minimal close button (since overrideredirect removes title bar)
         close_btn = tk.Button(self.window, text='✕', 
                              bg='#c62828', fg='#ffffff',
-                             font=("Liberation Sans", 10, "bold"),
+                             font=("Liberation Sans", 16, "bold"),
                              relief='flat', bd=0, padx=3, pady=0,
                              command=self._close)
         close_btn.pack(side='top', anchor='ne')
@@ -125,27 +125,27 @@ class VirtualKeyboard:
         for key in layout['row1']:
             width, colors = self._get_key_style(key)
             btn = tk.Button(row1_frame, text=key, width=width,
-                     font=("Liberation Sans", 10, "bold"),
+                     font=("Liberation Sans", 16, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
                      relief='flat', bd=0, takefocus=0)
             btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
-            btn.pack(side='left', padx=1, pady=1)
+            btn.pack(side='left', padx=2, pady=2)
             self._buttons[key] = btn
         
-        # Row 2 - qwerty row - stagger 1/4 key (8 pixels)
+        # Row 2 - qwerty row - stagger 1/6 key (8 pixels)
         row2_frame = tk.Frame(frame, bg=self.colors['bg_frame'])
         row2_frame.pack()
         tk.Frame(row2_frame, width=8, bg=self.colors['bg_frame']).pack(side='left')
         for key in layout['row2']:
             width, colors = self._get_key_style(key)
             btn = tk.Button(row2_frame, text=key, width=width,
-                     font=("Liberation Sans", 10, "bold"),
+                     font=("Liberation Sans", 16, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
                      relief='flat', bd=0, takefocus=0)
             btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
-            btn.pack(side='left', padx=1, pady=1)
+            btn.pack(side='left', padx=2, pady=2)
             self._buttons[key] = btn
         
         # Row 3 - asdf row - stagger 2/4 key (16 pixels)
@@ -155,12 +155,12 @@ class VirtualKeyboard:
         for key in layout['row3']:
             width, colors = self._get_key_style(key)
             btn = tk.Button(row3_frame, text=key, width=width,
-                     font=("Liberation Sans", 10, "bold"),
+                     font=("Liberation Sans", 16, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
                      relief='flat', bd=0, takefocus=0)
             btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
-            btn.pack(side='left', padx=1, pady=1)
+            btn.pack(side='left', padx=2, pady=2)
             self._buttons[key] = btn
         
         # Row 4 - zxcv row - stagger 1 key (32 pixels)
@@ -170,12 +170,12 @@ class VirtualKeyboard:
         for key in layout['row4']:
             width, colors = self._get_key_style(key)
             btn = tk.Button(row4_frame, text=key, width=width,
-                     font=("Liberation Sans", 10, "bold"),
+                     font=("Liberation Sans", 16, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
                      relief='flat', bd=0, takefocus=0)
             btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
-            btn.pack(side='left', padx=1, pady=1)
+            btn.pack(side='left', padx=2, pady=2)
             self._buttons[key] = btn
         
         # Row 5 - space bar row
@@ -201,12 +201,12 @@ class VirtualKeyboard:
                 text = key
             
             btn = tk.Button(row5_frame, text=text, width=width,
-                     font=("Liberation Sans", 10, "bold"),
+                     font=("Liberation Sans", 16, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
                      relief='flat', bd=0, takefocus=0)
             btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
-            btn.pack(side='left', padx=1, pady=1)
+            btn.pack(side='left', padx=2, pady=2)
             self._buttons[key] = btn
     
     def _get_key_style(self, key):
