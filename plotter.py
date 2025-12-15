@@ -26,6 +26,11 @@ class TelemetryPlotter:
         self.config_manager = config_manager
         self.colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF']
         
+        # Get fonts from parent (global UI fonts)
+        self.font_ui_button = getattr(parent, 'font_ui_button', None)
+        self.font_ui_body = getattr(parent, 'font_ui_body', None)
+        self.font_ui_section_title = getattr(parent, 'font_ui_section_title', None)
+        
     def show_plot_dialog(self, preselect_node_id=None, parent_window=None):
         """Show plot configuration dialog
         
@@ -133,10 +138,11 @@ class TelemetryPlotter:
         
         result = {}
         
-        # Title - smaller font
+        # Title
         title_label = tk.Label(dialog, text="Telemetry Plot Configuration", 
-                              bg='#1e1e1e', fg='white', font=("Arial", 11, "bold"))  # Reduced from 14 to 11
-        title_label.pack(pady=5)  # Reduced padding from 10 to 5
+                              bg='#1e1e1e', fg='white',
+                              font=self.font_ui_section_title if self.font_ui_section_title else ("Liberation Sans", 12, "bold"))
+        title_label.pack(pady=5)
         
         # Parameter selection
         param_frame = tk.LabelFrame(dialog, text="Parameter to Plot", bg='#2d2d2d', fg='white')
@@ -164,7 +170,7 @@ class TelemetryPlotter:
             rb = tk.Radiobutton(parent, text=text, variable=param_var, value=value,
                                bg='#2d2d2d', fg='white', selectcolor='#404040',
                                activebackground='#2d2d2d', activeforeground='white',
-                               font=("Liberation Sans", 12),
+                               font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                highlightthickness=0)
             rb.pack(anchor="w", pady=2)
         
@@ -202,7 +208,7 @@ class TelemetryPlotter:
             rb = tk.Radiobutton(col1, text=text, variable=time_var, value=value,
                                bg='#2d2d2d', fg='white', selectcolor='#404040',
                                activebackground='#2d2d2d', activeforeground='white',
-                               font=("Liberation Sans", 12),
+                               font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                highlightthickness=0)
             rb.pack(anchor="w", padx=10, pady=2)
         
@@ -210,7 +216,7 @@ class TelemetryPlotter:
             rb = tk.Radiobutton(col2, text=text, variable=time_var, value=value,
                                bg='#2d2d2d', fg='white', selectcolor='#404040',
                                activebackground='#2d2d2d', activeforeground='white',
-                               font=("Liberation Sans", 12),
+                               font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                highlightthickness=0)
             rb.pack(anchor="w", padx=10, pady=2)
         
@@ -225,7 +231,7 @@ class TelemetryPlotter:
         select_all_cb = tk.Checkbutton(node_frame, text="All Nodes", variable=select_all_var,
                                       bg='#2d2d2d', fg='white', selectcolor='#404040',
                                       activebackground='#2d2d2d', activeforeground='white',
-                                      font=("Liberation Sans", 12),
+                                      font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                       highlightthickness=0)
         select_all_cb.pack(anchor="w", padx=10, pady=3)
         
@@ -265,7 +271,7 @@ class TelemetryPlotter:
             cb = tk.Checkbutton(scrollable_frame, text=display_name, variable=var,
                                bg='#2d2d2d', fg='white', selectcolor='#404040',
                                activebackground='#2d2d2d', activeforeground='white',
-                               font=("Liberation Sans", 12),
+                               font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                highlightthickness=0)
             cb.pack(anchor="w", padx=10, pady=2)
             node_checkboxes.append(cb)
@@ -303,9 +309,13 @@ class TelemetryPlotter:
         
         # Buttons - enlarged for touch input
         tk.Button(button_frame, text="Cancel", command=on_cancel,
-                 bg='#404040', fg='white', width=12, height=2).pack(side="right", padx=(10, 0))
+                 bg='#404040', fg='white', 
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
+                 width=12, height=2).pack(side="right", padx=(10, 0))
         tk.Button(button_frame, text="Plot", command=on_ok,
-                 bg='#404040', fg='white', width=12, height=2).pack(side="right")
+                 bg='#404040', fg='white', 
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
+                 width=12, height=2).pack(side="right")
         
         # Wait for dialog to close
         dialog.wait_window()

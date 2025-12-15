@@ -49,20 +49,30 @@ class MessageDialog:
             'fg_bad': '#FF6B9D'
         })
         
+        # Get fonts from parent (global UI fonts)
+        self.font_ui_body = getattr(parent, 'font_ui_body', None)
+        self.font_ui_section_title = getattr(parent, 'font_ui_section_title', None)
+        self.font_ui_button = getattr(parent, 'font_ui_button', None)
+        
         # Create dialog window
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(f"Send Message to {node_name}")
-        self.dialog.geometry("630x240")
-        self.dialog.resizable(True, True)  # Allow resizing
-        self.dialog.transient(parent)
-        self.dialog.grab_set()
         self.dialog.configure(bg=self.colors['bg_frame'])
         
-        # Position relative to positioning_parent (50px down and right)
+        # Use overrideredirect for precise positioning (bypasses window manager)
+        # Position at top of screen to leave room for keyboard below
+        self.dialog.overrideredirect(True)
+        
+        # Position at top of screen, centered horizontally
         self.dialog.update_idletasks()
-        x = self.positioning_parent.winfo_x() + 50
-        y = self.positioning_parent.winfo_y() + 50
-        self.dialog.geometry(f"+{x}+{y}")
+        screen_width = self.dialog.winfo_screenwidth()
+        dialog_width = 630
+        dialog_height = 280  # Increased to fit close button
+        x = (screen_width - dialog_width) // 2
+        y = 10  # Near top of screen
+        self.dialog.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
+        
+        self.dialog.grab_set()
         
         self._create_widgets()
         
@@ -74,25 +84,46 @@ class MessageDialog:
         self.dialog.bind_all('<FocusIn>', self._on_focus_event, add='+')
         self.dialog.bind_all('<Button-1>', self._on_click_event, add='+')
         
-        # Set focus to text area
+        # Set focus to text area and show keyboard after dialog is visible
+        self.dialog.update_idletasks()
         self.text_area.focus_set()
+        self.dialog.after(100, self._show_keyboard_and_focus)  # Show keyboard after dialog renders
+    
+    def _show_keyboard_and_focus(self):
+        """Show keyboard and ensure text area has focus"""
+        self.virtual_keyboard.show()
+        self.text_area.focus_force()  # Force focus to ensure cursor visibility
+        self.text_area.mark_set('insert', '1.0')
+        self.text_area.see('insert')
         
     def _create_widgets(self):
         """Create dialog widgets"""
-        # Header
+        # Header with close button (since overrideredirect removes window decorations)
         header_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
-        header_frame.pack(fill="x", padx=10, pady=(10, 5))
+        header_frame.pack(fill="x", padx=10, pady=(5, 5))
         
-        tk.Label(header_frame, text=f"To: {self.node_name} ({self.node_id})", 
-                font=("Liberation Sans", 12, "bold"),
-                bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(anchor="w")
+        tk.Label(header_frame, text="To:", 
+                font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
+                bg=self.colors['bg_frame'], fg=self.colors['fg_secondary']).pack(side="left", anchor="w")
+        
+        tk.Label(header_frame, text=f" {self.node_name} ({self.node_id})", 
+                font=self.font_ui_section_title if self.font_ui_section_title else ("Liberation Sans", 12, "bold"),
+                bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(side="left", anchor="w")
+        
+        # Close button in header
+        tk.Button(header_frame, text='✕', 
+                 bg='#c62828', fg='#ffffff',
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
+                 relief='flat', bd=0, padx=8, pady=0,
+                 command=self._cancel).pack(side="right")
         
         # Message text area with scrollbar
         text_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
         text_frame.pack(fill="x", padx=10, pady=5)
         
-        tk.Label(text_frame, text="Message:", font=("Liberation Sans", 12),
-                bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(anchor="w")
+        tk.Label(text_frame, text="Message:", 
+                font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
+                bg=self.colors['bg_frame'], fg=self.colors['fg_secondary']).pack(anchor="w")
         
         text_container = tk.Frame(text_frame, bg=self.colors['bg_frame'])
         text_container.pack(fill="x")
@@ -102,13 +133,13 @@ class MessageDialog:
         
         self.text_area = tk.Text(text_container, 
                                  wrap="word", 
-                                 font=("Liberation Sans", 12),
+                                 font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                  height=3,  # 3 lines tall (enough for 180 chars)
                                  bg=self.colors['bg_main'], fg=self.colors['fg_normal'],
-                                 insertbackground='yellow',  # Bright yellow - highly visible
-                                 insertwidth=6,  # VERY wide cursor
+                                 insertbackground='white',  # White cursor for visibility
+                                 insertwidth=2,  # Standard cursor width
                                  insertontime=1000,  # On longer
-                                 insertofftime=200,  # Off shorter
+                                 insertofftime=0,  # Solid cursor - no blink off
                                  yscrollcommand=scrollbar.set)
         self.text_area.pack(side="left", fill="x", expand=True)
         scrollbar.config(command=self.text_area.yview)
@@ -116,9 +147,13 @@ class MessageDialog:
         # Set focus to text area so cursor is visible
         self.text_area.focus_set()
         
-        # Bind text change event
+        # Force cursor to start of text area
+        self.text_area.mark_set('insert', '1.0')
+        self.text_area.see('insert')
+        
+        # Bind character counter update using Modified event (safer than KeyRelease on Wayland)
         self.text_area.bind('<<Modified>>', self._on_text_change)
-        self.text_area.bind('<KeyRelease>', self._on_text_change)
+
         
         # Character counter
         counter_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
@@ -126,7 +161,7 @@ class MessageDialog:
         
         self.char_count_label = tk.Label(counter_frame, 
                                          text=f"0/{MAX_MESSAGE_LENGTH}",
-                                         font=("Liberation Sans", 12),
+                                         font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                          bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'])
         self.char_count_label.pack(side="right")
         
@@ -135,7 +170,7 @@ class MessageDialog:
         bell_check = tk.Checkbutton(counter_frame, 
                                     text="Send bell character (\\a) to alert",
                                     variable=self.send_bell_var,
-                                    font=("Liberation Sans", 12),
+                                    font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                     bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
                                     selectcolor=self.colors['bg_main'],
                                     activebackground=self.colors['bg_frame'],
@@ -147,10 +182,12 @@ class MessageDialog:
         button_frame.pack(fill="x", padx=10, pady=10)
         
         tk.Button(button_frame, text="Send", command=self._send_message,
-                 width=12, height=2, font=("Liberation Sans", 12, "bold"),
+                 width=12, height=2, 
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
                  bg=self.colors['fg_good'], fg='white').pack(side="right", padx=5)
         tk.Button(button_frame, text="Cancel", command=self._cancel,
-                 width=12, height=2, font=("Liberation Sans", 12),
+                 width=12, height=2, 
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12),
                  bg=self.colors['button_bg'], fg='white').pack(side="right")
         
         # Bind Enter key (Ctrl+Enter to send)
@@ -167,11 +204,14 @@ class MessageDialog:
         text_bytes = text.encode('utf-8')
         byte_count = len(text_bytes)
         
+        logger.info(f"_on_text_change called: event={event}, text='{text}', bytes={byte_count}")
+        
         # Update counter
         self.char_count_label.config(text=f"{byte_count}/{MAX_MESSAGE_LENGTH}")
         
         # Change color if approaching/exceeding limit
         if byte_count > MAX_MESSAGE_LENGTH:
+            logger.info(f"Exceeded limit, trimming from {byte_count} to {MAX_MESSAGE_LENGTH}")
             self.char_count_label.config(fg="#FF6B9D")  # Coral pink for error
             # Delete excess characters
             while byte_count > MAX_MESSAGE_LENGTH:
@@ -181,6 +221,7 @@ class MessageDialog:
                 byte_count = len(text_bytes)
             
             # Update text area
+            logger.info(f"Rewriting text area with trimmed text: '{text}'")
             self.text_area.delete("1.0", "end")
             self.text_area.insert("1.0", text)
             self.text_area.mark_set("insert", "end")
@@ -195,20 +236,60 @@ class MessageDialog:
     def _on_focus_event(self, event):
         """Handle FocusIn events to show keyboard for text widgets"""
         w = event.widget
-        # Don't show keyboard for keyboard's own widgets
+        logger.info(f"FocusIn event: widget={w}, class={w.winfo_class()}")
+        
+        # CRITICAL: Don't process events from keyboard's own widgets
+        # Walk up the parent chain to check if widget is inside keyboard
         if self.virtual_keyboard and hasattr(self.virtual_keyboard, 'window'):
-            if w.master is not self.virtual_keyboard.window:
-                if w.winfo_class() in ('Text', 'Entry'):
+            parent = w
+            while parent:
+                if parent == self.virtual_keyboard.window:
+                    logger.info(f"Ignoring keyboard widget: {w}")
+                    return  # Ignore keyboard's own widgets
+                try:
+                    parent = parent.master
+                except AttributeError:
+                    break
+            
+            # Show keyboard when Text or Entry gets focus
+            if w.winfo_class() in ('Text', 'Entry'):
+                # Only show if currently hidden
+                kb_state = self.virtual_keyboard.window.state()
+                logger.info(f"Text/Entry focused, keyboard state: {kb_state}")
+                if kb_state == 'withdrawn':
+                    logger.info(f"Showing keyboard for widget: {w}")
+                    self.virtual_keyboard.target_widget = w
                     self.virtual_keyboard.show()
+                else:
+                    # Already visible, just update target if needed
+                    if self.virtual_keyboard.target_widget != w:
+                        logger.info(f"Updating keyboard target: {w}")
+                        self.virtual_keyboard.target_widget = w
     
     def _on_click_event(self, event):
         """Handle Button-1 events to hide keyboard when clicking buttons"""
         w = event.widget
-        # Hide keyboard when clicking buttons (except keyboard buttons)
+        logger.info(f"Button-1 event: widget={w}, class={w.winfo_class()}")
+        
+        # CRITICAL: Don't process events from keyboard's own widgets
+        # Walk up the parent chain to check if widget is inside keyboard
         if self.virtual_keyboard and hasattr(self.virtual_keyboard, 'window'):
-            if w.master is not self.virtual_keyboard.window:
-                if w.winfo_class() == 'Button':
-                    self.virtual_keyboard.hide()
+            parent = w
+            while parent:
+                if parent == self.virtual_keyboard.window:
+                    logger.info(f"Ignoring keyboard widget click: {w}")
+                    return  # Ignore keyboard's own widgets
+                try:
+                    parent = parent.master
+                except AttributeError:
+                    break
+            
+            # Hide keyboard when clicking buttons (but not keyboard's buttons!)
+            if w.winfo_class() == 'Button':
+                logger.info(f"Hiding keyboard due to button click: {w}")
+                self.virtual_keyboard.hide()
+                # Give focus back to the clicked button
+                w.focus_force()
     
     def _send_message(self):
         """Send the message"""

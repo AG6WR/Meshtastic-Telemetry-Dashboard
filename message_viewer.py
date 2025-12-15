@@ -53,6 +53,22 @@ class MessageViewer:
         self.on_mark_read_callback = on_mark_read
         self.on_archive_callback = on_archive
         
+        # Get colors from parent (dark theme)
+        self.colors = getattr(parent, 'colors', {
+            'bg_frame': '#2b2b2b',
+            'bg_main': '#1e1e1e',
+            'fg_normal': '#e0e0e0',
+            'fg_secondary': '#b0b0b0',
+            'fg_good': '#228B22',
+            'fg_warning': '#FFA500',
+            'fg_bad': '#FF6B9D'
+        })
+        
+        # Get fonts from parent (global UI fonts)
+        self.font_ui_body = getattr(parent, 'font_ui_body', None)
+        self.font_ui_section_title = getattr(parent, 'font_ui_section_title', None)
+        self.font_ui_button = getattr(parent, 'font_ui_button', None)
+        
         # Extract message details
         self.message_id = message_data.get('message_id', 'unknown')
         self.from_id = message_data.get('from_node_id', '')
@@ -68,20 +84,10 @@ class MessageViewer:
         
         # Create dialog
         self.dialog = tk.Toplevel(parent)
-        self.dialog.title("Message")
-        self.dialog.geometry("630x280")
+        self.dialog.title(f"Message from {self.from_name}")
+        self.dialog.geometry("650x500")
         self.dialog.resizable(True, True)
         self.dialog.transient(parent)
-        
-        # Get colors from parent
-        self.colors = getattr(parent, 'colors', {
-            'bg_frame': '#2b2b2b',
-            'fg_normal': '#e0e0e0',
-            'fg_secondary': '#b0b0b0',
-            'bg_selected': '#1a237e',
-            'fg_good': '#228B22'
-        })
-        
         self.dialog.configure(bg=self.colors['bg_frame'])
         
         self._create_widgets()
@@ -92,12 +98,6 @@ class MessageViewer:
         
         # Handle window close
         self.dialog.protocol("WM_DELETE_WINDOW", self._on_window_close)
-        
-        # Position relative to positioning_parent (50px down and right)
-        self.dialog.update_idletasks()
-        x = self.positioning_parent.winfo_x() + 50
-        y = self.positioning_parent.winfo_y() + 50
-        self.dialog.geometry(f"+{x}+{y}")
     
     def _create_widgets(self):
         """Create dialog widgets"""
@@ -113,7 +113,7 @@ class MessageViewer:
             # Sent message: show "To:"
             to_label = tk.Label(header_frame, text="To:",
                               bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                              font=("Liberation Sans", 12))
+                              font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12))
             to_label.pack(side="left")
             
             if self.is_bulletin:
@@ -126,18 +126,18 @@ class MessageViewer:
             
             to_name_label = tk.Label(header_frame, text=f" {to_value}",
                                     bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                                    font=("Liberation Sans", 12, "bold"))
+                                    font=self.font_ui_section_title if self.font_ui_section_title else ("Liberation Sans", 12, "bold"))
             to_name_label.pack(side="left")
         else:
             # Received message: show "From:"
             from_label = tk.Label(header_frame, text="From:",
                                 bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                                font=("Liberation Sans", 12))
+                                font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12))
             from_label.pack(side="left")
             
             from_name_label = tk.Label(header_frame, text=f" {self.from_name}",
                                       bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                                      font=("Liberation Sans", 12, "bold"))
+                                      font=self.font_ui_section_title if self.font_ui_section_title else ("Liberation Sans", 12, "bold"))
             from_name_label.pack(side="left")
         
         # Timestamp
@@ -146,19 +146,19 @@ class MessageViewer:
         
         ts_label = tk.Label(timestamp_frame, text="Received:" if self.direction == 'received' else "Sent:",
                           bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                          font=("Liberation Sans", 12))
+                          font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12))
         ts_label.pack(side="left")
         
         dt = datetime.fromtimestamp(self.timestamp)
-        ts_value = tk.Label(timestamp_frame, text=f"{dt.strftime('%Y-%m-%d %H:%M:%S')}",
+        ts_value = tk.Label(timestamp_frame, text=f" {dt.strftime('%Y-%m-%d %H:%M:%S')}",
                           bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                          font=("Liberation Sans", 12))
+                          font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12))
         ts_value.pack(side="left")
         
         # Message text area (scrollable)
         text_label = tk.Label(content_frame, text="Message:",
                             bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                            font=("Liberation Sans", 12))
+                            font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12))
         text_label.pack(anchor="w", pady=(0, 5))
         
         text_frame = tk.Frame(content_frame, bg=self.colors['bg_frame'], height=80)
@@ -169,7 +169,7 @@ class MessageViewer:
         scrollbar.pack(side="right", fill="y")
         
         self.text_display = tk.Text(text_frame, wrap="word", 
-                                    font=("Liberation Sans", 12),
+                                    font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
                                     bg='#1e1e1e', fg=self.colors['fg_normal'],
                                     yscrollcommand=scrollbar.set,
                                     relief="sunken", bd=2,
@@ -189,7 +189,7 @@ class MessageViewer:
             
             receipt_label = tk.Label(receipt_frame, text="Read receipts:",
                                    bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                                   font=("Liberation Sans", 12))
+                                   font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12))
             receipt_label.pack(anchor="w")
             
             for node_id, receipt_data in self.read_receipts.items():
@@ -203,7 +203,7 @@ class MessageViewer:
                     
                     status_label = tk.Label(receipt_frame, text=status_text,
                                           bg=self.colors['bg_frame'], fg=self.colors['fg_good'],
-                                          font=("Liberation Sans", 12))
+                                          font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12))
                     status_label.pack(anchor="w")
         
         # Button bar at bottom
@@ -215,7 +215,7 @@ class MessageViewer:
             mark_read_btn = tk.Button(button_frame, text="Mark as Read", width=12, height=2,
                                      command=self._on_mark_read,
                                      bg='#2e7d32', fg='white',
-                                     font=("Liberation Sans", 12))
+                                     font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
             mark_read_btn.pack(side="left", padx=(0, 11))
         
         # Reply button
@@ -223,7 +223,7 @@ class MessageViewer:
             reply_btn = tk.Button(button_frame, text="Reply", width=10, height=2,
                                  command=self._on_reply,
                                  bg='#0d47a1', fg='white',
-                                 font=("Liberation Sans", 12))
+                                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
             reply_btn.pack(side="left", padx=(0, 11))
         
         # Archive button (only if not already archived)
@@ -231,7 +231,7 @@ class MessageViewer:
             archive_btn = tk.Button(button_frame, text="Archive", width=10, height=2,
                                    command=self._on_archive,
                                    bg='#f57c00', fg='white',
-                                   font=("Liberation Sans", 12))
+                                   font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
             archive_btn.pack(side="left", padx=(0, 11))
         
         # Delete button
@@ -239,14 +239,14 @@ class MessageViewer:
             delete_btn = tk.Button(button_frame, text="Delete...", width=10, height=2,
                                   command=self._on_delete,
                                   bg='#c62828', fg='white',
-                                  font=("Liberation Sans", 12))
+                                  font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
             delete_btn.pack(side="left", padx=(0, 11))
         
         # Close button (always present on right side)
         close_btn = tk.Button(button_frame, text="Close", width=10, height=2,
                              command=self._on_window_close,
                              bg='#424242', fg='white',
-                             font=("Liberation Sans", 12))
+                             font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
         close_btn.pack(side="right")
     
     def _on_mark_read(self):

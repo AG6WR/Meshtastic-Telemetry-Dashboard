@@ -58,12 +58,25 @@ class VirtualKeyboard:
         self.window.title("Keyboard")
         self.window.configure(bg=self.colors['bg_frame'])
         
-        # Don't show at instantiation (will be shown on focus)
+        # Use overrideredirect for precise positioning (bypasses window manager)
+        # Acceptable for touch keyboard - no decorations needed
+        self.window.overrideredirect(True)
+        
+        # Don't show at instantiation - start withdrawn (StackOverflow pattern)
+        self.window.withdraw()
         # Position will be set when first shown
         self._positioned = False
         
         # Make it stay on top
         self.window.attributes('-topmost', True)
+        
+        # Add minimal close button (since overrideredirect removes title bar)
+        close_btn = tk.Button(self.window, text='✕', 
+                             bg='#c62828', fg='#ffffff',
+                             font=("Liberation Sans", 16, "bold"),
+                             relief='flat', bd=0, padx=3, pady=0,
+                             command=self._close)
+        close_btn.pack(side='top', anchor='ne')
         
         # Create container frame
         self.container = tk.Frame(self.window, bg=self.colors['bg_frame'])
@@ -113,27 +126,27 @@ class VirtualKeyboard:
         for key in layout['row1']:
             width, colors = self._get_key_style(key)
             btn = tk.Button(row1_frame, text=key, width=width,
-                     font=("Liberation Sans", 10, "bold"),
+                     font=("Liberation Sans", 16, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
-                     relief='raised', bd=2)
+                     relief='flat', bd=0, takefocus=0)
             btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
-            btn.pack(side='left', padx=1, pady=1)
+            btn.pack(side='left', padx=2, pady=2)
             self._buttons[key] = btn
         
-        # Row 2 - qwerty row - stagger 1/4 key (8 pixels)
+        # Row 2 - qwerty row - stagger 1/6 key (8 pixels)
         row2_frame = tk.Frame(frame, bg=self.colors['bg_frame'])
         row2_frame.pack()
         tk.Frame(row2_frame, width=8, bg=self.colors['bg_frame']).pack(side='left')
         for key in layout['row2']:
             width, colors = self._get_key_style(key)
             btn = tk.Button(row2_frame, text=key, width=width,
-                     font=("Liberation Sans", 10, "bold"),
+                     font=("Liberation Sans", 16, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
-                     relief='raised', bd=2)
+                     relief='flat', bd=0, takefocus=0)
             btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
-            btn.pack(side='left', padx=1, pady=1)
+            btn.pack(side='left', padx=2, pady=2)
             self._buttons[key] = btn
         
         # Row 3 - asdf row - stagger 2/4 key (16 pixels)
@@ -143,27 +156,27 @@ class VirtualKeyboard:
         for key in layout['row3']:
             width, colors = self._get_key_style(key)
             btn = tk.Button(row3_frame, text=key, width=width,
-                     font=("Liberation Sans", 10, "bold"),
+                     font=("Liberation Sans", 16, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
-                     relief='raised', bd=2)
+                     relief='flat', bd=0, takefocus=0)
             btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
-            btn.pack(side='left', padx=1, pady=1)
+            btn.pack(side='left', padx=2, pady=2)
             self._buttons[key] = btn
         
-        # Row 4 - zxcv row - stagger 1 key + 1/3 (32 pixels)
+        # Row 4 - zxcv row - stagger 1 key (32 pixels)
         row4_frame = tk.Frame(frame, bg=self.colors['bg_frame'])
         row4_frame.pack()
         tk.Frame(row4_frame, width=32, bg=self.colors['bg_frame']).pack(side='left')
         for key in layout['row4']:
             width, colors = self._get_key_style(key)
             btn = tk.Button(row4_frame, text=key, width=width,
-                     font=("Liberation Sans", 10, "bold"),
+                     font=("Liberation Sans", 16, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
-                     relief='raised', bd=2)
+                     relief='flat', bd=0, takefocus=0)
             btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
-            btn.pack(side='left', padx=1, pady=1)
+            btn.pack(side='left', padx=2, pady=2)
             self._buttons[key] = btn
         
         # Row 5 - space bar row
@@ -189,12 +202,12 @@ class VirtualKeyboard:
                 text = key
             
             btn = tk.Button(row5_frame, text=text, width=width,
-                     font=("Liberation Sans", 10, "bold"),
+                     font=("Liberation Sans", 16, "bold"),
                      bg=colors['bg'], fg=colors['fg'],
                      activebackground=colors['bg'], activeforeground=colors['fg'],
-                     relief='raised', bd=2)
+                     relief='flat', bd=0, takefocus=0)
             btn.config(command=lambda k=key, b=btn: self._key_press(k, b))
-            btn.pack(side='left', padx=1, pady=1)
+            btn.pack(side='left', padx=2, pady=2)
             self._buttons[key] = btn
     
     def _get_key_style(self, key):
@@ -247,6 +260,8 @@ class VirtualKeyboard:
             # Flash AFTER tkraise to avoid double-draw - DISABLED for testing
             #if button:
             #    self._flash_key(button)
+            # Keep focus on target widget to prevent flash
+            self.target_widget.focus_set()
             return
         
         # Flash the key (for non-Caps keys) - DISABLED for testing
@@ -276,13 +291,18 @@ class VirtualKeyboard:
         # Regular keys
         else:
             self._insert_char(key)
+        
+        # CRITICAL FIX: Restore focus to target widget after every key press
+        # This prevents focus events from triggering and causing window flash
+        self.target_widget.focus_set()
     
     def _insert_char(self, char):
         """Insert character into target widget"""
         if isinstance(self.target_widget, tk.Text):
             self.target_widget.insert('insert', char)
-            self.target_widget.event_generate('<<Modified>>')
-            self.target_widget.event_generate('<KeyRelease>')
+            # DISABLED - these event_generate calls may trigger window redraws
+            #self.target_widget.event_generate('<<Modified>>')
+            #self.target_widget.event_generate('<KeyRelease>')
         elif isinstance(self.target_widget, tk.Entry):
             current_pos = self.target_widget.index('insert')
             self.target_widget.insert(current_pos, char)
@@ -291,8 +311,9 @@ class VirtualKeyboard:
         """Handle backspace"""
         if isinstance(self.target_widget, tk.Text):
             self.target_widget.delete('insert-1c', 'insert')
-            self.target_widget.event_generate('<<Modified>>')
-            self.target_widget.event_generate('<KeyRelease>')
+            # DISABLED - these event_generate calls may trigger window redraws
+            #self.target_widget.event_generate('<<Modified>>')
+            #self.target_widget.event_generate('<KeyRelease>')
         elif isinstance(self.target_widget, tk.Entry):
             current_pos = self.target_widget.index('insert')
             if current_pos > 0:
@@ -333,25 +354,60 @@ class VirtualKeyboard:
             self.target_widget.icursor(pos + 1)
     
     def _close(self):
-        """Close keyboard"""
-        self.window.destroy()
+        """Close keyboard - withdraw instead of destroy (StackOverflow pattern)"""
+        self.hide()
     
     def show(self):
         """Show the keyboard"""
+        logger.info(f"show() called, current state: {self.window.state()}")
         # Position below parent on first show
         if not self._positioned:
             self.window.update_idletasks()
             parent = self.window.master
-            x = parent.winfo_x()
-            y = parent.winfo_y() + parent.winfo_height() + 5
+            
+            # Get screen dimensions and keyboard size
+            screen_width = self.window.winfo_screenwidth()
+            screen_height = self.window.winfo_screenheight()
+            kb_width = self.window.winfo_reqwidth()
+            kb_height = self.window.winfo_reqheight()
+            
+            # Calculate Y position (above or below parent)
+            parent_bottom = parent.winfo_rooty() + parent.winfo_height()
+            space_below = screen_height - parent_bottom
+            
+            if space_below < kb_height + 20:
+                # Position above parent
+                y = parent.winfo_rooty() - kb_height - 5
+                logger.info(f"Insufficient space below ({space_below}px), positioning above")
+            else:
+                # Position below parent
+                y = parent_bottom + 5
+                logger.info(f"Sufficient space below ({space_below}px), positioning below")
+            
+            # Center keyboard horizontally relative to parent
+            parent_center_x = parent.winfo_rootx() + (parent.winfo_width() // 2)
+            x = parent_center_x - (kb_width // 2)
+            
+            # Ensure keyboard doesn't go off-screen
+            if x < 0:
+                x = 0
+                logger.info(f"Adjusted X to 0 (would have been off left edge)")
+            elif x + kb_width > screen_width:
+                x = screen_width - kb_width
+                logger.info(f"Adjusted X to {x} (would have been off right edge)")
+            
+            logger.info(f"Positioning keyboard at ({x}, {y}), centered on parent")
             self.window.geometry(f"+{x}+{y}")
             self._positioned = True
         
         self.window.deiconify()
+        logger.info(f"Keyboard shown, new state: {self.window.state()}")
     
     def hide(self):
         """Hide the keyboard"""
+        logger.info(f"hide() called, current state: {self.window.state()}")
         self.window.withdraw()
+        logger.info(f"Keyboard hidden, new state: {self.window.state()}")
     
     def destroy(self):
         """Destroy the keyboard"""

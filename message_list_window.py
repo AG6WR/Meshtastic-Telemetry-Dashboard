@@ -48,19 +48,21 @@ class MessageListWindow:
             'fg_bad': '#FF6B9D'
         })
         
-        # Create dialog window
+        # Get fonts from parent (global UI fonts)
+        self.font_ui_body = getattr(parent, 'font_ui_body', None)
+        self.font_ui_section_title = getattr(parent, 'font_ui_section_title', None)
+        self.font_ui_context_menu = getattr(parent, 'font_ui_context_menu', None)
+        self.font_ui_window_title = getattr(parent, 'font_ui_window_title', None)
+        self.font_ui_notes = getattr(parent, 'font_ui_notes', None)
+        self.font_ui_button = getattr(parent, 'font_ui_button', None)
+        
+        # Create window
         self.window = tk.Toplevel(parent)
         self.window.title("Messages")
         self.window.geometry("630x600")
         self.window.resizable(True, True)
         self.window.transient(parent)
         self.window.configure(bg=self.colors['bg_frame'])
-        
-        # Position relative to parent (50px down and right)
-        self.window.update_idletasks()
-        x = parent.winfo_x() + 50
-        y = parent.winfo_y() + 50
-        self.window.geometry(f"+{x}+{y}")
         
         # Create widgets
         self._create_widgets()
@@ -75,34 +77,34 @@ class MessageListWindow:
         """Create window widgets"""
         # Title bar
         title_frame = tk.Frame(self.window, bg=self.colors['bg_frame'])
-        title_frame.pack(fill="x", padx=10, pady=(10, 5))
+        title_frame.pack(fill="x", padx=10, pady=10)
         
         tk.Label(title_frame, text="Message Center", 
-                font=("Liberation Sans", 16, "bold"),
+                font=self.font_ui_window_title if self.font_ui_window_title else ("Liberation Sans", 14, "bold"),
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(side="left")
         
         # Close button (rightmost)
-        close_btn = tk.Button(title_frame, text="✕ Close", 
+        close_btn = tk.Button(title_frame, text="Close", 
                              command=self._on_close,
                              bg='#424242', fg='white',
                              width=10, height=2,
-                             font=("Liberation Sans", 12))
+                             font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
         close_btn.pack(side="right", padx=(5, 0))
         
         # Refresh button
-        refresh_btn = tk.Button(title_frame, text="🔄 Refresh", 
+        refresh_btn = tk.Button(title_frame, text="Refresh", 
                                command=self._refresh_all_tabs,
                                bg='#404040', fg='white',
                                width=10, height=2,
-                               font=("Liberation Sans", 12))
+                               font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
         refresh_btn.pack(side="right", padx=(5, 0))
         
         # Compose button
-        compose_btn = tk.Button(title_frame, text="✉ Compose", 
+        compose_btn = tk.Button(title_frame, text="Compose", 
                                command=self._on_compose,
                                bg='#2e7d32', fg='white',
                                width=10, height=2,
-                               font=("Liberation Sans", 12))
+                               font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
         compose_btn.pack(side="right")
         
         # Tab notebook
@@ -111,7 +113,7 @@ class MessageListWindow:
         style.configure('TNotebook', background=self.colors['bg_frame'], borderwidth=0)
         style.configure('TNotebook.Tab', background=self.colors['bg_main'], 
                        foreground=self.colors['fg_normal'], padding=[10, 5],
-                       font=("Liberation Sans", 12))
+                       font=("Liberation Sans", 12))  # Use tab font style
         style.map('TNotebook.Tab', background=[('selected', self.colors['bg_frame'])])
         
         self.notebook = ttk.Notebook(self.window)
@@ -136,24 +138,24 @@ class MessageListWindow:
         
         tk.Button(left_frame, text="View", command=self._on_view_selected,
                  bg='#0d47a1', fg='white', width=10, height=2,
-                 font=("Liberation Sans", 12)).pack(side="left", padx=(0, 5))
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12)).pack(side="left", padx=(0, 5))
         
         tk.Button(left_frame, text="Reply", command=self._on_reply_selected,
                  bg='#2e7d32', fg='white', width=10, height=2,
-                 font=("Liberation Sans", 12)).pack(side="left", padx=(0, 5))
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12)).pack(side="left", padx=(0, 5))
         
         tk.Button(left_frame, text="Archive", command=self._on_archive_selected,
                  bg='#f57c00', fg='white', width=10, height=2,
-                 font=("Liberation Sans", 12)).pack(side="left", padx=(0, 5))
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12)).pack(side="left", padx=(0, 5))
         
         tk.Button(left_frame, text="Delete", command=self._on_delete_selected,
                  bg='#c62828', fg='white', width=10, height=2,
-                 font=("Liberation Sans", 12)).pack(side="left")
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12)).pack(side="left")
         
         # Selection count label
         self.selection_label = tk.Label(action_frame, text="No selection",
                                        bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                                       font=("Liberation Sans", 12))
+                                       font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12))
         self.selection_label.pack(side="right")
     
     def _create_tab(self, tab_name: str) -> tk.Frame:
@@ -379,20 +381,20 @@ class MessageListWindow:
         
         tk.Label(top_line, text=f"{icon} {dir_label}", 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                font=("Liberation Sans", 11, "bold")).pack(side="left")
+                font=self.font_ui_section_title if self.font_ui_section_title else ("Liberation Sans", 12, "bold")).pack(side="left")
         
         tk.Label(top_line, text=from_to, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                font=("Liberation Sans", 11)).pack(side="left", padx=(10, 0))
+                font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12)).pack(side="left", padx=(10, 0))
         
         tk.Label(top_line, text=time_str, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                font=("Liberation Sans", 11)).pack(side="right")
+                font=self.font_ui_notes if self.font_ui_notes else ("Liberation Sans Narrow", 11)).pack(side="right")
         
         # Bottom line: preview
         tk.Label(content_frame, text=preview, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                font=("Liberation Sans", 11), anchor="w", justify="left").pack(fill="x")
+                font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12), anchor="w", justify="left").pack(fill="x")
         
         # Make entire row clickable to view message (except checkbox)
         def on_click(event):
@@ -550,61 +552,79 @@ class MessageListWindow:
         selector.transient(self.window)
         selector.configure(bg=self.colors['bg_frame'])
         
-        # Position relative to parent (50px down and right)
-        selector.update_idletasks()
-        x = self.window.winfo_x() + 50
-        y = self.window.winfo_y() + 50
-        selector.geometry(f"+{x}+{y}")
-        
-        tk.Label(selector, text="Select a node to send message:", 
-                font=("Liberation Sans", 12, "bold"),
+        tk.Label(selector, text="Select recipient(s):", 
+                font=self.font_ui_section_title if self.font_ui_section_title else ("Liberation Sans", 12, "bold"),
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(pady=10)
         
-        # Create listbox with scrollbar
+        # Create scrollable frame for checkboxes
         list_frame = tk.Frame(selector, bg=self.colors['bg_frame'])
         list_frame.pack(fill="both", expand=True, padx=10, pady=5)
         
-        scrollbar = tk.Scrollbar(list_frame)
-        scrollbar.pack(side="right", fill="y")
+        canvas = tk.Canvas(list_frame, bg=self.colors['bg_frame'], highlightthickness=0)
+        scrollbar = tk.Scrollbar(list_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg=self.colors['bg_frame'])
         
-        listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
-                            bg=self.colors['bg_main'], fg=self.colors['fg_normal'],
-                            font=("Liberation Sans", 11), selectmode="single",
-                            height=15)
-        listbox.pack(side="left", fill="both", expand=True)
-        scrollbar.config(command=listbox.yview)
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
         
-        # Add nodes to listbox
-        node_list = []
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Create checkboxes for each node
+        node_vars = {}
         for node_id, node_data in sorted(nodes_data.items(), key=lambda x: x[1].get('Node LongName', x[0])):
             node_name = node_data.get('Node LongName', node_id)
             display_name = f"{node_name} ({node_id})"
-            listbox.insert(tk.END, display_name)
-            node_list.append(node_id)
+            
+            var = tk.BooleanVar(value=False)
+            node_vars[node_id] = var
+            
+            cb = tk.Checkbutton(scrollable_frame, text=display_name, variable=var,
+                               bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
+                               selectcolor=self.colors['bg_main'],
+                               activebackground=self.colors['bg_frame'], 
+                               activeforeground=self.colors['fg_normal'],
+                               font=self.font_ui_context_menu if self.font_ui_context_menu else ("Liberation Sans", 12),
+                               highlightthickness=0)
+            cb.pack(anchor="w", padx=10, pady=2)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
         
         # Buttons
         btn_frame = tk.Frame(selector, bg=self.colors['bg_frame'])
         btn_frame.pack(pady=10)
         
         def on_select():
-            selection = listbox.curselection()
-            if selection:
-                node_id = node_list[selection[0]]
-                selector.destroy()
-                if self.on_send_message_callback:
-                    self.on_send_message_callback(node_id)
-            else:
-                tk.messagebox.showwarning("No Selection", "Please select a node.", parent=selector)
+            selected_nodes = [(node_id, nodes_data[node_id].get('Node LongName', node_id)) 
+                            for node_id, var in node_vars.items() if var.get()]
+            
+            if not selected_nodes:
+                tk.messagebox.showwarning("No Selection", "Please select at least one recipient.", parent=selector)
+                return
+            
+            selector.destroy()
+            
+            # For now, send to first selected node
+            # TODO: Support multiple recipients in a single message
+            selected_node_id = selected_nodes[0][0]
+            if len(selected_nodes) > 1:
+                tk.messagebox.showinfo("Note", 
+                    f"Multiple recipients selected. Opening compose for {selected_nodes[0][1]}.\n" +
+                    "Multi-recipient messaging will be supported in a future update.",
+                    parent=self.window)
+            
+            if self.on_send_message_callback:
+                self.on_send_message_callback(selected_node_id)
         
-        tk.Button(btn_frame, text="Select", command=on_select,
+        tk.Button(btn_frame, text="Compose", command=on_select,
                  bg='#2e7d32', fg='white', width=10, height=2,
-                 font=("Liberation Sans", 12, "bold")).pack(side="left", padx=5)
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12)).pack(side="left", padx=5)
         tk.Button(btn_frame, text="Cancel", command=selector.destroy,
                  bg='#424242', fg='white', width=10, height=2,
-                 font=("Liberation Sans", 12)).pack(side="left", padx=5)
-        
-        # Bind double-click to select
-        listbox.bind('<Double-Button-1>', lambda e: on_select())
+                 font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12)).pack(side="left", padx=5)
     
     def _on_close(self):
         """Handle window close"""
