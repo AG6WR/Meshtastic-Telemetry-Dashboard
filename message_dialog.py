@@ -125,8 +125,8 @@ class MessageDialog:
                                  wrap="word", 
                                  font=("Liberation Sans", 12),
                                  height=3,  # 3 lines tall (enough for 180 chars)
-                                 bg='#808080', fg='#ffffff',  # Grey background, white text - testing cursor visibility
-                                 insertbackground='white',  # White cursor for visibility on grey
+                                 bg=self.colors['bg_main'], fg=self.colors['fg_normal'],
+                                 insertbackground='white',  # White cursor for visibility
                                  insertwidth=2,  # Standard cursor width
                                  insertontime=1000,  # On longer
                                  insertofftime=0,  # Solid cursor - no blink off
