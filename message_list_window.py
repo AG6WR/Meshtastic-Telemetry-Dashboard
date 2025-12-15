@@ -53,25 +53,11 @@ class MessageListWindow:
         self.window.title("Messages")
         self.window.geometry("630x600")
         self.window.resizable(True, True)
-        # Don't use transient - Wayland window managers ignore positioning for transient windows
-        # self.window.transient(parent)
+        self.window.transient(parent)  # Wayland-native way for relative positioning
         self.window.configure(bg=self.colors['bg_frame'])
         
-        # Position near top-left of screen (10px offset from parent)
-        parent.update_idletasks()  # Ensure parent has valid coordinates
-        self.window.update_idletasks()
-        # Force normal window type for Wayland (dialogs get centered)
-        try:
-            self.window.attributes('-type', 'normal')
-        except tk.TclError:
-            pass  # Not all platforms support this
-        x = parent.winfo_rootx() + 10
-        y = parent.winfo_rooty() + 10
-        logger.info(f"Message Center positioning: parent at ({parent.winfo_rootx()}, {parent.winfo_rooty()}), window at ({x}, {y})")
-        # Wayland workaround: set geometry after window is mapped
-        self.window.geometry(f"630x600+{x}+{y}")
-        self.window.update()  # Force update
-        self.window.geometry(f"+{x}+{y}")  # Set position again after size is applied
+        # Wayland places transient windows automatically relative to parent
+        # Explicit positioning is ignored on Wayland
         
         # Create widgets
         self._create_widgets()
@@ -558,21 +544,10 @@ class MessageListWindow:
         selector = tk.Toplevel(self.window)
         selector.title("Select Recipient")
         selector.geometry("400x500")
-        # Don't use transient - Wayland window managers ignore positioning for transient windows
-        # selector.transient(self.window)
+        selector.transient(self.window)  # Wayland-native way for relative positioning
         selector.configure(bg=self.colors['bg_frame'])
         
-        # Position relative to message center (10px offset)
-        selector.update_idletasks()
-        try:
-            selector.attributes('-type', 'normal')
-        except tk.TclError:
-            pass
-        x = self.window.winfo_rootx() + 10
-        y = self.window.winfo_rooty() + 10
-        selector.geometry(f"400x500+{x}+{y}")
-        selector.update()
-        selector.geometry(f"+{x}+{y}")  # Set position again
+        # Wayland places transient windows automatically
         
         tk.Label(selector, text="Select a node to send message:", 
                 font=("Liberation Sans", 12, "bold"),

@@ -71,8 +71,7 @@ class MessageViewer:
         self.dialog.title("Message")
         self.dialog.geometry("650x500")
         self.dialog.resizable(True, True)
-        # Don't use transient - Wayland window managers ignore positioning for transient windows  
-        # self.dialog.transient(parent)
+        self.dialog.transient(parent)  # Wayland-native way for relative positioning
         
         # Get colors from parent
         self.colors = getattr(parent, 'colors', {
@@ -85,17 +84,8 @@ class MessageViewer:
         
         self.dialog.configure(bg=self.colors['bg_frame'])
         
-        # Position relative to positioning_parent (10px offset to keep near top-left)
-        self.dialog.update_idletasks()
-        if self.positioning_parent:
-            # Force normal window type for Wayland (dialogs get centered)
-            try:
-                self.dialog.attributes('-type', 'normal')
-            except tk.TclError:
-                pass  # Not all platforms support this
-            x = self.positioning_parent.winfo_rootx() + 10
-            y = self.positioning_parent.winfo_rooty() + 10
-            self.dialog.geometry(f"+{x}+{y}")
+        # Wayland places transient windows automatically relative to parent
+        # Explicit positioning is ignored on Wayland
         
         self._create_widgets()
         

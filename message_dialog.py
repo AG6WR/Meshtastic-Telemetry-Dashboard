@@ -53,25 +53,13 @@ class MessageDialog:
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(f"Send Message to {node_name}")
         self.dialog.geometry("630x240")
-        self.dialog.resizable(True, True)  # Allow resizing
-        # Don't use transient - Wayland window managers ignore positioning for transient windows
-        # self.dialog.transient(parent)
+        self.dialog.resizable(True, True)
+        self.dialog.transient(parent)  # Wayland-native way for relative positioning
         self.dialog.grab_set()
         self.dialog.configure(bg=self.colors['bg_frame'])
         
-        # Position relative to positioning_parent (10px offset to keep near top-left)
-        self.dialog.update_idletasks()
-        # Force normal window type for Wayland (dialogs get centered)
-        try:
-            self.dialog.attributes('-type', 'normal')
-        except tk.TclError:
-            pass  # Not all platforms support this
-        x = self.positioning_parent.winfo_rootx() + 10
-        y = self.positioning_parent.winfo_rooty() + 10
-        # Wayland workaround: set geometry after window is mapped
-        self.dialog.geometry(f"630x240+{x}+{y}")
-        self.dialog.update()  # Force update
-        self.dialog.geometry(f"+{x}+{y}")  # Set position again
+        # Wayland places transient windows automatically relative to parent
+        # Explicit positioning is ignored on Wayland
         
         self._create_widgets()
         
