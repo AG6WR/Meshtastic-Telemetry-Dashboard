@@ -51,17 +51,10 @@ class MessageListWindow:
         # Create window
         self.window = tk.Toplevel(parent)
         self.window.title("Messages")
+        self.window.geometry("630x600")
+        self.window.resizable(True, True)
+        self.window.transient(parent)
         self.window.configure(bg=self.colors['bg_frame'])
-        
-        # Use overrideredirect for precise positioning (bypasses window manager)
-        # Position at top-left of screen
-        self.window.overrideredirect(True)
-        
-        # Position at top-left of screen
-        self.window.update_idletasks()
-        window_width = 630
-        window_height = 640  # Increased to fit close button
-        self.window.geometry(f"{window_width}x{window_height}+10+10")
         
         # Create widgets
         self._create_widgets()
@@ -69,25 +62,26 @@ class MessageListWindow:
         # Load initial data
         self._refresh_all_tabs()
         
-        # Note: WM_DELETE_WINDOW doesn't work with overrideredirect
-        # Close button calls self.close directly
+        # Handle window close
+        self.window.protocol("WM_DELETE_WINDOW", self._on_close)
     
     def _create_widgets(self):
         """Create window widgets"""
-        # Title bar with close button (since overrideredirect removes window decorations)
+        # Title bar
         title_frame = tk.Frame(self.window, bg=self.colors['bg_frame'])
-        title_frame.pack(fill="x", padx=10, pady=(5, 5))
+        title_frame.pack(fill="x", padx=10, pady=10)
         
         tk.Label(title_frame, text="Message Center", 
                 font=("Liberation Sans", 16, "bold"),
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(side="left")
         
-        # Close button (rightmost) - more prominent since it's the only way to close
-        tk.Button(title_frame, text='✕', 
-                 bg='#c62828', fg='#ffffff',
-                 font=("Liberation Sans", 16, "bold"),
-                 relief='flat', bd=0, padx=8, pady=0,
-                 command=self._on_close).pack(side="right")
+        # Close button (rightmost)
+        close_btn = tk.Button(title_frame, text="✕ Close", 
+                             command=self._on_close,
+                             bg='#424242', fg='white',
+                             width=10, height=2,
+                             font=("Liberation Sans", 12))
+        close_btn.pack(side="right", padx=(5, 0))
         
         # Refresh button
         refresh_btn = tk.Button(title_frame, text="🔄 Refresh", 
@@ -546,37 +540,13 @@ class MessageListWindow:
         # Create simple node selector dialog
         selector = tk.Toplevel(self.window)
         selector.title("Select Recipient")
+        selector.geometry("400x500")
+        selector.transient(self.window)
         selector.configure(bg=self.colors['bg_frame'])
         
-        # Use overrideredirect for precise positioning (bypasses window manager)
-        selector.overrideredirect(True)
-        
-        # Position at top of screen, centered horizontally
-        selector.update_idletasks()
-        screen_width = selector.winfo_screenwidth()
-        dialog_width = 400
-        dialog_height = 540  # Increased to fit close button
-        x = (screen_width - dialog_width) // 2
-        y = 10  # Near top of screen
-        selector.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
-        
-        # Make it stay on top
-        selector.attributes('-topmost', True)
-        
-        # Header with close button
-        header_frame = tk.Frame(selector, bg=self.colors['bg_frame'])
-        header_frame.pack(fill="x", padx=10, pady=(5, 5))
-        
-        tk.Label(header_frame, text="Select Recipient", 
+        tk.Label(selector, text="Select a node to send message:", 
                 font=("Liberation Sans", 12, "bold"),
-                bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(side="left")
-        
-        # Close button
-        tk.Button(header_frame, text='✕', 
-                 bg='#c62828', fg='#ffffff',
-                 font=("Liberation Sans", 14, "bold"),
-                 relief='flat', bd=0, padx=8, pady=0,
-                 command=selector.destroy).pack(side="right")
+                bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(pady=10)
         
         # Create listbox with scrollbar
         list_frame = tk.Frame(selector, bg=self.colors['bg_frame'])
