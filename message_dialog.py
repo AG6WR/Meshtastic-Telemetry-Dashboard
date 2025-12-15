@@ -82,7 +82,14 @@ class MessageDialog:
         # Set focus to text area and show keyboard after dialog is visible
         self.dialog.update_idletasks()
         self.text_area.focus_set()
-        self.dialog.after(100, self.virtual_keyboard.show)  # Show keyboard after dialog renders
+        self.dialog.after(100, self._show_keyboard_and_focus)  # Show keyboard after dialog renders
+    
+    def _show_keyboard_and_focus(self):
+        """Show keyboard and ensure text area has focus"""
+        self.virtual_keyboard.show()
+        self.text_area.focus_force()  # Force focus to ensure cursor visibility
+        self.text_area.mark_set('insert', '1.0')
+        self.text_area.see('insert')
         
     def _create_widgets(self):
         """Create dialog widgets"""
@@ -118,17 +125,21 @@ class MessageDialog:
                                  wrap="word", 
                                  font=("Liberation Sans", 12),
                                  height=3,  # 3 lines tall (enough for 180 chars)
-                                 bg=self.colors['bg_main'], fg=self.colors['fg_normal'],
-                                 insertbackground='yellow',  # Bright yellow - highly visible
-                                 insertwidth=6,  # VERY wide cursor
+                                 bg='#808080', fg='#ffffff',  # Grey background, white text - testing cursor visibility
+                                 insertbackground='red',  # Bright red - maximum visibility
+                                 insertwidth=8,  # Even wider cursor
                                  insertontime=1000,  # On longer
-                                 insertofftime=200,  # Off shorter
+                                 insertofftime=0,  # Solid cursor - no blink off
                                  yscrollcommand=scrollbar.set)
         self.text_area.pack(side="left", fill="x", expand=True)
         scrollbar.config(command=self.text_area.yview)
         
         # Set focus to text area so cursor is visible
         self.text_area.focus_set()
+        
+        # Force cursor to start of text area
+        self.text_area.mark_set('insert', '1.0')
+        self.text_area.see('insert')
         
         # Bind character counter update using Modified event (safer than KeyRelease on Wayland)
         self.text_area.bind('<<Modified>>', self._on_text_change)
