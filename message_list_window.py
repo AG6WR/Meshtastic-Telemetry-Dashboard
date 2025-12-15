@@ -544,55 +544,79 @@ class MessageListWindow:
         selector.transient(self.window)
         selector.configure(bg=self.colors['bg_frame'])
         
-        tk.Label(selector, text="Select a node to send message:", 
+        tk.Label(selector, text="Select recipient(s):", 
                 font=("Liberation Sans", 12, "bold"),
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal']).pack(pady=10)
         
-        # Create listbox with scrollbar
+        # Create scrollable frame for checkboxes
         list_frame = tk.Frame(selector, bg=self.colors['bg_frame'])
         list_frame.pack(fill="both", expand=True, padx=10, pady=5)
         
-        scrollbar = tk.Scrollbar(list_frame)
-        scrollbar.pack(side="right", fill="y")
+        canvas = tk.Canvas(list_frame, bg=self.colors['bg_frame'], highlightthickness=0)
+        scrollbar = tk.Scrollbar(list_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg=self.colors['bg_frame'])
         
-        listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
-                            bg=self.colors['bg_main'], fg=self.colors['fg_normal'],
-                            font=("Liberation Sans", 11), selectmode="single",
-                            height=15)
-        listbox.pack(side="left", fill="both", expand=True)
-        scrollbar.config(command=listbox.yview)
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
         
-        # Add nodes to listbox
-        node_list = []
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Create checkboxes for each node
+        node_vars = {}
         for node_id, node_data in sorted(nodes_data.items(), key=lambda x: x[1].get('Node LongName', x[0])):
             node_name = node_data.get('Node LongName', node_id)
             display_name = f"{node_name} ({node_id})"
-            listbox.insert(tk.END, display_name)
-            node_list.append(node_id)
+            
+            var = tk.BooleanVar(value=False)
+            node_vars[node_id] = var
+            
+            cb = tk.Checkbutton(scrollable_frame, text=display_name, variable=var,
+                               bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
+                               selectcolor=self.colors['bg_main'],
+                               activebackground=self.colors['bg_frame'], 
+                               activeforeground=self.colors['fg_normal'],
+                               font=("Liberation Sans", 11),
+                               highlightthickness=0)
+            cb.pack(anchor="w", padx=10, pady=2)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
         
         # Buttons
         btn_frame = tk.Frame(selector, bg=self.colors['bg_frame'])
         btn_frame.pack(pady=10)
         
         def on_select():
-            selection = listbox.curselection()
-            if selection:
-                node_id = node_list[selection[0]]
-                selector.destroy()
-                if self.on_send_message_callback:
-                    self.on_send_message_callback(node_id)
-            else:
-                tk.messagebox.showwarning("No Selection", "Please select a node.", parent=selector)
+            selected_nodes = [(node_id, nodes_data[node_id].get('Node LongName', node_id)) 
+                            for node_id, var in node_vars.items() if var.get()]
+            
+            if not selected_nodes:
+                tk.messagebox.showwarning("No Selection", "Please select at least one recipient.", parent=selector)
+                return
+            
+            selector.destroy()
+            
+            # For now, send to first selected node
+            # TODO: Support multiple recipients in a single message
+            selected_node_id = selected_nodes[0][0]
+            if len(selected_nodes) > 1:
+                tk.messagebox.showinfo("Note", 
+                    f"Multiple recipients selected. Opening compose for {selected_nodes[0][1]}.\n" +
+                    "Multi-recipient messaging will be supported in a future update.",
+                    parent=self.window)
+            
+            if self.on_send_message_callback:
+                self.on_send_message_callback(selected_node_id)
         
-        tk.Button(btn_frame, text="Select", command=on_select,
+        tk.Button(btn_frame, text="Compose", command=on_select,
                  bg='#2e7d32', fg='white', width=10, height=2,
                  font=("Liberation Sans", 12, "bold")).pack(side="left", padx=5)
         tk.Button(btn_frame, text="Cancel", command=selector.destroy,
                  bg='#424242', fg='white', width=10, height=2,
                  font=("Liberation Sans", 12)).pack(side="left", padx=5)
-        
-        # Bind double-click to select
-        listbox.bind('<Double-Button-1>', lambda e: on_select())
     
     def _on_close(self):
         """Handle window close"""
