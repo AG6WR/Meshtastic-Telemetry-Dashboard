@@ -776,6 +776,30 @@ class EnhancedDashboard(tk.Tk):
         self.font_ui_context_menu = tkfont.Font(family="Liberation Sans", size=12)  # Context menus (larger for touch)
         self.font_ui_input = tkfont.Font(family="Liberation Sans", size=11)  # Text entry, comboboxes, listboxes
         
+        # Card view fonts - monospace for compact card display (unchanged)
+        base_family = "Consolas" if sys.platform.startswith("win") else "Courier New"
+        self.font_base = tkfont.Font(family=base_family, size=11)
+        self.font_bold = tkfont.Font(family=base_family, size=11, weight="bold")
+        self.font_data = tkfont.Font(family=base_family, size=12)  # Card view data font
+        self.font_data_bold = tkfont.Font(family=base_family, size=12, weight="bold")  # Card view bold data
+        self.font_card_header = tkfont.Font(family=base_family, size=14, weight="bold")  # Card header 14pt
+        self.font_card_line2 = tkfont.Font(family=base_family, size=11)  # Card line 2 (Motion/Last Heard) 10pt - matches line 4
+        self.font_card_line3 = tkfont.Font(family=base_family, size=14, weight="bold")  # Card line 3 (V/I/T) 14pt
+        self.font_card_label = tkfont.Font(family=base_family, size=8)  # Card labels 8pt small (for "ICP Batt:", "Ch:", etc.)
+        self.font_card_value = tkfont.Font(family=base_family, size=11, weight="bold")  # Card values 11pt bold (for data values)
+        self.font_italic = tkfont.Font(family=base_family, size=11, slant="italic")
+        self.font_title = tkfont.Font(family=base_family, size=18, weight="bold")
+        
+        # Global UI fonts - Liberation Sans family for windows/dialogs
+        self.font_ui_button = tkfont.Font(family="Liberation Sans Narrow", size=11)  # All buttons
+        self.font_ui_tab = tkfont.Font(family="Liberation Sans Narrow", size=11)  # Notebook tabs
+        self.font_ui_section_title = tkfont.Font(family="Liberation Sans", size=12, weight="bold")  # Section headers, LabelFrame titles
+        self.font_ui_window_title = tkfont.Font(family="Liberation Sans", size=14, weight="bold")  # Window/dialog main titles
+        self.font_ui_body = tkfont.Font(family="Liberation Sans", size=11)  # Message text, labels, general content
+        self.font_ui_notes = tkfont.Font(family="Liberation Sans Narrow", size=10)  # Timestamps, help text, descriptions
+        self.font_ui_context_menu = tkfont.Font(family="Liberation Sans", size=12)  # Context menus (larger for touch)
+        self.font_ui_input = tkfont.Font(family="Liberation Sans", size=11)  # Text entry, comboboxes, listboxes
+        
         # Title frame
         title_frame = tk.Frame(self, bg=self.colors['bg_main'])
         title_frame.pack(fill="x", padx=8, pady=(8, 0))
