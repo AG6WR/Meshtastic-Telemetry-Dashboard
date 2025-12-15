@@ -373,20 +373,20 @@ class MessageListWindow:
         
         tk.Label(top_line, text=f"{icon} {dir_label}", 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                font=("Liberation Sans", 11, "bold")).pack(side="left")
+                font=("Liberation Sans", 12, "bold")).pack(side="left")
         
         tk.Label(top_line, text=from_to, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                font=("Liberation Sans", 11)).pack(side="left", padx=(10, 0))
+                font=("Liberation Sans", 12)).pack(side="left", padx=(10, 0))
         
         tk.Label(top_line, text=time_str, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'],
-                font=("Liberation Sans", 11)).pack(side="right")
+                font=("Liberation Sans", 12)).pack(side="right")
         
         # Bottom line: preview
         tk.Label(content_frame, text=preview, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                font=("Liberation Sans", 11), anchor="w", justify="left").pack(fill="x")
+                font=("Liberation Sans", 12), anchor="w", justify="left").pack(fill="x")
         
         # Make entire row clickable to view message (except checkbox)
         def on_click(event):
