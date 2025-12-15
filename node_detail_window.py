@@ -119,23 +119,21 @@ class NodeDetailWindow:
         button_frame = tk.Frame(self.window, bg=self.colors['bg_frame'], padx=10, pady=10)
         button_frame.pack(fill="x", padx=10, pady=(10, 5))
         
-        # No font specified - use default tkinter button font like main dashboard
+        # Use parent's global font for buttons
+        button_font = getattr(self.parent, 'font_ui_button', ("Liberation Sans", 12))
         
-        # Use EXACT same pattern as working main dashboard buttons:
-        # - command= parameter set directly in Button constructor
-        # - Create and pack in one statement
-        # - Use actual method references, not conditionals
-        
-        # Button config - enlarged for touch input
+        # Button config - sized for 3 buttons per row with spacing
         btn_config = {
             'bg': self.colors['button_bg'],
             'fg': self.colors['button_fg'],
-            'font': ("Liberation Sans", 12),
-            'width': 10,
-            'height': 2
+            'font': button_font,
+            'width': 8,
+            'height': 1,
+            'padx': 8,
+            'pady': 4
         }
         
-        # ROW 1: Action buttons (Logs, CSV, Plot) and Close button
+        # ROW 1: Logs, CSV, Close
         row1_frame = tk.Frame(button_frame, bg=self.colors['bg_frame'])
         row1_frame.pack(fill="x", pady=(0, 5))
         
@@ -145,23 +143,25 @@ class NodeDetailWindow:
         if self.on_csv:
             tk.Button(row1_frame, text="CSV", command=self.on_csv, **btn_config).pack(side="left", padx=(0, 5))
         
-        if self.on_plot:
-            tk.Button(row1_frame, text="Plot", command=self.on_plot, **btn_config).pack(side="left", padx=(0, 5))
-        
-        # CLOSE BUTTON (right side of row 1)
+        # Close button (gray, right side of row 1)
         close_config = btn_config.copy()
-        close_config['bg'] = '#424242'  # Gray close button
+        close_config['bg'] = '#424242'
         tk.Button(row1_frame, text="Close", command=self.window.destroy, **close_config).pack(side="right")
         
-        # ROW 2: Forget Node button (right side)
+        # ROW 2: Plot, Forget Node
         row2_frame = tk.Frame(button_frame, bg=self.colors['bg_frame'])
         row2_frame.pack(fill="x")
         
-        # FORGET NODE BUTTON (right side of row 2)
+        if self.on_plot:
+            plot_config = btn_config.copy()
+            plot_config['bg'] = '#2e7d32'  # Green for positive action
+            tk.Button(row2_frame, text="Plot", command=self.on_plot, **plot_config).pack(side="left", padx=(0, 5))
+        
+        # Forget Node button (red, right side of row 2)
         forget_config = btn_config.copy()
-        forget_config['bg'] = '#c62828'  # Red background to indicate destructive action
-        forget_config['fg'] = 'white'  # White text
-        forget_config['width'] = 13
+        forget_config['bg'] = '#c62828'
+        forget_config['fg'] = 'white'
+        forget_config['width'] = 11
         tk.Button(row2_frame, text="Forget Node", command=self._forget_node, **forget_config).pack(side="right")
     
     def _create_header(self):
@@ -169,18 +169,18 @@ class NodeDetailWindow:
         header_frame = tk.Frame(self.scrollable_frame, bg=self.colors['bg_frame'], padx=15, pady=10)
         header_frame.pack(fill="x", padx=10, pady=(10, 5))
         
-        # Node name (long name)
+        # Node name (long name) - use parent's window title font
         name = self.node_data.get('Node LongName', 'Unknown')
-        name_font = tkfont.Font(family="Liberation Sans", size=12, weight="bold")
+        name_font = getattr(self.parent, 'font_ui_window_title', ("Liberation Sans", 16, "bold"))
         name_label = tk.Label(header_frame, text=name,
                              bg=self.colors['bg_frame'],
                              fg=self.colors['fg_normal'],
                              font=name_font)
         name_label.pack(anchor="w")
         
-        # Node ID and short name
+        # Node ID and short name - use parent's body font
         short_name = self.node_data.get('Node ShortName', 'N/A')
-        id_font = tkfont.Font(family="Consolas", size=11)
+        id_font = getattr(self.parent, 'font_ui_body', ("Liberation Sans", 12))
         id_label = tk.Label(header_frame, text=f"{self.node_id} ({short_name})",
                            bg=self.colors['bg_frame'],
                            fg=self.colors['fg_secondary'],
@@ -192,8 +192,8 @@ class NodeDetailWindow:
         section_frame = tk.Frame(self.scrollable_frame, bg=self.colors['bg_main'], padx=15, pady=6)
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
-        # Section title
-        title_font = tkfont.Font(family="Liberation Sans", size=11, weight="bold")
+        # Section title - use parent's section title font
+        title_font = getattr(self.parent, 'font_ui_section_title', ("Liberation Sans", 13, "bold"))
         title_label = tk.Label(section_frame, text="General Information",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -203,8 +203,9 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_label = tkfont.Font(family="Liberation Sans", size=11)
-        font_value = tkfont.Font(family="Liberation Sans", size=11)
+        # Use parent's body font for labels and values
+        font_label = getattr(self.parent, 'font_ui_body', ("Liberation Sans", 12))
+        font_value = getattr(self.parent, 'font_ui_body', ("Liberation Sans", 12))
         
         # Status - check Last Heard to determine actual status
         last_heard = self.node_data.get('Last Heard', 0)
@@ -254,8 +255,8 @@ class NodeDetailWindow:
         section_frame = tk.Frame(self.scrollable_frame, bg=self.colors['bg_main'], padx=15, pady=6)
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
-        # Section title
-        title_font = tkfont.Font(family="Liberation Sans", size=11, weight="bold")
+        # Section title - use parent's section title font
+        title_font = getattr(self.parent, 'font_ui_section_title', ("Liberation Sans", 13, "bold"))
         title_label = tk.Label(section_frame, text="Environmental Telemetry",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -265,8 +266,9 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_label = tkfont.Font(family="Liberation Sans", size=11)
-        font_value = tkfont.Font(family="Liberation Sans", size=11)
+        # Use parent's body font for labels and values
+        font_label = getattr(self.parent, 'font_ui_body', ("Liberation Sans", 12))
+        font_value = getattr(self.parent, 'font_ui_body', ("Liberation Sans", 12))
         
         # Temperature
         temp = self.node_data.get('Temperature')
@@ -293,8 +295,8 @@ class NodeDetailWindow:
         section_frame = tk.Frame(self.scrollable_frame, bg=self.colors['bg_main'], padx=15, pady=6)
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
-        # Section title
-        title_font = tkfont.Font(family="Liberation Sans", size=11, weight="bold")
+        # Section title - use parent's section title font
+        title_font = getattr(self.parent, 'font_ui_section_title', ("Liberation Sans", 13, "bold"))
         title_label = tk.Label(section_frame, text="Device Telemetry",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -304,8 +306,12 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_label = tkfont.Font(family="Liberation Sans", size=11)
-        font_value = tkfont.Font(family="Liberation Sans", size=11)
+        # Use parent's body font for labels and values
+        font_label = getattr(self.parent, 'font_ui_body', ("Liberation Sans", 12))
+        font_value = getattr(self.parent, 'font_ui_body', ("Liberation Sans", 12))
+        
+        # Use parent's italic font for subsection headers
+        subsection_font = getattr(self.parent, 'font_ui_body_italic', ("Liberation Sans", 12, "italic"))
         
         # === Meshtastic Internal Battery ===
         internal_battery = self.node_data.get('Battery Level')
@@ -316,7 +322,7 @@ class NodeDetailWindow:
             internal_header = tk.Label(content_frame, text="Meshtastic Internal Battery:",
                                       bg=self.colors['bg_frame'],
                                       fg=self.colors['fg_secondary'],
-                                      font=tkfont.Font(family="Liberation Sans", size=11, slant="italic"))
+                                      font=subsection_font)
             internal_header.pack(anchor="w", pady=(0, 2))
             
             # Internal battery percentage
@@ -344,7 +350,7 @@ class NodeDetailWindow:
             external_header = tk.Label(content_frame, text="Main System Battery:",
                                       bg=self.colors['bg_frame'],
                                       fg=self.colors['fg_secondary'],
-                                      font=tkfont.Font(family="Liberation Sans", size=11, slant="italic"))
+                                      font=subsection_font)
             external_header.pack(anchor="w", pady=(0, 2))
             
             # Calculate percentage from voltage using parent's data collector
@@ -403,8 +409,8 @@ class NodeDetailWindow:
         section_frame = tk.Frame(self.scrollable_frame, bg=self.colors['bg_main'], padx=15, pady=6)
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
-        # Section title
-        title_font = tkfont.Font(family="Liberation Sans", size=11, weight="bold")
+        # Section title - use parent's section title font
+        title_font = getattr(self.parent, 'font_ui_section_title', ("Liberation Sans", 13, "bold"))
         title_label = tk.Label(section_frame, text="Motion Detection",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -414,8 +420,9 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_label = tkfont.Font(family="Liberation Sans", size=11)
-        font_value = tkfont.Font(family="Liberation Sans", size=11)
+        # Use parent's body font for labels and values
+        font_label = getattr(self.parent, 'font_ui_body', ("Liberation Sans", 12))
+        font_value = getattr(self.parent, 'font_ui_body', ("Liberation Sans", 12))
         
         # Last motion time
         motion_dt = datetime.fromtimestamp(last_motion)
@@ -435,8 +442,8 @@ class NodeDetailWindow:
         section_frame = tk.Frame(self.scrollable_frame, bg=self.colors['bg_main'], padx=15, pady=6)
         section_frame.pack(fill="x", padx=10, pady=(0, 5))
         
-        # Section title
-        title_font = tkfont.Font(family="Liberation Sans", size=11, weight="bold")
+        # Section title - use parent's section title font
+        title_font = getattr(self.parent, 'font_ui_section_title', ("Liberation Sans", 13, "bold"))
         title_label = tk.Label(section_frame, text="Recent Messages",
                               bg=self.colors['bg_main'],
                               fg=self.colors['fg_normal'],
@@ -446,8 +453,9 @@ class NodeDetailWindow:
         content_frame = tk.Frame(section_frame, bg=self.colors['bg_frame'], padx=10, pady=6)
         content_frame.pack(fill="x")
         
-        font_msg = tkfont.Font(family="Consolas", size=11)
-        font_header = tkfont.Font(family="Consolas", size=11)
+        # Use parent's fonts for message content
+        font_msg = getattr(self.parent, 'font_ui_body', ("Liberation Sans", 12))
+        font_header = getattr(self.parent, 'font_ui_notes', ("Liberation Sans Narrow", 11))
         
         # Display messages in reverse chronological order
         for msg in reversed(messages):

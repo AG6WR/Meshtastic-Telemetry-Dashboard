@@ -769,9 +769,10 @@ class EnhancedDashboard(tk.Tk):
         # Global UI fonts - Liberation Sans family for windows/dialogs
         self.font_ui_button = tkfont.Font(family="Liberation Sans", size=12)  # All buttons
         self.font_ui_tab = tkfont.Font(family="Liberation Sans", size=12)  # Notebook tabs
-        self.font_ui_section_title = tkfont.Font(family="Liberation Sans", size=12, weight="bold")  # Section headers, LabelFrame titles
-        self.font_ui_window_title = tkfont.Font(family="Liberation Sans", size=14, weight="bold")  # Window/dialog main titles
+        self.font_ui_section_title = tkfont.Font(family="Liberation Sans", size=13, weight="bold")  # Section headers in detail windows
+        self.font_ui_window_title = tkfont.Font(family="Liberation Sans", size=16, weight="bold")  # Window/dialog main titles (node name, etc.)
         self.font_ui_body = tkfont.Font(family="Liberation Sans", size=12)  # Message text, labels, general content
+        self.font_ui_body_italic = tkfont.Font(family="Liberation Sans", size=12, slant="italic")  # Subsection headers
         self.font_ui_notes = tkfont.Font(family="Liberation Sans Narrow", size=11)  # Timestamps, help text, descriptions
         self.font_ui_context_menu = tkfont.Font(family="Liberation Sans", size=12)  # Context menus (larger for touch)
         self.font_ui_input = tkfont.Font(family="Liberation Sans", size=11)  # Text entry, comboboxes, listboxes
@@ -2030,13 +2031,6 @@ class EnhancedDashboard(tk.Tk):
                              bg=bg_color, fg=self.colors['fg_normal'], 
                              font=self.font_card_header)
         name_label.pack(side="left")
-        
-        # Local node badge
-        if is_local:
-            local_badge = tk.Label(left_header, text=" 📍",
-                                  bg=bg_color, fg='#00AA00',
-                                  font=self.font_card_header)
-            local_badge.pack(side="left")
         
         # Right side - Menu button, message indicator, and status
         right_header = tk.Frame(header_frame, bg=bg_color)

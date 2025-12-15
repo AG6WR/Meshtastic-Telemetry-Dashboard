@@ -5,23 +5,39 @@
 ### High Priority - Touch-Friendly UI
 
 #### Icon & Font Issues
-- [ ] **Fix location pin emoji on Pi** (Issue #a)
-  - Location: Node cards, local node indicator (📍)
-  - Current: Renders as empty box on Raspberry Pi
-  - Investigation needed: Test alternative emoji fonts or use ASCII alternative
-  - Font options on Pi: Check `fc-list` for available emoji/symbol fonts
-  - Consider: Switch to text "(LOCAL)" or test different pin emoji (📌)
+- [x] **Fix location pin emoji on Pi** (Issue #a - REMOVED)
+  - Solution: Removed pin emoji entirely - green background already indicates local node
+  - No longer renders empty box on Pi
 
 #### Window Layout Improvements
-- [ ] **Move Close button to upper right in Node Detail window** (Issue #d)
-  - Current: Lower left
-  - Change to: Upper right (standard convention)
-  - Also move: "Forget Node" button to upper right, aligned with Close
-  - Increase font sizes: Detail view has plenty of room, increase by 2 sizes
+- [x] **Node Detail window improvements** (Issue #d - DONE)
+  - Button layout: Row 1: Logs, CSV, Close | Row 2: Plot, Forget Node
+  - Buttons now fit properly with smaller width (8 chars vs 10)
+  - Plot button now green (#2e7d32) to match positive action scheme
+  - Text styling enlarged throughout:
+    - Node name: 16pt bold (was 12pt)
+    - Section titles: 13pt bold (was 11pt)
+    - Body text/labels: 12pt (was 11pt)
+    - Subsection headers: 12pt italic (was 11pt)
 
-- [ ] **Scrub button colors for consistency** (Issue #c - partial)
-  - Close buttons: Should match "Quit" button color (red/fg_bad)
-  - Quick pass needed to ensure all close buttons are same color
+- [ ] **Refine Alerts window** (Issue #e)
+  - Current issues:
+    - Functionality is confusing - needs better documentation/notes
+    - Window size needs adjustment
+  - Tasks:
+    - Add inline help text or tooltips explaining alert configuration
+    - Resize window for better readability
+    - Document what each alert type does and when it triggers
+    - Consider adding example values or placeholder hints
+  - Location: `node_alert_config.py`
+
+- [x] **Scrub button colors for consistency** (Issue #c - DONE)
+  - Standardized color scheme across all windows:
+    - Gray #424242: Close, Cancel, Quit (neutral dismiss)
+    - Green #2e7d32: Send, Compose, Reply, Mark Read, Plot (positive)
+    - Blue #0d47a1: View (informational)
+    - Orange #f57c00: Archive (moderate)
+    - Red #c62828: Delete, Forget, small ✕ icons (destructive)
 
 ### Code Quality & Technical Debt
 
