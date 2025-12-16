@@ -451,7 +451,11 @@ class MessageListWindow:
             messagebox.showinfo("No Selection", "Please select a message to view.", parent=self.window)
             return
         
-        # View first selected message
+        if len(selected) > 1:
+            messagebox.showwarning("Multiple Selection", "Please select only one message to view.", parent=self.window)
+            return
+        
+        # View selected message
         message_id = selected[0]
         if self.on_view_message_callback:
             self.on_view_message_callback(message_id)
