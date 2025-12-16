@@ -342,7 +342,7 @@ class MessageListWindow:
         # For received messages: show if unread or replied
         if direction == 'received':
             if not is_read:
-                status_icons.append("● Unread")
+                status_icons.append("[UNREAD]")
             # TODO: Add replied indicator when we track replies
             # if message.get('replied', False):
             #     status_icons.append("↩️ Replied")
