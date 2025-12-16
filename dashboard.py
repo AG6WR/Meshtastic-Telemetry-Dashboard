@@ -3078,6 +3078,8 @@ class EnhancedDashboard(tk.Tk):
                                           font=self.font_card_line2)
                     motion_label.pack(anchor="w", side="left")
                     card_info['motion_label'] = motion_label
+        
+        logger.info(f"_update_card_line2 completed for {node_id}")
     
     def update_node_card(self, node_id: str, node_data: Dict[str, Any], current_time: float, is_changed: bool = False):
         """Update existing card without recreating it (prevents flickering)
