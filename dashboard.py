@@ -2177,14 +2177,13 @@ class EnhancedDashboard(tk.Tk):
                                    font=self.font_card_line2, cursor="hand2", anchor="w")
             message_label.pack(anchor="w", side="left", fill="x")
             
-            # Make clickable to open message viewer
-            # Note: This label will be excluded from bind_click_recursive below
+            # Make clickable to open message center and viewer
             def open_viewer(event):
-                self._open_message_viewer(node_id)
-                return "break"  # Stop event propagation to prevent card menu
+                self.open_messages()  # Open message center behind
+                self._open_message_viewer(node_id)  # Open viewer on top
+                return "break"  # Stop event propagation
             
             message_label.bind('<Button-1>', open_viewer)
-            message_label._is_message_label = True  # Mark for exclusion from card click binding
             
         # Line 2 reserved for temporary status messages only (motion, last heard, messages)
         # Short name removed from here (was on right side)
@@ -2589,18 +2588,31 @@ class EnhancedDashboard(tk.Tk):
         # Humidity moved from row 2 to row 3
         humidity_label = None
         
-        # Click handler for showing context menu (left-click only)
+        # Click handler - if unread messages, open message viewer; otherwise show context menu
         def on_card_click(event):
-            show_card_menu(event)
+            # Dismiss any active menu first
+            if hasattr(self, 'active_menu') and self.active_menu:
+                try:
+                    self.active_menu.unpost()
+                except Exception:
+                    pass
+                self.active_menu = None
+            
+            # Check if this card has unread messages
+            if node_id in self.unread_messages and len(self.unread_messages[node_id]) > 0:
+                # Open message center first (behind), then message viewer (on top)
+                self.open_messages()
+                self._open_message_viewer(node_id)
+                return "break"
+            else:
+                # No unread messages - show context menu
+                show_card_menu(event)
         
         # Bind left-click to card frame and all children recursively
-        # Skip message labels (they have their own click handler)
         def bind_click_recursive(widget):
-            # Skip widgets marked as message labels
-            if not hasattr(widget, '_is_message_label'):
-                widget.bind("<Button-1>", on_card_click)
-                for child in widget.winfo_children():
-                    bind_click_recursive(child)
+            widget.bind("<Button-1>", on_card_click)
+            for child in widget.winfo_children():
+                bind_click_recursive(child)
         
         bind_click_recursive(card_frame)
         
@@ -3025,13 +3037,13 @@ class EnhancedDashboard(tk.Tk):
                                    font=self.font_card_line2, cursor="hand2", anchor="w")
             message_label.pack(anchor="w", side="left", fill="x")
             
-            # Make clickable to open message viewer
+            # Make clickable to open message center and viewer
             def open_viewer(event):
-                self._open_message_viewer(node_id)
+                self.open_messages()  # Open message center behind
+                self._open_message_viewer(node_id)  # Open viewer on top
                 return "break"  # Stop event propagation
             
             message_label.bind('<Button-1>', open_viewer)
-            message_label._is_message_label = True  # Exclude from card click binding
             
             # Update widget reference
             card_info['message_label'] = message_label
