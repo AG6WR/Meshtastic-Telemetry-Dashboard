@@ -232,5 +232,24 @@
     "delivered_at": null,
     "read_receipts": {},
     "archived": true
+  },
+  {
+    "message_id": "9ce45070_1765860856215",
+    "structured": true,
+    "from_node_id": "!9ce45070",
+    "from_name": "Vista Del Monte",
+    "to_node_ids": [
+      "!a20a0de0"
+    ],
+    "is_bulletin": false,
+    "text": "tyfgg",
+    "timestamp": 1765860856.520858,
+    "direction": "received",
+    "read": true,
+    "archived": false,
+    "read_at": 1765860864.46741,
+    "delivery_status": "pending",
+    "delivered_at": null,
+    "read_receipts": {}
   }
 ]

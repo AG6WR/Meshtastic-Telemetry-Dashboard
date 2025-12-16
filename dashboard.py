@@ -2097,36 +2097,8 @@ class EnhancedDashboard(tk.Tk):
         # Bind card click to show menu (show_card_menu handles dismissing old menu)
         card_frame.bind('<Button-1>', show_card_menu)
         
-        # Message indicator (always create it, show/hide based on message time)
-        msg_indicator = tk.Label(right_header, text="📧 ",
-                                bg=bg_color, fg=self.colors['fg_normal'],
-                                font=self.font_card_header)
-        
-        # Add click handler to message indicator to open message viewer
-        def on_message_click(event):
-            try:
-                logger.info(f"Message indicator clicked for node {node_id}")
-                # Get most recent unread message for this node
-                if node_id in self.unread_messages and len(self.unread_messages[node_id]) > 0:
-                    # Open most recent unread message
-                    message_data = self.unread_messages[node_id][0]  # Already sorted newest first
-                    message_id = message_data.get('message_id')
-                    logger.info(f"Opening message {message_id} from indicator click")
-                    if message_id:
-                        self._view_message_by_id(message_id)
-                else:
-                    logger.warning(f"No unread messages for {node_id} when clicking indicator")
-            except Exception as e:
-                logger.error(f"Error opening message from indicator: {e}", exc_info=True)
-            return "break"  # Stop event propagation
-        
-        msg_indicator.bind('<Button-1>', on_message_click)
-        
-        last_message_time = node_data.get('Last Message Time')
-        if last_message_time:
-            time_since_message = current_time - last_message_time
-            if time_since_message <= 900:  # 15 minutes = 900 seconds
-                msg_indicator.pack(side="left", anchor="e")
+        # Message indicator removed - will be re-implemented with status broadcast system
+        # See TODO.md for Status Broadcast System feature plan
         
         # Status (colored, bold - 14pt)
         status_label = tk.Label(right_header, text=status,
@@ -2158,6 +2130,8 @@ class EnhancedDashboard(tk.Tk):
             # Show most recent unread message
             newest_msg = unread_msgs[0]  # Already sorted newest first
             msg_text = newest_msg.get('text', '')
+            # Strip control characters (like bell char) that may be stored in messages
+            msg_text = ''.join(c for c in msg_text if c.isprintable() or c == ' ')
             msg_from = newest_msg.get('from_name', 'Unknown')
             
             # Shorten sender name if too long (use first word or first 15 chars)
@@ -2637,7 +2611,6 @@ class EnhancedDashboard(tk.Tk):
             'shortname_label': shortname_label,
             'status_label': status_label,
             'menu_button': menu_button,
-            'msg_indicator': msg_indicator,
             'message_label': message_label if unread_msgs else None,
             'heard_label': heard_label,
             'motion_label': motion_label,
@@ -3020,6 +2993,8 @@ class EnhancedDashboard(tk.Tk):
             # Show most recent unread message
             newest_msg = unread_msgs[0]  # Already sorted newest first
             msg_text = newest_msg.get('text', '')
+            # Strip control characters (like bell char) that may be stored in messages
+            msg_text = ''.join(c for c in msg_text if c.isprintable() or c == ' ')
             msg_from = newest_msg.get('from_name', 'Unknown')
             
             # Shorten sender name if too long
@@ -3141,19 +3116,13 @@ class EnhancedDashboard(tk.Tk):
         
         card_info['status_label'].config(text=status, fg=status_colors.get(status, self.colors['fg_normal']))
         
-        # Update message indicator
-        last_message_time = node_data.get('Last Message Time')
-        if last_message_time and 'msg_indicator' in card_info and card_info['msg_indicator']:
-            time_since_message = current_time - last_message_time
-            if time_since_message <= 900:  # 15 minutes
-                card_info['msg_indicator'].pack(side="left", anchor="e")
-            else:
-                card_info['msg_indicator'].pack_forget()
+        # Message indicator removed - will be re-implemented with status broadcast system
         
         # Update Last Heard / Motion Detected
         # Calculate background color based on whether this is local node
         local_node_id = self._get_local_node_id()
-        normal_bg = self.colors['bg_local_node'] if (node_id == local_node_id) else self.colors['bg_frame']
+        is_local = (node_id == local_node_id)
+        normal_bg = self.colors['bg_local_node'] if is_local else self.colors['bg_frame']
         
         last_motion = node_data.get('Last Motion')
         motion_display_duration = self.config_manager.get('dashboard.motion_display_seconds', 900)
@@ -3755,9 +3724,7 @@ class EnhancedDashboard(tk.Tk):
             """Callback when user confirms message send"""
             import time
             
-            # Add bell character if requested
-            if send_bell:
-                message = '\a' + message
+            # Bell character option removed - will be re-implemented with status broadcast
             
             # Generate message ID
             message_id = self._generate_message_id()
@@ -3911,8 +3878,11 @@ class EnhancedDashboard(tk.Tk):
     
     def _show_message_notification(self, from_id: str, from_name: str, to_name: str, text: str):
         """Add message to scrolling notification banner at bottom"""
+        # Strip control characters (bell, tab, etc.) from display text
+        clean_text = ''.join(c for c in text if c.isprintable() or c == ' ')
+        
         # Add to recent messages (keep last 3)
-        message_tuple = (from_name, to_name, text)
+        message_tuple = (from_name, to_name, clean_text)
         self.recent_messages.append(message_tuple)
         if len(self.recent_messages) > 3:
             self.recent_messages.pop(0)  # Remove oldest

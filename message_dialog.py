@@ -28,7 +28,7 @@ class MessageDialog:
             parent: Parent window (for transient relationship and color scheme)
             node_id: Target node ID (e.g., "!a20a0de0")
             node_name: Display name for the node
-            send_callback: Function to call when sending - callback(node_id, message, send_bell)
+            send_callback: Function to call when sending - callback(node_id, message, bell_unused)
             positioning_parent: Window to position relative to (defaults to parent)
         """
         self.parent = parent
@@ -165,18 +165,6 @@ class MessageDialog:
                                          bg=self.colors['bg_frame'], fg=self.colors['fg_secondary'])
         self.char_count_label.pack(side="right")
         
-        # Bell character option
-        self.send_bell_var = tk.BooleanVar(value=False)
-        bell_check = tk.Checkbutton(counter_frame, 
-                                    text="Send bell character (\\a) to alert",
-                                    variable=self.send_bell_var,
-                                    font=self.font_ui_body if self.font_ui_body else ("Liberation Sans", 12),
-                                    bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                                    selectcolor=self.colors['bg_main'],
-                                    activebackground=self.colors['bg_frame'],
-                                    activeforeground=self.colors['fg_normal'])
-        bell_check.pack(side="left")
-        
         # Buttons - enlarged for touch input
         button_frame = tk.Frame(self.dialog, bg=self.colors['bg_frame'])
         button_frame.pack(fill="x", padx=10, pady=10)
@@ -307,16 +295,11 @@ class MessageDialog:
                                parent=self.dialog)
             return
         
-        # Add bell character if requested
-        send_bell = self.send_bell_var.get()
-        if send_bell:
-            text = "\a" + text  # Bell character at start
-        
         logger.info(f"Sending message to {self.node_id} ({self.node_name}): {repr(text)}")
         
         # Call the send callback
         try:
-            self.send_callback(self.node_id, text, send_bell)
+            self.send_callback(self.node_id, text, False)
             self.result = "sent"
             self.dialog.destroy()
         except Exception as e:

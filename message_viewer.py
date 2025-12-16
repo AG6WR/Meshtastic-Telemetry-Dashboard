@@ -178,8 +178,11 @@ class MessageViewer:
         self.text_display.pack(side="left", fill="both", expand=True)
         scrollbar.config(command=self.text_display.yview)
         
+        # Strip control characters (bell, tab, etc.) from display text
+        clean_text = ''.join(c for c in self.text if c.isprintable() or c == ' ')
+        
         # Insert message text
-        self.text_display.insert("1.0", self.text)
+        self.text_display.insert("1.0", clean_text)
         self.text_display.config(state="disabled")  # Make read-only
         
         # Read receipt status (for sent messages)

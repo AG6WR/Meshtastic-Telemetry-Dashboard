@@ -57,7 +57,7 @@ class MessageManager:
             if self.messages_file.exists():
                 with open(self.messages_file, 'r', encoding='utf-8') as f:
                     self.messages = json.load(f)
-                logger.info(f"Loaded {len(self.messages)} messages from {self.messages_file}")
+                logger.debug(f"Loaded {len(self.messages)} messages from {self.messages_file}")
                 
                 # Clean up old messages on load
                 self._cleanup_old_messages()

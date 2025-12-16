@@ -324,8 +324,11 @@ class MessageListWindow:
         else:
             from_to = f"From: {from_name}"
         
+        # Strip control characters (bell, tab, etc.) from display text
+        clean_text = ''.join(c for c in text if c.isprintable() or c == ' ')
+        
         # Preview (first 120 chars for wider display)
-        preview = text[:120] + "..." if len(text) > 120 else text
+        preview = clean_text[:120] + "..." if len(clean_text) > 120 else clean_text
         
         # Add status indicators
         status_icons = []

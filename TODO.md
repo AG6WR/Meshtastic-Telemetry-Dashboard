@@ -50,6 +50,28 @@
 - [ ] Test fullscreen exit window state on Pi (ongoing issue - has workaround with Quit button)
 - [ ] Verify message list click-to-open on Pi (View button works as alternative)
 
+### Status Broadcast System (Future Branch)
+- [ ] **Dashboard Status Broadcasts** - Enable dashboards to share status with each other
+  - **Purpose**: Allow nodes to display `[MSG]` indicator showing which other nodes have unread messages
+  - **Implementation Notes**:
+    1. **Interval**: Configurable via settings/telemetry (like other Meshtastic telemetry rates)
+    2. **Message Format**: Dedicated message type with backward-compatible tuple structure:
+       - `<nodeid><d-status><tupletype1><tupledata1><tupletype2><tupledata2>...`
+       - Need to define delimiter strategy for variable-length fields
+       - Consider standard approaches for extensibility (TLV encoding?)
+    3. **Status Fields to Include**:
+       - Dashboard version
+       - Operational state (red/yellow/green)
+       - Send help now flag
+       - GMRS channel currently operating
+       - Ham voice freq currently operating
+       - Unread message count
+    4. **Behavior**: 
+       - Broadcast to all (not direct messages)
+       - Treated like telemetry (not shown in Message Center)
+       - Stored in node_data for display on cards
+  - **Branch**: Create dedicated feature branch when ready to implement
+
 ### Hardware Integration Features
 - [ ] **Current Sense Scaling** (New Feature)
   - Location: Ch3 Current telemetry display (ICP Main Batt current)

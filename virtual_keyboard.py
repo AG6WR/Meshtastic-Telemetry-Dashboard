@@ -405,9 +405,13 @@ class VirtualKeyboard:
     
     def hide(self):
         """Hide the keyboard"""
-        logger.info(f"hide() called, current state: {self.window.state()}")
-        self.window.withdraw()
-        logger.info(f"Keyboard hidden, new state: {self.window.state()}")
+        try:
+            if self.window.winfo_exists():
+                logger.info(f"hide() called, current state: {self.window.state()}")
+                self.window.withdraw()
+                logger.info(f"Keyboard hidden, new state: {self.window.state()}")
+        except Exception as e:
+            logger.debug(f"Keyboard hide() skipped - window may be destroyed: {e}")
     
     def destroy(self):
         """Destroy the keyboard"""
