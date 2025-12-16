@@ -3503,9 +3503,11 @@ class EnhancedDashboard(tk.Tk):
                 # Refresh Message Center if open
                 if hasattr(self, 'message_list_window') and self.message_list_window:
                     try:
-                        self.message_list_window._refresh_all_tabs()
-                    except Exception:
-                        pass  # Window may have been closed
+                        if self.message_list_window.window.winfo_exists():
+                            logger.debug("Refreshing Message Center after delete")
+                            self.message_list_window._refresh_all_tabs()
+                    except Exception as e:
+                        logger.warning(f"Error refreshing Message Center: {e}")
             except Exception as e:
                 logger.error(f"Error deleting message: {e}")
         
@@ -3547,9 +3549,11 @@ class EnhancedDashboard(tk.Tk):
                 # Refresh Message Center if open
                 if hasattr(self, 'message_list_window') and self.message_list_window:
                     try:
-                        self.message_list_window._refresh_all_tabs()
-                    except Exception:
-                        pass  # Window may have been closed
+                        if self.message_list_window.window.winfo_exists():
+                            logger.debug("Refreshing Message Center after mark as read")
+                            self.message_list_window._refresh_all_tabs()
+                    except Exception as e:
+                        logger.warning(f"Error refreshing Message Center: {e}")
             except Exception as e:
                 logger.error(f"Error marking message as read: {e}")
         
@@ -3577,9 +3581,11 @@ class EnhancedDashboard(tk.Tk):
                     # Refresh Message Center if open
                     if hasattr(self, 'message_list_window') and self.message_list_window:
                         try:
-                            self.message_list_window._refresh_all_tabs()
-                        except Exception:
-                            pass  # Window may have been closed
+                            if self.message_list_window.window.winfo_exists():
+                                logger.debug("Refreshing Message Center after archive")
+                                self.message_list_window._refresh_all_tabs()
+                        except Exception as e:
+                            logger.warning(f"Error refreshing Message Center: {e}")
             except Exception as e:
                 logger.error(f"Error archiving message: {e}")
         

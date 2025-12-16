@@ -239,6 +239,12 @@ class MessageListWindow:
         all_messages = self.message_manager.load_messages()
         logger.info(f"_refresh_tab({tab_type}): Loaded {len(all_messages)} total messages")
         
+        # Log read status for debugging
+        if tab_type == "inbox":
+            for m in all_messages:
+                if m.get('direction') == 'received':
+                    logger.debug(f"  Message {m.get('message_id', 'unknown')[:8]}: read={m.get('read', False)}")
+        
         # Filter messages based on tab type
         if tab_type == "inbox":
             # Inbox: Received messages not archived
