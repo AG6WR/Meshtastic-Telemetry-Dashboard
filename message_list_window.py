@@ -45,7 +45,8 @@ class MessageListWindow:
             'fg_secondary': '#b0b0b0',
             'fg_good': '#228B22',
             'fg_warning': '#FFA500',
-            'fg_bad': '#FF6B9D'
+            'fg_bad': '#FF6B9D',
+            'accent': '#4a90d9'
         })
         
         # Get fonts from parent (global UI fonts)
@@ -289,16 +290,20 @@ class MessageListWindow:
         row_frame = tk.Frame(parent_frame, bg=self.colors['bg_frame'], relief='raised', bd=1)
         row_frame.pack(fill="x", padx=5, pady=2)
         
-        # Checkbox - larger for touch input
+        # Checkbox - touch-friendly toggle button style (indicatoron=0)
         check_var = tk.BooleanVar(value=False)
         checkbox = tk.Checkbutton(row_frame, variable=check_var,
+                                  text="",
+                                  indicatoron=0,
                                   bg=self.colors['bg_frame'],
                                   fg='white',
-                                  activebackground=self.colors['bg_frame'],
+                                  activebackground=self.colors['accent'],
                                   activeforeground='white',
-                                  selectcolor=self.colors['bg_main'],
+                                  selectcolor=self.colors['accent'],
                                   highlightthickness=0,
-                                  font=("Liberation Sans", 18),
+                                  font=("Liberation Sans", 20, "bold"),
+                                  width=3, height=1,
+                                  relief='raised', bd=2,
                                   command=self._update_selection_count)
         checkbox.pack(side="left", padx=8, pady=8)
         
@@ -337,7 +342,7 @@ class MessageListWindow:
         # For received messages: show if unread or replied
         if direction == 'received':
             if not is_read:
-                status_icons.append("🔵 Unread")
+                status_icons.append("● Unread")
             # TODO: Add replied indicator when we track replies
             # if message.get('replied', False):
             #     status_icons.append("↩️ Replied")
@@ -555,7 +560,7 @@ class MessageListWindow:
         # Create simple node selector dialog
         selector = tk.Toplevel(self.window)
         selector.title("Select Recipient")
-        selector.geometry("400x500")
+        selector.geometry("480x500")
         selector.transient(self.window)
         selector.configure(bg=self.colors['bg_frame'])
         
@@ -589,13 +594,16 @@ class MessageListWindow:
             node_vars[node_id] = var
             
             cb = tk.Checkbutton(scrollable_frame, text=display_name, variable=var,
+                               indicatoron=0,
                                bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
-                               selectcolor=self.colors['bg_main'],
-                               activebackground=self.colors['bg_frame'], 
-                               activeforeground=self.colors['fg_normal'],
-                               font=("Liberation Sans", 16),
+                               selectcolor=self.colors['accent'],
+                               activebackground=self.colors['accent'], 
+                               activeforeground='white',
+                               font=("Liberation Sans", 14),
+                               relief='raised', bd=2,
+                               anchor='w', padx=10,
                                highlightthickness=0)
-            cb.pack(anchor="w", padx=10, pady=5)
+            cb.pack(anchor="w", fill="x", padx=10, pady=5)
         
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")

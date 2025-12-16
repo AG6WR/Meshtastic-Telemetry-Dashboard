@@ -746,7 +746,8 @@ class EnhancedDashboard(tk.Tk):
             'fg_good': '#228B22',        # Positive values: Online status, high battery, good SNR (forest green)
             'fg_warning': '#FFA500',     # Warning values: Medium battery, elevated temps (orange)
             'fg_yellow': '#FFFF00',      # Caution values: Moderate concerns (yellow)
-            'fg_bad': '#FF6B9D'          # Negative values: Offline status, low battery, errors (coral pink - better contrast than crimson)
+            'fg_bad': '#FF6B9D',         # Negative values: Offline status, low battery, errors (coral pink - better contrast than crimson)
+            'accent': '#4a90d9'          # Accent color for interactive elements (blue)
         }
         
         # Configure main window
