@@ -289,7 +289,7 @@ class MessageListWindow:
         row_frame = tk.Frame(parent_frame, bg=self.colors['bg_frame'], relief='raised', bd=1)
         row_frame.pack(fill="x", padx=5, pady=2)
         
-        # Checkbox
+        # Checkbox - larger for touch input
         check_var = tk.BooleanVar(value=False)
         checkbox = tk.Checkbutton(row_frame, variable=check_var,
                                   bg=self.colors['bg_frame'],
@@ -298,8 +298,9 @@ class MessageListWindow:
                                   activeforeground='white',
                                   selectcolor=self.colors['bg_main'],
                                   highlightthickness=0,
+                                  font=("Liberation Sans", 18),
                                   command=self._update_selection_count)
-        checkbox.pack(side="left", padx=5, pady=5)
+        checkbox.pack(side="left", padx=8, pady=8)
         
         # Message content frame (clickable)
         content_frame = tk.Frame(row_frame, bg=self.colors['bg_frame'], cursor="hand2")
@@ -592,9 +593,9 @@ class MessageListWindow:
                                selectcolor=self.colors['bg_main'],
                                activebackground=self.colors['bg_frame'], 
                                activeforeground=self.colors['fg_normal'],
-                               font=self.font_ui_context_menu if self.font_ui_context_menu else ("Liberation Sans", 12),
+                               font=("Liberation Sans", 16),
                                highlightthickness=0)
-            cb.pack(anchor="w", padx=10, pady=2)
+            cb.pack(anchor="w", padx=10, pady=5)
         
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
