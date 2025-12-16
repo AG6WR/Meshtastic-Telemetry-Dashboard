@@ -1255,16 +1255,16 @@ class EnhancedDashboard(tk.Tk):
         self.after(300000, self.start_periodic_refresh)  # 5 minutes
     
     def _start_message_flash_timer(self):
-        """Start periodic timer to toggle message flash state (1 second cycle)
+        """Start periodic timer to toggle message flash state (2 second cycle)
         
-        Also runs message sync every 5 seconds as a safety net to catch any
+        Also runs message sync every 4 seconds as a safety net to catch any
         cache/storage mismatches that event-driven updates may have missed.
         """
         try:
-            # Run message sync periodically (every 5 seconds) as safety net
+            # Run message sync periodically (every 4 seconds) as safety net
             # This catches any bugs in event-driven cache updates
             current_time = time.time()
-            if not hasattr(self, '_last_message_check') or current_time - self._last_message_check >= 5.0:
+            if not hasattr(self, '_last_message_check') or current_time - self._last_message_check >= 4.0:
                 self._last_message_check = current_time
                 logger.debug("MESSAGE_SYNC: Running periodic sync check")
                 self._load_unread_messages()
@@ -1303,8 +1303,8 @@ class EnhancedDashboard(tk.Tk):
             logger.error(f"Error in flash timer: {e}", exc_info=True)
         
         finally:
-            # Always reschedule next flash toggle (1000ms = 1 second)
-            self.after(1000, self._start_message_flash_timer)
+            # Always reschedule next flash toggle (2000ms = 2 seconds)
+            self.after(2000, self._start_message_flash_timer)
     
     def cleanup_old_logs(self):
         """Clean up old application log files based on retention settings"""
@@ -3792,6 +3792,15 @@ class EnhancedDashboard(tk.Tk):
                 
                 self.message_manager.save_message(message_obj)
                 logger.info(f"Saved sent message to storage: {message_id}")
+                
+                # Refresh Message Center if open (immediate update for sent items)
+                if hasattr(self, 'message_list_window') and self.message_list_window:
+                    try:
+                        if self.message_list_window.window.winfo_exists():
+                            logger.debug("Refreshing Message Center after send")
+                            self.message_list_window._refresh_all_tabs()
+                    except Exception as e:
+                        logger.warning(f"Error refreshing Message Center: {e}")
             else:
                 logger.error(f"Failed to send message to {node_name} ({dest_id})")
                 messagebox.showerror("Send Failed", f"Failed to send message to {node_name}")

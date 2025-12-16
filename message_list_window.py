@@ -64,11 +64,17 @@ class MessageListWindow:
         self.window.transient(parent)
         self.window.configure(bg=self.colors['bg_frame'])
         
+        # Auto-refresh timer ID
+        self._auto_refresh_timer = None
+        
         # Create widgets
         self._create_widgets()
         
         # Load initial data
         self._refresh_all_tabs()
+        
+        # Start auto-refresh timer (2 seconds)
+        self._start_auto_refresh()
         
         # Handle window close
         self.window.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -90,14 +96,6 @@ class MessageListWindow:
                              width=10, height=2,
                              font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
         close_btn.pack(side="right", padx=(5, 0))
-        
-        # Refresh button
-        refresh_btn = tk.Button(title_frame, text="Refresh", 
-                               command=self._refresh_all_tabs,
-                               bg='#404040', fg='white',
-                               width=10, height=2,
-                               font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12))
-        refresh_btn.pack(side="right", padx=(5, 0))
         
         # Compose button
         compose_btn = tk.Button(title_frame, text="Compose", 
@@ -296,6 +294,7 @@ class MessageListWindow:
                                   activebackground=self.colors['bg_frame'],
                                   activeforeground='white',
                                   selectcolor=self.colors['bg_main'],
+                                  highlightthickness=0,
                                   command=self._update_selection_count)
         checkbox.pack(side="left", padx=5, pady=5)
         
@@ -303,16 +302,13 @@ class MessageListWindow:
         content_frame = tk.Frame(row_frame, bg=self.colors['bg_frame'], cursor="hand2")
         content_frame.pack(side="left", fill="x", expand=True, padx=5, pady=5)
         
-        # Direction icon and label
+        # Direction label (no emoji icons - they don't render correctly on Pi)
         if direction == 'sent':
-            icon = "📤"
-            dir_label = "Sent"
+            dir_label = "Sent:"
         elif is_bulletin:
-            icon = "🔔"
-            dir_label = "Bulletin"
+            dir_label = "Bulletin:"
         else:
-            icon = "📥"
-            dir_label = "Received"
+            dir_label = "Received:"
         
         # From/To display
         if direction == 'sent':
@@ -375,11 +371,11 @@ class MessageListWindow:
                     read_dt = datetime.fromtimestamp(latest_read)
                     time_str = f"Sent {time_str}, Read {read_dt.strftime('%m/%d %H:%M')}"
         
-        # Top line: icon + type + from/to + time
+        # Top line: direction + from/to + time
         top_line = tk.Frame(content_frame, bg=self.colors['bg_frame'])
         top_line.pack(fill="x")
         
-        tk.Label(top_line, text=f"{icon} {dir_label}", 
+        tk.Label(top_line, text=dir_label, 
                 bg=self.colors['bg_frame'], fg=self.colors['fg_normal'],
                 font=self.font_ui_section_title if self.font_ui_section_title else ("Liberation Sans", 12, "bold")).pack(side="left")
         
@@ -630,6 +626,35 @@ class MessageListWindow:
                  bg='#424242', fg='white', width=10, height=2,
                  font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12)).pack(side="left", padx=5)
     
+    def _start_auto_refresh(self):
+        """Start auto-refresh timer (2 second interval)"""
+        try:
+            # Check if window still exists
+            if not self.window.winfo_exists():
+                return
+            
+            # Refresh all tabs
+            self._refresh_all_tabs()
+            
+        except Exception as e:
+            logger.warning(f"Auto-refresh error: {e}")
+        
+        finally:
+            # Schedule next refresh (2000ms = 2 seconds)
+            try:
+                if self.window.winfo_exists():
+                    self._auto_refresh_timer = self.window.after(2000, self._start_auto_refresh)
+            except:
+                pass
+    
     def _on_close(self):
         """Handle window close"""
+        # Cancel auto-refresh timer
+        if self._auto_refresh_timer:
+            try:
+                self.window.after_cancel(self._auto_refresh_timer)
+            except:
+                pass
+            self._auto_refresh_timer = None
+        
         self.window.destroy()
