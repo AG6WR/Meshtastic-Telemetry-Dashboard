@@ -3496,33 +3496,14 @@ class EnhancedDashboard(tk.Tk):
                 logger.error(f"Error deleting message: {e}")
         
         def on_close(msg_id: str, direction: str):
-            """Callback when viewer closes - mark as read and send receipt"""
-            if direction == 'received':
-                try:
-                    self.message_manager.mark_as_read(msg_id)
-                    logger.info(f"Marked message {msg_id} as read")
-                    
-                    # Send read receipt if structured
-                    if message_data.get('structured', True):
-                        receipt_text = f"[RECEIPT:{msg_id}]"
-                        sender_id = message_data.get('from_node_id')
-                        if sender_id:
-                            self.data_collector.connection_manager.send_message(sender_id, receipt_text)
-                    
-                    # Remove from unread cache (stored under local node ID)
-                    if cache_node_id and cache_node_id in self.unread_messages:
-                        self.unread_messages[cache_node_id] = [
-                            msg for msg in self.unread_messages[cache_node_id]
-                            if msg.get('message_id') != msg_id
-                        ]
-                    
-                    # Update card display for local node
-                    if local_node_id:
-                        self._update_card_line2(local_node_id)
-                    self._update_messages_button()  # Update button badge
-                    
-                except Exception as e:
-                    logger.error(f"Error marking message as read: {e}")
+            """Callback when viewer closes without marking as read.
+            
+            Does NOT mark as read or send receipt - user must explicitly
+            click 'Mark as Read' to do that. This allows users to view
+            messages and leave them unread as a reminder to act on later.
+            """
+            # Just close - don't change read status or send receipt
+            logger.debug(f"Message viewer closed for {msg_id} without marking as read")
         
         def on_mark_read(msg_id: str):
             """Callback when user clicks Mark as Read in viewer"""
@@ -3646,36 +3627,14 @@ class EnhancedDashboard(tk.Tk):
                 logger.error(f"Error deleting message: {e}")
         
         def on_close(message_id: str, direction: str):
-            """Callback when viewer closes - mark as read and send receipt"""
-            if direction == 'received':
-                try:
-                    # Mark message as read
-                    self.message_manager.mark_as_read(message_id)
-                    logger.info(f"Marked message {message_id} as read")
-                    
-                    # Send read receipt back to sender
-                    receipt_text = f"[RECEIPT:{message_id}]"
-                    sender_id = message_data.get('from_node_id')
-                    if sender_id:
-                        success = self.data_collector.connection_manager.send_message(sender_id, receipt_text)
-                        if success:
-                            logger.info(f"Sent read receipt for {message_id} to {sender_id}")
-                        else:
-                            logger.warning(f"Failed to send read receipt for {message_id}")
-                    
-                    # Remove from unread cache
-                    if node_id in self.unread_messages:
-                        self.unread_messages[node_id] = [
-                            msg for msg in self.unread_messages[node_id]
-                            if msg.get('message_id') != message_id
-                        ]
-                    
-                    # Surgically update line 2 to remove message label and stop flash
-                    self._update_card_line2(node_id)
-                    self._update_messages_button()  # Update button badge
-                    
-                except Exception as e:
-                    logger.error(f"Error marking message as read: {e}")
+            """Callback when viewer closes without marking as read.
+            
+            Does NOT mark as read or send receipt - user must explicitly
+            click 'Mark as Read' to do that. This allows users to view
+            messages and leave them unread as a reminder to act on later.
+            """
+            # Just close - don't change read status or send receipt
+            logger.debug(f"Message viewer closed for {message_id} without marking as read")
         
         def on_mark_read(message_id: str):
             """Callback when user clicks Mark as Read in viewer"""
