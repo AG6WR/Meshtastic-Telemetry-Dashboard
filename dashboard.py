@@ -2169,11 +2169,8 @@ class EnhancedDashboard(tk.Tk):
             max_preview = 50
             preview = msg_text[:max_preview] + '...' if len(msg_text) > max_preview else msg_text
             
-            # Show count if multiple unread
-            count_badge = f" [{len(unread_msgs)}]" if len(unread_msgs) > 1 else ""
-            
-            # Format: [MSG] From: preview text... [count]
-            display_text = f"[MSG] {msg_from}: {preview}{count_badge}"
+            # Format: [MSG] From: preview text
+            display_text = f"[MSG] {msg_from}: {preview}"
             
             message_label = tk.Label(lastheard_frame, text=display_text,
                                    bg=bg_color, fg=self.colors['fg_normal'],
@@ -3020,11 +3017,8 @@ class EnhancedDashboard(tk.Tk):
             max_preview = 50
             preview = msg_text[:max_preview] + '...' if len(msg_text) > max_preview else msg_text
             
-            # Show count if multiple unread
-            count_badge = f" [{len(unread_msgs)}]" if len(unread_msgs) > 1 else ""
-            
-            # Format: [MSG] From: preview text... [count]
-            display_text = f"[MSG] {msg_from}: {preview}{count_badge}"
+            # Format: [MSG] From: preview text
+            display_text = f"[MSG] {msg_from}: {preview}"
             
             message_label = tk.Label(lastheard_frame, text=display_text,
                                    bg=bg_color, fg=self.colors['fg_normal'],
