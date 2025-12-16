@@ -3486,6 +3486,13 @@ class EnhancedDashboard(tk.Tk):
                 
                 # Update all cards that might show this message
                 self._update_all_message_indicators()
+                
+                # Refresh Message Center if open
+                if hasattr(self, 'message_list_window') and self.message_list_window:
+                    try:
+                        self.message_list_window._refresh_all_tabs()
+                    except Exception:
+                        pass  # Window may have been closed
             except Exception as e:
                 logger.error(f"Error deleting message: {e}")
         
@@ -3523,6 +3530,13 @@ class EnhancedDashboard(tk.Tk):
                 if local_node_id:
                     self._update_card_line2(local_node_id)
                 self._update_messages_button()  # Update button badge
+                
+                # Refresh Message Center if open
+                if hasattr(self, 'message_list_window') and self.message_list_window:
+                    try:
+                        self.message_list_window._refresh_all_tabs()
+                    except Exception:
+                        pass  # Window may have been closed
             except Exception as e:
                 logger.error(f"Error marking message as read: {e}")
         
@@ -3546,6 +3560,13 @@ class EnhancedDashboard(tk.Tk):
                     if local_node_id:
                         self._update_card_line2(local_node_id)
                     self._update_messages_button()  # Update button badge
+                    
+                    # Refresh Message Center if open
+                    if hasattr(self, 'message_list_window') and self.message_list_window:
+                        try:
+                            self.message_list_window._refresh_all_tabs()
+                        except Exception:
+                            pass  # Window may have been closed
             except Exception as e:
                 logger.error(f"Error archiving message: {e}")
         
