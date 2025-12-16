@@ -9,6 +9,13 @@
   - Solution: Removed pin emoji entirely - green background already indicates local node
   - No longer renders empty box on Pi
 
+- [ ] **Research available glyphs in Liberation font family**
+  - Goal: Identify symbols that render correctly on Pi for UI indicators
+  - Need to find alternatives to emoji that won't render as boxes
+  - Consider: checkmarks, bullets, arrows, geometric shapes
+  - Test on actual Pi with Liberation Sans/Mono fonts
+  - Document working glyphs for future UI development
+
 #### Window Layout Improvements
 - [x] **Node Detail window improvements** (Issue #d - DONE)
   - Button layout: Row 1: Logs, CSV, Close | Row 2: Plot, Forget Node
