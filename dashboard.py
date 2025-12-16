@@ -999,30 +999,35 @@ class EnhancedDashboard(tk.Tk):
             # Track previous count to detect changes
             prev_count = len(self.unread_messages.get(local_node_id, []))
             
-            # Get unread messages for local node
+            # Get unread messages for local node from persistent storage
             unread = self.message_manager.get_unread_messages(local_node_id)
+            new_count = len(unread) if unread else 0
             
-            logger.info(f"_load_unread_messages: local_node_id={local_node_id}, prev_count={prev_count}, new_count={len(unread) if unread else 0}")
+            # Log at debug level normally, but WARN if mismatch detected
+            # A mismatch indicates event-driven updates missed something
+            if new_count != prev_count:
+                logger.warning(f"MESSAGE_SYNC: Cache mismatch detected! cache={prev_count}, storage={new_count}. "
+                              f"This indicates a bug in event-driven message handling.")
+            else:
+                logger.debug(f"_load_unread_messages: cache and storage in sync ({new_count} messages)")
             
             if unread:
                 self.unread_messages[local_node_id] = unread
-                new_count = len(unread)
-                logger.info(f"Loaded {new_count} unread message(s) for local node {local_node_id}")
                 
-                # If count changed and card exists, update line 2
-                if new_count != prev_count and local_node_id in self.card_widgets:
-                    logger.info(f"Unread count changed ({prev_count} -> {new_count}), updating card line 2")
-                    self._update_card_line2(local_node_id)
+                # If count changed and card exists, update UI
+                if new_count != prev_count:
+                    logger.info(f"MESSAGE_SYNC: Fixing cache ({prev_count} -> {new_count}), updating UI")
+                    if local_node_id in self.card_widgets:
+                        self._update_card_line2(local_node_id)
+                    self._update_messages_button()
             else:
                 # No unread messages - clear cache if needed
                 if prev_count > 0:
                     self.unread_messages[local_node_id] = []
-                    logger.info("No unread messages found, clearing cache")
-                    # Update line 2 to remove message display
+                    logger.info(f"MESSAGE_SYNC: Fixing cache ({prev_count} -> 0), updating UI")
                     if local_node_id in self.card_widgets:
                         self._update_card_line2(local_node_id)
-                else:
-                    logger.debug("No unread messages found")
+                    self._update_messages_button()
                 
         except Exception as e:
             logger.error(f"Error loading unread messages: {e}", exc_info=True)
@@ -1252,15 +1257,16 @@ class EnhancedDashboard(tk.Tk):
     def _start_message_flash_timer(self):
         """Start periodic timer to toggle message flash state (1 second cycle)
         
-        Also checks for new messages every 5 seconds to pick up externally injected messages.
+        Also runs message sync every 5 seconds as a safety net to catch any
+        cache/storage mismatches that event-driven updates may have missed.
         """
         try:
-            # Check for new messages periodically (every 5 seconds)
+            # Run message sync periodically (every 5 seconds) as safety net
+            # This catches any bugs in event-driven cache updates
             current_time = time.time()
             if not hasattr(self, '_last_message_check') or current_time - self._last_message_check >= 5.0:
                 self._last_message_check = current_time
-                # Only log if in debug mode - too chatty otherwise
-                logger.debug("Flash timer: Checking for new messages (5-second interval)")
+                logger.debug("MESSAGE_SYNC: Running periodic sync check")
                 self._load_unread_messages()
             
             # Check if any local node has unread messages
@@ -3635,6 +3641,7 @@ class EnhancedDashboard(tk.Tk):
                 
                 # Surgically update line 2 to remove message label
                 self._update_card_line2(node_id)
+                self._update_messages_button()  # Update button badge
             except Exception as e:
                 logger.error(f"Error deleting message: {e}")
         
@@ -3665,6 +3672,7 @@ class EnhancedDashboard(tk.Tk):
                     
                     # Surgically update line 2 to remove message label and stop flash
                     self._update_card_line2(node_id)
+                    self._update_messages_button()  # Update button badge
                     
                 except Exception as e:
                     logger.error(f"Error marking message as read: {e}")
@@ -3696,6 +3704,7 @@ class EnhancedDashboard(tk.Tk):
                 
                 # Update card to remove message indicator and stop flash
                 self._update_card_line2(node_id)
+                self._update_messages_button()  # Update button badge
             except Exception as e:
                 logger.error(f"Error marking message as read: {e}")
         
@@ -3718,6 +3727,7 @@ class EnhancedDashboard(tk.Tk):
                     
                     # Update card to remove message indicator
                     self._update_card_line2(node_id)
+                    self._update_messages_button()  # Update button badge
             except Exception as e:
                 logger.error(f"Error archiving message: {e}")
         
