@@ -59,7 +59,7 @@ class MessageListWindow:
         # Create window
         self.window = tk.Toplevel(parent)
         self.window.title("Messages")
-        self.window.geometry("630x600")
+        self.window.geometry("756x720")
         self.window.resizable(True, True)
         self.window.transient(parent)
         self.window.configure(bg=self.colors['bg_frame'])
