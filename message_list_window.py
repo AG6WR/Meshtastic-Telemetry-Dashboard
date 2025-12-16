@@ -67,6 +67,9 @@ class MessageListWindow:
         # Auto-refresh timer ID
         self._auto_refresh_timer = None
         
+        # State tracking - hash of last known messages to detect changes
+        self._last_messages_hash = None
+        
         # Create widgets
         self._create_widgets()
         
@@ -626,15 +629,47 @@ class MessageListWindow:
                  bg='#424242', fg='white', width=10, height=2,
                  font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12)).pack(side="left", padx=5)
     
+    def _compute_messages_hash(self) -> str:
+        """Compute a hash of current message state for change detection.
+        
+        Returns:
+            Hash string representing current message state
+        """
+        try:
+            all_messages = self.message_manager.load_messages()
+            # Create a tuple of relevant fields that would affect display
+            state_data = []
+            for msg in all_messages:
+                state_data.append((
+                    msg.get('message_id', ''),
+                    msg.get('read', False),
+                    msg.get('archived', False),
+                    msg.get('direction', ''),
+                    len(msg.get('read_receipts', {}))
+                ))
+            # Sort for consistent ordering
+            state_data.sort()
+            return str(hash(tuple(state_data)))
+        except Exception as e:
+            logger.warning(f"Error computing messages hash: {e}")
+            return str(hash(str(e)))  # Return unique hash on error
+    
     def _start_auto_refresh(self):
-        """Start auto-refresh timer (2 second interval)"""
+        """Start auto-refresh timer (2 second interval)
+        
+        Only redraws if message state has changed.
+        """
         try:
             # Check if window still exists
             if not self.window.winfo_exists():
                 return
             
-            # Refresh all tabs
-            self._refresh_all_tabs()
+            # Check if messages have changed
+            current_hash = self._compute_messages_hash()
+            if current_hash != self._last_messages_hash:
+                logger.debug(f"Message state changed, refreshing tabs")
+                self._last_messages_hash = current_hash
+                self._refresh_all_tabs()
             
         except Exception as e:
             logger.warning(f"Auto-refresh error: {e}")
