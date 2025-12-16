@@ -3544,7 +3544,9 @@ class EnhancedDashboard(tk.Tk):
                 # Update card display for local node
                 if local_node_id:
                     self._update_card_line2(local_node_id)
+                logger.info("About to update messages button")
                 self._update_messages_button()  # Update button badge
+                logger.info("Updated messages button, now checking Message Center")
                 
                 # Refresh Message Center if open
                 logger.info(f"Checking Message Center: hasattr={hasattr(self, 'message_list_window')}, ref={self.message_list_window is not None if hasattr(self, 'message_list_window') else 'N/A'}")

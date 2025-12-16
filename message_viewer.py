@@ -253,7 +253,8 @@ class MessageViewer:
         """Handle Mark as Read button click"""
         if self.on_mark_read_callback:
             self.on_mark_read_callback(self.message_id)
-        self.dialog.destroy()
+        # Use after() to destroy after callback processing completes
+        self.dialog.after(10, self.dialog.destroy)
     
     def _on_reply(self):
         """Handle Reply button click"""
