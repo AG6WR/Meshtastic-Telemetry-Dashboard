@@ -3078,8 +3078,6 @@ class EnhancedDashboard(tk.Tk):
                                           font=self.font_card_line2)
                     motion_label.pack(anchor="w", side="left")
                     card_info['motion_label'] = motion_label
-        
-        logger.info(f"_update_card_line2 completed for {node_id}")
     
     def update_node_card(self, node_id: str, node_data: Dict[str, Any], current_time: float, is_changed: bool = False):
         """Update existing card without recreating it (prevents flickering)
@@ -3546,18 +3544,12 @@ class EnhancedDashboard(tk.Tk):
                 # Update card display for local node
                 if local_node_id:
                     self._update_card_line2(local_node_id)
-                logger.info("About to update messages button")
                 self._update_messages_button()  # Update button badge
-                logger.info("Updated messages button, now checking Message Center")
                 
                 # Refresh Message Center if open
-                logger.info(f"Checking Message Center: hasattr={hasattr(self, 'message_list_window')}, ref={self.message_list_window is not None if hasattr(self, 'message_list_window') else 'N/A'}")
                 if hasattr(self, 'message_list_window') and self.message_list_window:
                     try:
-                        exists = self.message_list_window.window.winfo_exists()
-                        logger.info(f"Message Center window exists: {exists}")
-                        if exists:
-                            logger.info("Refreshing Message Center after mark as read")
+                        if self.message_list_window.window.winfo_exists():
                             self.message_list_window._refresh_all_tabs()
                     except Exception as e:
                         logger.warning(f"Error refreshing Message Center: {e}")
@@ -3705,6 +3697,15 @@ class EnhancedDashboard(tk.Tk):
                 # Update card to remove message indicator and stop flash
                 self._update_card_line2(node_id)
                 self._update_messages_button()  # Update button badge
+                
+                # Refresh Message Center if open
+                if hasattr(self, 'message_list_window') and self.message_list_window:
+                    try:
+                        if self.message_list_window.window.winfo_exists():
+                            logger.info("Refreshing Message Center after mark as read")
+                            self.message_list_window._refresh_all_tabs()
+                    except Exception as e:
+                        logger.warning(f"Error refreshing Message Center: {e}")
             except Exception as e:
                 logger.error(f"Error marking message as read: {e}")
         
