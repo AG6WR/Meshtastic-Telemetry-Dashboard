@@ -3547,10 +3547,13 @@ class EnhancedDashboard(tk.Tk):
                 self._update_messages_button()  # Update button badge
                 
                 # Refresh Message Center if open
+                logger.info(f"Checking Message Center: hasattr={hasattr(self, 'message_list_window')}, ref={self.message_list_window is not None if hasattr(self, 'message_list_window') else 'N/A'}")
                 if hasattr(self, 'message_list_window') and self.message_list_window:
                     try:
-                        if self.message_list_window.window.winfo_exists():
-                            logger.debug("Refreshing Message Center after mark as read")
+                        exists = self.message_list_window.window.winfo_exists()
+                        logger.info(f"Message Center window exists: {exists}")
+                        if exists:
+                            logger.info("Refreshing Message Center after mark as read")
                             self.message_list_window._refresh_all_tabs()
                     except Exception as e:
                         logger.warning(f"Error refreshing Message Center: {e}")
