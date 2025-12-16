@@ -19,6 +19,7 @@ archive/
 # Config files with sensitive information
 config/app_config.json
 config/node_alert_settings.json
+config/messages.json
 
 # Keep templates but not actual config
 !config/app_config_template.json
