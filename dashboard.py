@@ -3452,13 +3452,20 @@ class EnhancedDashboard(tk.Tk):
             logger.warning(f"Message {message_id} not found")
             return
         
+        # For received messages, unread cache is stored under local node ID
+        local_node_id = self._get_local_node_id()
+        
         # Determine node_id for updating UI after actions
         if message_data.get('direction') == 'received':
-            node_id = message_data.get('from_node_id')
+            # Sender node_id for reply purposes
+            sender_node_id = message_data.get('from_node_id')
+            # Unread messages are cached under local node ID
+            cache_node_id = local_node_id
         else:
             # For sent messages, use first recipient or None
             to_ids = message_data.get('to_node_ids', [])
-            node_id = to_ids[0] if to_ids else None
+            sender_node_id = to_ids[0] if to_ids else None
+            cache_node_id = None  # Sent messages aren't in unread cache
         
         def on_reply(reply_to_id: str, reply_to_name: str):
             """Callback when user clicks Reply in viewer"""
@@ -3496,16 +3503,16 @@ class EnhancedDashboard(tk.Tk):
                         if sender_id:
                             self.data_collector.connection_manager.send_message(sender_id, receipt_text)
                     
-                    # Remove from unread cache
-                    if node_id and node_id in self.unread_messages:
-                        self.unread_messages[node_id] = [
-                            msg for msg in self.unread_messages[node_id]
+                    # Remove from unread cache (stored under local node ID)
+                    if cache_node_id and cache_node_id in self.unread_messages:
+                        self.unread_messages[cache_node_id] = [
+                            msg for msg in self.unread_messages[cache_node_id]
                             if msg.get('message_id') != msg_id
                         ]
                     
-                    # Update card display
-                    if node_id:
-                        self._update_card_line2(node_id)
+                    # Update card display for local node
+                    if local_node_id:
+                        self._update_card_line2(local_node_id)
                     self._update_messages_button()  # Update button badge
                     
                 except Exception as e:
@@ -3524,38 +3531,40 @@ class EnhancedDashboard(tk.Tk):
                     if sender_id:
                         self.data_collector.connection_manager.send_message(sender_id, receipt_text)
                 
-                # Remove from unread cache
-                if node_id and node_id in self.unread_messages:
-                    self.unread_messages[node_id] = [
-                        msg for msg in self.unread_messages[node_id]
+                # Remove from unread cache (stored under local node ID)
+                if cache_node_id and cache_node_id in self.unread_messages:
+                    self.unread_messages[cache_node_id] = [
+                        msg for msg in self.unread_messages[cache_node_id]
                         if msg.get('message_id') != msg_id
                     ]
                 
-                # Update card display
-                if node_id:
-                    self._update_card_line2(node_id)
+                # Update card display for local node
+                if local_node_id:
+                    self._update_card_line2(local_node_id)
+                self._update_messages_button()  # Update button badge
             except Exception as e:
                 logger.error(f"Error marking message as read: {e}")
         
         def on_archive(msg_id: str):
             """Callback when user clicks Archive in viewer"""
             try:
-                message = self.message_manager.get_message(msg_id)
+                message = self.message_manager.get_message_by_id(msg_id)
                 if message:
                     message['archived'] = True
                     self.message_manager.save_message(message)
                     logger.info(f"Archived message {msg_id}")
                     
-                    # Remove from unread cache
-                    if node_id and node_id in self.unread_messages:
-                        self.unread_messages[node_id] = [
-                            msg for msg in self.unread_messages[node_id]
+                    # Remove from unread cache (stored under local node ID)
+                    if cache_node_id and cache_node_id in self.unread_messages:
+                        self.unread_messages[cache_node_id] = [
+                            msg for msg in self.unread_messages[cache_node_id]
                             if msg.get('message_id') != msg_id
                         ]
                     
-                    # Update card display
-                    if node_id:
-                        self._update_card_line2(node_id)
+                    # Update card display for local node
+                    if local_node_id:
+                        self._update_card_line2(local_node_id)
+                    self._update_messages_button()  # Update button badge
             except Exception as e:
                 logger.error(f"Error archiving message: {e}")
         
@@ -3694,7 +3703,7 @@ class EnhancedDashboard(tk.Tk):
             """Callback when user clicks Archive in viewer"""
             try:
                 # Set archived flag in message
-                message = self.message_manager.get_message(message_id)
+                message = self.message_manager.get_message_by_id(message_id)
                 if message:
                     message['archived'] = True
                     self.message_manager.save_message(message)
@@ -3840,6 +3849,7 @@ class EnhancedDashboard(tk.Tk):
                 self.unread_messages[local_node_id].append(message_obj)
                 logger.info(f"Added to unread messages for local node (total: {len(self.unread_messages[local_node_id])})")
                 self._update_messages_button()  # Update button badge
+                self._update_card_line2(local_node_id)  # Update card flex line
             
             # Show notification
             self._show_message_notification(from_id, from_name, to_name, message_text)
@@ -3874,6 +3884,7 @@ class EnhancedDashboard(tk.Tk):
                 self.unread_messages[local_node_id].append(message_obj)
                 logger.info(f"Added unstructured message to unread (total: {len(self.unread_messages[local_node_id])})")
                 self._update_messages_button()  # Update button badge
+                self._update_card_line2(local_node_id)  # Update card flex line
             
             # Show notification
             self._show_message_notification(from_id, from_name, to_name, text)
@@ -3969,8 +3980,9 @@ class EnhancedDashboard(tk.Tk):
             # Save any pending messages
             if hasattr(self, 'message_manager') and self.message_manager:
                 try:
-                    # Message manager auto-saves, but call save explicitly to be sure
-                    self.message_manager.save_messages()
+                    # Message manager auto-saves on each operation, so this is a no-op
+                    # but we keep it for explicit shutdown handling
+                    pass
                 except Exception as e:
                     logger.error(f"Error saving messages during shutdown: {e}")
             
