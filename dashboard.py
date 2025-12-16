@@ -2180,7 +2180,7 @@ class EnhancedDashboard(tk.Tk):
             # Make clickable to open message center and viewer
             def open_viewer(event):
                 self.open_messages()  # Open message center behind
-                self._open_message_viewer(node_id)  # Open viewer on top
+                self.after(50, lambda: self._open_message_viewer(node_id))  # Open viewer on top
                 return "break"  # Stop event propagation
             
             message_label.bind('<Button-1>', open_viewer)
@@ -2600,9 +2600,10 @@ class EnhancedDashboard(tk.Tk):
             
             # Check if this card has unread messages
             if node_id in self.unread_messages and len(self.unread_messages[node_id]) > 0:
-                # Open message center first (behind), then message viewer (on top)
+                # Open message center first (will be behind)
                 self.open_messages()
-                self._open_message_viewer(node_id)
+                # Open message viewer (on top) - use after() to ensure it appears on top
+                self.after(50, lambda: self._open_message_viewer(node_id))
                 return "break"
             else:
                 # No unread messages - show context menu
@@ -3040,7 +3041,7 @@ class EnhancedDashboard(tk.Tk):
             # Make clickable to open message center and viewer
             def open_viewer(event):
                 self.open_messages()  # Open message center behind
-                self._open_message_viewer(node_id)  # Open viewer on top
+                self.after(50, lambda: self._open_message_viewer(node_id))  # Open viewer on top
                 return "break"  # Stop event propagation
             
             message_label.bind('<Button-1>', open_viewer)
