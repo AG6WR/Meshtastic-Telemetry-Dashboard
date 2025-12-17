@@ -38,6 +38,9 @@ import time
 import subprocess
 import logging
 from typing import Dict, Any, Optional
+
+# Modularized components (Phase 1)
+import formatters
 from pubsub import pub
 
 from config_manager import ConfigManager
@@ -1044,17 +1047,7 @@ class EnhancedDashboard(tk.Tk):
             tuple: (converted_value, unit_string, thresholds_tuple)
                    thresholds_tuple = (red_threshold, yellow_threshold)
         """
-        if to_unit is None:
-            to_unit = self.config_manager.get('dashboard.temperature_unit', 'C')
-        
-        if to_unit == 'F':
-            # Convert to Fahrenheit: F = C * 9/5 + 32
-            temp_f = temp_c * 9/5 + 32
-            # Thresholds: 45°C = 113°F, 35°C = 95°F
-            return (temp_f, '°F', (113, 95))
-        else:
-            # Keep in Celsius
-            return (temp_c, '°C', (45, 35))
+        return formatters.convert_temperature(temp_c, self.config_manager, to_unit)
     
     # =========================================================================
     # Field Registry Helper Methods
@@ -1063,63 +1056,43 @@ class EnhancedDashboard(tk.Tk):
     
     def format_temperature(self, temp_c):
         """Format temperature value (number only, unit is separate label)"""
-        temp_value, temp_unit_str, _ = self.convert_temperature(temp_c)
-        return f"{temp_value:.0f}"
+        return formatters.format_temperature(temp_c, self.config_manager)
     
     def get_temperature_color(self, temp_c):
         """Get color based on temperature thresholds"""
-        _, _, (red_threshold, yellow_threshold) = self.convert_temperature(temp_c)
-        if temp_c > red_threshold or temp_c < 0:
-            return self.colors['fg_bad']
-        elif temp_c >= yellow_threshold:
-            return self.colors['fg_warning']
-        else:
-            return self.colors['fg_good']
+        return formatters.get_temperature_color(temp_c, self.colors, self.config_manager)
     
     def format_humidity(self, humidity):
         """Format humidity value"""
-        return f"{humidity:.0f}%"
+        return formatters.format_humidity(humidity)
     
     def get_humidity_color(self, humidity):
         """Get color based on humidity thresholds"""
-        if humidity > 80 or humidity < 20:
-            return self.colors['fg_warning']
-        else:
-            return self.colors['fg_good']
+        return formatters.get_humidity_color(humidity, self.colors)
     
     def format_pressure(self, pressure):
         """Format pressure value (number only, unit is separate label)"""
-        return f"{pressure:.1f}"
+        return formatters.format_pressure(pressure)
     
     def get_pressure_color(self, pressure):
         """Get color based on pressure (always normal for now)"""
-        return self.colors['fg_normal']
+        return formatters.get_pressure_color(pressure, self.colors)
     
     def format_channel_util(self, util):
         """Format channel utilization percentage"""
-        return f"Ch: {util:.1f}%"
+        return formatters.format_channel_util(util)
     
     def get_channel_util_color(self, util):
         """Get color based on channel utilization thresholds"""
-        if util > 25:
-            return self.colors['fg_bad']
-        elif util > 10:
-            return self.colors['fg_warning']
-        else:
-            return self.colors['fg_good']
+        return formatters.get_channel_util_color(util, self.colors)
     
     def format_air_util(self, util):
         """Format air utilization percentage"""
-        return f"Air: {util:.1f}%"
+        return formatters.format_air_util(util)
     
     def get_air_util_color(self, util):
         """Get color based on air utilization thresholds"""
-        if util > 10:
-            return self.colors['fg_bad']
-        elif util > 5:
-            return self.colors['fg_warning']
-        else:
-            return self.colors['fg_good']
+        return formatters.get_air_util_color(util, self.colors)
     
     def setup_table(self):
         """Setup the data table"""
@@ -1665,18 +1638,7 @@ class EnhancedDashboard(tk.Tk):
     
     def format_duration(self, seconds: int) -> str:
         """Format duration according to configured format"""
-        time_format = self.config_manager.get('dashboard.time_format', 'DDd:HHh:MMm:SSs')
-        
-        if time_format in ['DD:HH:MM:SS', 'DDd:HHh:MMm:SSs']:
-            days = seconds // 86400
-            hours = (seconds % 86400) // 3600
-            minutes = (seconds % 3600) // 60
-            secs = seconds % 60
-            return f"{days:02d}d:{hours:02d}h:{minutes:02d}m:{secs:02d}s"
-        elif time_format == 'Minutes':
-            return f"{seconds // 60}m"
-        else:  # Seconds
-            return f"{seconds}s"
+        return formatters.format_duration(seconds, self.config_manager)
     
     def get_node_sort_key(self, node_data: Dict[str, Any], current_time: float):
         """Get sort key for node (online nodes first)"""
@@ -3316,17 +3278,7 @@ class EnhancedDashboard(tk.Tk):
     
     def get_voltage_display(self, voltage: float):
         """Get voltage display with appropriate color coding"""
-        if voltage is not None:
-            # Match table view: Red if <11V or >14.5V, Yellow if 11-12V or 14-14.5V, Green if 12-14V
-            if voltage < 11.0 or voltage > 14.5:
-                color = self.colors['fg_bad']  # Red for dangerous voltages
-            elif voltage < 12.0 or voltage > 14.0:
-                color = self.colors['fg_warning']  # Orange for low battery or slightly high
-            else:
-                color = self.colors['fg_good']  # Green for good battery (12-14V)
-            return f"{voltage:.1f}V", color
-        else:
-            return "No voltage", self.colors['fg_secondary']
+        return formatters.get_voltage_display(voltage, self.colors)
     
     def get_battery_percentage_display(self, node_data: dict):
         """Get battery percentage display with appropriate color coding
@@ -3337,67 +3289,16 @@ class EnhancedDashboard(tk.Tk):
         
         Returns: (text, color) tuple
         """
-        # Try external battery first (Ch3 Voltage)
-        ch3_voltage = node_data.get('Ch3 Voltage')
-        if ch3_voltage is not None and self.data_collector:
-            battery_pct = self.data_collector.voltage_to_percentage(ch3_voltage)
-            if battery_pct is not None:
-                # Color coding: 0-25% red, 25-50% yellow, >50% green
-                if battery_pct > 50:
-                    color = self.colors['fg_good']     # Green
-                elif battery_pct >= 25:
-                    color = self.colors['fg_warning']  # Yellow
-                else:
-                    color = self.colors['fg_bad']      # Red
-                return f"Bat:{battery_pct}%", color
-        
-        # Fall back to internal battery percentage
-        internal_battery = node_data.get('Battery Level')
-        if internal_battery is not None:
-            # Color coding: 0-25% red, 25-50% yellow, >50% green
-            if internal_battery > 50:
-                color = self.colors['fg_good']     # Green
-            elif internal_battery >= 25:
-                color = self.colors['fg_warning']  # Yellow
-            else:
-                color = self.colors['fg_bad']      # Red
-            return f"Bat:{internal_battery}%", color
-        
-        # No battery data available
-        return "no external battery sensor", self.colors['fg_secondary']
+        return formatters.get_battery_percentage_display(node_data, self.colors, self.data_collector)
     
     def get_signal_bar_colors(self, snr: float):
         """Return list of colors for each of the 4 signal bars based on SNR
         White for 'on' bars, black for 'off' bars"""
-        white = '#FFFFFF'
-        black = '#000000'
-        
-        if snr >= 10:
-            # All 4 bars on (white)
-            return [white, white, white, white]
-        elif snr >= 5:
-            # 3 bars on, last one off
-            return [white, white, white, black]
-        elif snr >= 0:
-            # 2 bars on, last two off
-            return [white, white, black, black]
-        elif snr >= -5:
-            # 1 bar on, last three off
-            return [white, black, black, black]
-        else:
-            # All bars off (black)
-            return [black, black, black, black]
+        return formatters.get_signal_bar_colors(snr)
     
     def format_time_ago(self, seconds: float):
         """Format time difference as human readable string"""
-        if seconds < 60:
-            return f"{int(seconds)}s"
-        elif seconds < 3600:
-            return f"{int(seconds // 60)}m"
-        elif seconds < 86400:
-            return f"{int(seconds // 3600)}h"
-        else:
-            return f"{int(seconds // 86400)}d"
+        return formatters.format_time_ago(seconds)
     
     def toggle_view(self):
         """Toggle between table and card view"""
