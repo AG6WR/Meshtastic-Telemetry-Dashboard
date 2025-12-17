@@ -43,6 +43,8 @@ from typing import Dict, Any, Optional
 import formatters
 # Modularized components (Phase 2)
 from settings_dialog import SettingsDialog
+# Modularized components (Phase 3)
+import message_protocol
 from pubsub import pub
 
 from config_manager import ConfigManager
@@ -346,15 +348,8 @@ class EnhancedDashboard(tk.Tk):
         Returns:
             Message ID string (e.g., '0de0_1734112345678')
         """
-        import time
         local_node_id = self.config_manager.get('meshtastic.local_node_id')
-        if local_node_id and local_node_id.startswith('!'):
-            short_id = local_node_id[1:]  # Remove '!' prefix
-        else:
-            short_id = 'unknown'
-        
-        timestamp_ms = int(time.time() * 1000)
-        return f"{short_id}_{timestamp_ms}"
+        return message_protocol.generate_message_id(local_node_id)
     
     def _get_local_node_id(self) -> str:
         """Get the local node ID from the connected interface.
@@ -3112,9 +3107,6 @@ class EnhancedDashboard(tk.Tk):
     
     def _on_message_received(self, message_data: Dict[str, Any]):
         """Handle received message notification"""
-        import time
-        import re
-        
         from_id = message_data.get('from')
         to_id = message_data.get('to')
         text = message_data.get('text', '')
@@ -3129,36 +3121,30 @@ class EnhancedDashboard(tk.Tk):
         local_node_id = self._get_local_node_id()
         
         # Check if this is a read receipt: [RECEIPT:msg_id]
-        receipt_match = re.match(r'^\[RECEIPT:([^\]]+)\]', text)
-        if receipt_match:
-            message_id = receipt_match.group(1)
-            logger.info(f"Received read receipt for message {message_id} from {from_name}")
+        receipt_msg_id = message_protocol.parse_receipt(text)
+        if receipt_msg_id:
+            logger.info(f"Received read receipt for message {receipt_msg_id} from {from_name}")
             
             # Update read receipt in message_manager
-            self.message_manager.add_read_receipt(message_id, from_id)
+            self.message_manager.add_read_receipt(receipt_msg_id, from_id)
             return  # Don't show notification for receipts
         
         # Check if this is a protocol-formatted message: [MSG:id]text
-        msg_match = re.match(r'^\[MSG:([^\]]+)\](.*)$', text, re.DOTALL)
-        if msg_match:
-            message_id = msg_match.group(1)
-            message_text = msg_match.group(2)
+        parsed_msg = message_protocol.parse_protocol_message(text)
+        if parsed_msg:
+            message_id, message_text = parsed_msg
             logger.info(f"Received protocol message {message_id} from {from_name}: {repr(message_text)}")
             
-            # Save to message_manager
-            message_obj = {
-                'message_id': message_id,
-                'structured': True,  # Flag to indicate this uses our protocol
-                'from_node_id': from_id,
-                'from_name': from_name,
-                'to_node_ids': [to_id] if to_id else [],
-                'is_bulletin': not to_id or to_id == '^all',  # Bulletin if no specific recipient
-                'text': message_text,  # Store without protocol prefix
-                'timestamp': time.time(),
-                'direction': 'received',
-                'read': False,
-                'archived': False
-            }
+            # Save to message_manager using protocol helper
+            message_obj = message_protocol.create_message_object(
+                message_id=message_id,
+                from_node_id=from_id,
+                from_name=from_name,
+                to_node_ids=[to_id] if to_id else [],
+                text=message_text,
+                direction='received',
+                structured=True
+            )
             
             self.message_manager.save_message(message_obj)
             
@@ -3178,22 +3164,18 @@ class EnhancedDashboard(tk.Tk):
             logger.info(f"Received unstructured message from {from_name} to {to_name}: {repr(text)}")
             
             # Generate message_id for local tracking
-            message_id = f"{from_id.strip('!')}_{int(time.time() * 1000)}"
+            message_id = message_protocol.generate_unstructured_message_id(from_id)
             
-            # Save as unstructured message
-            message_obj = {
-                'message_id': message_id,
-                'structured': False,  # Flag to indicate this is from external client
-                'from_node_id': from_id,
-                'from_name': from_name,
-                'to_node_ids': [to_id] if to_id else [],
-                'is_bulletin': not to_id or to_id == '^all',
-                'text': text,
-                'timestamp': time.time(),
-                'direction': 'received',
-                'read': False,
-                'archived': False
-            }
+            # Save as unstructured message using protocol helper
+            message_obj = message_protocol.create_message_object(
+                message_id=message_id,
+                from_node_id=from_id,
+                from_name=from_name,
+                to_node_ids=[to_id] if to_id else [],
+                text=text,
+                direction='received',
+                structured=False
+            )
             
             self.message_manager.save_message(message_obj)
             
@@ -3212,7 +3194,7 @@ class EnhancedDashboard(tk.Tk):
     def _show_message_notification(self, from_id: str, from_name: str, to_name: str, text: str):
         """Add message to scrolling notification banner at bottom"""
         # Strip control characters (bell, tab, etc.) from display text
-        clean_text = ''.join(c for c in text if c.isprintable() or c == ' ')
+        clean_text = message_protocol.clean_display_text(text)
         
         # Add to recent messages (keep last 3)
         message_tuple = (from_name, to_name, clean_text)
