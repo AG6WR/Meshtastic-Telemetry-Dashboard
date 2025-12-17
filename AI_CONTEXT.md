@@ -139,8 +139,9 @@ font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12)
 | Element | Size/Value |
 |---------|------------|
 | Window min-height | 650px (leaves room for taskbar) |
-| Button min-width | 70px |
+| Button min-width | 80px |
 | Button min-height | 32px |
+| Button padding | 8px 16px |
 | Scrollbar width | 20px (touch-friendly) |
 | Font (body/buttons) | Liberation Sans 12pt |
 | Font (section titles) | 12pt bold |
@@ -196,6 +197,29 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0px;
 }
 ```
+
+### Button Layout Convention
+
+- **Primary actions** (OK, Send, View) go on the **right**
+- **Destructive actions** (Delete) go on the **left**, separated from other buttons
+- **Status/info labels** go on the **left**
+- This follows natural left-to-right reading flow ending at action buttons
+
+### Wayland Window Positioning
+
+**Context:** Pi runs Wayland compositor which restricts window positioning for security.
+
+**Qt vs Tkinter:**
+- Qt has better Wayland support than Tkinter
+- `QDialog` with parent will position relative to parent (usually works)
+- Qt handles compositor negotiation automatically
+- May still not honor exact pixel positions, but should be close
+
+**Best practices:**
+- Always pass parent widget to dialogs: `QDialog(parent)`
+- Use `self.move(parent.geometry().x() + offset, ...)` for relative positioning
+- Don't rely on exact pixel-perfect positioning on Wayland
+- Test on Pi to verify actual behavior
 
 ---
 

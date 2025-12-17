@@ -1,0 +1,314 @@
+"""
+Message Dialog (Qt/PySide6) for sending Meshtastic text messages
+
+This is the PySide6 port of message_dialog.py. For touchscreen virtual keyboard
+support on Raspberry Pi, Qt's built-in virtual keyboard can be enabled via
+QT_IM_MODULE=qtvirtualkeyboard environment variable, or a custom Qt keyboard
+widget can be added later.
+
+Usage:
+    from message_dialog_qt import MessageDialogQt
+    
+    dialog = MessageDialogQt(parent, node_id, node_name, send_callback)
+    dialog.exec()
+"""
+
+import logging
+from typing import Callable, Optional
+
+from PySide6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit,
+    QPushButton, QFrame, QMessageBox, QSizePolicy
+)
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFont, QColor, QPalette
+
+logger = logging.getLogger(__name__)
+
+# Meshtastic maximum payload length is 233 bytes
+# Protocol overhead: [MSG:a20a0de0_1765667875991] = 28 bytes
+# Available for user text: 233 - 28 = 205 bytes
+# Using 180 bytes to leave margin for safety
+MAX_MESSAGE_LENGTH = 180
+
+
+class MessageDialogQt(QDialog):
+    """Qt dialog for composing and sending text messages to Meshtastic nodes"""
+    
+    message_sent = Signal(str, str, bool)  # node_id, message, bell_flag
+    
+    def __init__(self, parent, node_id: str, node_name: str, 
+                 send_callback: Callable[[str, str, bool], None],
+                 positioning_parent: Optional[object] = None):
+        """
+        Create a message dialog
+        
+        Args:
+            parent: Parent window
+            node_id: Target node ID (e.g., "!a20a0de0")
+            node_name: Display name for the node
+            send_callback: Function to call when sending - callback(node_id, message, bell_unused)
+            positioning_parent: Window to position relative to (defaults to parent)
+        """
+        super().__init__(parent)
+        
+        self.node_id = node_id
+        self.node_name = node_name
+        self.send_callback = send_callback
+        self.result = None
+        
+        # Get colors from parent (dark theme) or use defaults
+        self.colors = getattr(parent, 'colors', {
+            'bg_frame': '#2b2b2b',
+            'bg_main': '#1e1e1e',
+            'fg_normal': '#e0e0e0',
+            'fg_secondary': '#b0b0b0',
+            'button_bg': '#0d47a1',
+            'fg_good': '#228B22',
+            'fg_bad': '#FF6B9D'
+        })
+        
+        self.setWindowTitle(f"Send Message to {node_name}")
+        self.setMinimumSize(630, 280)
+        self.setModal(True)
+        
+        # Apply dark theme
+        self._apply_dark_theme()
+        
+        self._create_widgets()
+        
+        # Center on screen (or relative to parent)
+        self._center_dialog(positioning_parent or parent)
+    
+    def _apply_dark_theme(self):
+        """Apply dark theme colors to dialog"""
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {self.colors['bg_frame']};
+            }}
+            QLabel {{
+                color: {self.colors['fg_normal']};
+            }}
+            QTextEdit {{
+                background-color: {self.colors['bg_main']};
+                color: {self.colors['fg_normal']};
+                border: 1px solid #555;
+                border-radius: 4px;
+                padding: 4px;
+            }}
+            QPushButton {{
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-size: 12pt;
+            }}
+        """)
+    
+    def _center_dialog(self, reference_widget):
+        """Center dialog on screen"""
+        self.adjustSize()
+        if reference_widget and hasattr(reference_widget, 'geometry'):
+            # Center relative to reference widget
+            ref_geo = reference_widget.geometry()
+            x = ref_geo.x() + (ref_geo.width() - self.width()) // 2
+            y = ref_geo.y() + (ref_geo.height() - self.height()) // 2
+            self.move(x, y)
+        else:
+            # Center on screen
+            screen = self.screen().geometry()
+            x = (screen.width() - self.width()) // 2
+            y = 50  # Near top to leave room for virtual keyboard
+            self.move(x, y)
+    
+    def _create_widgets(self):
+        """Create dialog widgets"""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(8)
+        
+        # Header with recipient info and close button
+        header_layout = QHBoxLayout()
+        
+        to_label = QLabel("To:")
+        to_label.setStyleSheet(f"color: {self.colors['fg_secondary']}; font-size: 12pt;")
+        header_layout.addWidget(to_label)
+        
+        recipient_label = QLabel(f" {self.node_name} ({self.node_id})")
+        recipient_label.setStyleSheet(f"color: {self.colors['fg_normal']}; font-size: 12pt; font-weight: bold;")
+        header_layout.addWidget(recipient_label)
+        
+        header_layout.addStretch()
+        
+        layout.addLayout(header_layout)
+        
+        # Message label
+        msg_label = QLabel("Message:")
+        msg_label.setStyleSheet(f"color: {self.colors['fg_secondary']}; font-size: 12pt;")
+        layout.addWidget(msg_label)
+        
+        # Text area for message
+        self.text_area = QTextEdit()
+        self.text_area.setMinimumHeight(80)
+        self.text_area.setMaximumHeight(120)
+        self.text_area.setPlaceholderText("Type your message here...")
+        self.text_area.setFont(QFont("Liberation Sans", 12))
+        self.text_area.textChanged.connect(self._on_text_change)
+        layout.addWidget(self.text_area)
+        
+        # Character counter
+        counter_layout = QHBoxLayout()
+        counter_layout.addStretch()
+        
+        self.char_count_label = QLabel(f"0/{MAX_MESSAGE_LENGTH}")
+        self.char_count_label.setStyleSheet(f"color: {self.colors['fg_secondary']}; font-size: 12pt;")
+        counter_layout.addWidget(self.char_count_label)
+        
+        layout.addLayout(counter_layout)
+        
+        # Button row
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.setMinimumSize(80, 32)
+        cancel_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #424242;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+            }
+            QPushButton:hover {
+                background-color: #616161;
+            }
+        """)
+        cancel_btn.clicked.connect(self._cancel)
+        button_layout.addWidget(cancel_btn)
+        
+        send_btn = QPushButton("Send")
+        send_btn.setMinimumSize(80, 32)
+        send_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {self.colors['fg_good']};
+                color: white;
+                border: none;
+                padding: 8px 16px;
+            }}
+            QPushButton:hover {{
+                background-color: #2E7D32;
+            }}
+        """)
+        send_btn.clicked.connect(self._send_message)
+        button_layout.addWidget(send_btn)
+        
+        layout.addLayout(button_layout)
+        
+        # Set focus to text area
+        self.text_area.setFocus()
+    
+    def _on_text_change(self):
+        """Update character count and enforce limit"""
+        text = self.text_area.toPlainText()
+        text_bytes = text.encode('utf-8')
+        byte_count = len(text_bytes)
+        
+        # Update counter
+        self.char_count_label.setText(f"{byte_count}/{MAX_MESSAGE_LENGTH}")
+        
+        # Change color based on length
+        if byte_count > MAX_MESSAGE_LENGTH:
+            self.char_count_label.setStyleSheet("color: #FF6B9D; font-size: 12pt;")  # Coral pink for error
+            
+            # Trim to max length
+            while byte_count > MAX_MESSAGE_LENGTH and text:
+                text = text[:-1]
+                text_bytes = text.encode('utf-8')
+                byte_count = len(text_bytes)
+            
+            # Block signals to prevent recursion
+            self.text_area.blockSignals(True)
+            cursor = self.text_area.textCursor()
+            cursor_pos = cursor.position()
+            self.text_area.setPlainText(text)
+            # Restore cursor position (at end if beyond new length)
+            cursor.setPosition(min(cursor_pos, len(text)))
+            self.text_area.setTextCursor(cursor)
+            self.text_area.blockSignals(False)
+            
+            # Update count after trim
+            self.char_count_label.setText(f"{byte_count}/{MAX_MESSAGE_LENGTH}")
+            
+        elif byte_count > MAX_MESSAGE_LENGTH * 0.9:
+            self.char_count_label.setStyleSheet("color: #FFA500; font-size: 12pt;")  # Orange for warning
+        else:
+            self.char_count_label.setStyleSheet(f"color: {self.colors['fg_secondary']}; font-size: 12pt;")
+    
+    def _send_message(self):
+        """Send the message"""
+        text = self.text_area.toPlainText().strip()
+        
+        if not text:
+            QMessageBox.warning(self, "Empty Message", "Please enter a message to send.")
+            return
+        
+        # Check byte length
+        text_bytes = text.encode('utf-8')
+        if len(text_bytes) > MAX_MESSAGE_LENGTH:
+            QMessageBox.critical(self, "Message Too Long",
+                               f"Message is {len(text_bytes)} bytes, maximum is {MAX_MESSAGE_LENGTH} bytes.")
+            return
+        
+        logger.info(f"Sending message to {self.node_id} ({self.node_name}): {repr(text)}")
+        
+        # Call the send callback
+        try:
+            self.send_callback(self.node_id, text, False)
+            self.result = "sent"
+            self.accept()
+        except Exception as e:
+            logger.error(f"Error sending message: {e}")
+            QMessageBox.critical(self, "Send Error", f"Failed to send message: {e}")
+    
+    def _cancel(self):
+        """Cancel and close dialog"""
+        self.result = "cancelled"
+        self.reject()
+    
+    def keyPressEvent(self, event):
+        """Handle key press events"""
+        # Ctrl+Enter to send
+        if event.key() == Qt.Key_Return and event.modifiers() & Qt.ControlModifier:
+            self._send_message()
+        # Escape to cancel
+        elif event.key() == Qt.Key_Escape:
+            self._cancel()
+        else:
+            super().keyPressEvent(event)
+
+
+# Test harness for standalone testing
+if __name__ == "__main__":
+    import sys
+    from PySide6.QtWidgets import QApplication
+    
+    def mock_send(node_id, message, bell):
+        print(f"MOCK SEND: to={node_id}, message={message}, bell={bell}")
+    
+    app = QApplication(sys.argv)
+    
+    # Create a mock parent with colors
+    class MockParent:
+        colors = {
+            'bg_frame': '#2b2b2b',
+            'bg_main': '#1e1e1e',
+            'fg_normal': '#e0e0e0',
+            'fg_secondary': '#b0b0b0',
+            'button_bg': '#0d47a1',
+            'fg_good': '#228B22',
+            'fg_bad': '#FF6B9D'
+        }
+    
+    dialog = MessageDialogQt(None, "!a20a0de0", "TestNode", mock_send)
+    result = dialog.exec()
+    
+    print(f"Dialog result: {dialog.result}")
+    sys.exit(0)

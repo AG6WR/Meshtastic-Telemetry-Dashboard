@@ -139,7 +139,7 @@ class SettingsDialogQt(QDialog):
         
         # Test Email button (left side)
         test_email_btn = QPushButton("Test Email")
-        test_email_btn.setMinimumSize(100, 40)
+        test_email_btn.setMinimumSize(100, 32)
         test_email_btn.clicked.connect(self.test_email)
         button_layout.addWidget(test_email_btn)
         
@@ -147,15 +147,15 @@ class SettingsDialogQt(QDialog):
         
         # OK, Apply, Cancel buttons (right side)
         ok_btn = QPushButton("OK")
-        ok_btn.setMinimumSize(80, 40)
+        ok_btn.setMinimumSize(80, 32)
         ok_btn.clicked.connect(self.ok)
         
         apply_btn = QPushButton("Apply")
-        apply_btn.setMinimumSize(80, 40)
+        apply_btn.setMinimumSize(80, 32)
         apply_btn.clicked.connect(self.apply)
         
         cancel_btn = QPushButton("Cancel")
-        cancel_btn.setMinimumSize(80, 40)
+        cancel_btn.setMinimumSize(80, 32)
         cancel_btn.clicked.connect(self.cancel)
         
         button_layout.addWidget(ok_btn)
