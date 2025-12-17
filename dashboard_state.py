@@ -87,9 +87,9 @@ class NodeDisplayState:
     
     def has_node_changed(self, node_id: str, new_data: Dict[str, Any]) -> bool:
         """Check if node data has changed since last update"""
-        if node_id not in self.last_node_data:
+        if node_id not in self.nodes_data:
             return True
-        old_data = self.last_node_data[node_id]
+        old_data = self.nodes_data[node_id]
         
         # Compare key telemetry fields
         compare_keys = [
@@ -104,8 +104,11 @@ class NodeDisplayState:
         return False
     
     def update_node_data(self, node_id: str, data: Dict[str, Any]):
-        """Update node data and track previous state"""
-        self.last_node_data[node_id] = self.nodes_data.get(node_id, {}).copy()
+        """Update node data and track previous state for change detection"""
+        # Store the previous data for rollback/comparison if needed
+        if node_id in self.nodes_data:
+            self.last_node_data[node_id] = self.nodes_data[node_id].copy()
+        # Update current data
         self.nodes_data[node_id] = data
 
 
