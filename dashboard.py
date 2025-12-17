@@ -1099,10 +1099,8 @@ class EnhancedDashboard(tk.Tk):
         # Update button states
         if node_id:
             self.btn_logs.config(state="normal")
-            self.btn_csv.config(state="normal")
         else:
             self.btn_logs.config(state="disabled")
-            self.btn_csv.config(state="disabled")
         
         # Force display refresh to update row highlighting
         self.force_refresh()
