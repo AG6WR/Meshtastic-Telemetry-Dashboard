@@ -17,6 +17,19 @@ This applies especially to:
 
 **Remember:** The user knows their requirements better than the AI does. Always confirm before acting.
 
+**ASK FOR VISUAL FEEDBACK** - The AI cannot see the UI:
+- When user launches a dialog/window, **ASK what they see** before assuming success
+- Don't assume "no crash" means "looks correct" - layout issues are common
+- Ask about: sizing, alignment, readability, missing elements, visual glitches
+- **Example**: After user tests `settings_dialog_qt.py`, ask "How does it look? Are all tabs visible? Any layout issues?"
+- The user is the only source of truth for visual correctness
+
+**LAUNCH GUI TESTS IN BACKGROUND** - Don't block the conversation:
+- Always use `isBackground=true` when launching GUI applications for testing
+- This allows continued conversation while user tests the UI
+- User will close the window when done testing and report feedback
+- Never use blocking (foreground) launches for GUI test windows
+
 ---
 
 ## Current Session Context
@@ -31,7 +44,7 @@ This applies especially to:
 
 ### Virtual Keyboard Implementation
 
-**Context:** Dashboard runs on Raspberry Pi with 7" touchscreen running Wayland. Standard on-screen keyboards (onboard, squeekboard) don't work on Wayland.
+**Context:** Dashboard runs on Raspberry Pi with 10" touchscreen (1280x720) running Wayland. Standard on-screen keyboards (onboard, squeekboard) don't work on Wayland.
 
 **Solution:** Custom Tkinter virtual keyboard (`virtual_keyboard.py`) that inserts characters directly into Text widgets.
 
@@ -114,6 +127,75 @@ font=self.font_ui_button if self.font_ui_button else ("Liberation Sans", 12)
 - Likely caused by Tkinter redraw when modifying Text widget
 - Individual key flash code disabled as workaround
 - Not worth fixing unless it becomes a user complaint
+
+---
+
+## 🎨 Qt/PySide6 Layout Standards (for consistency across windows)
+
+**Target Display:** Raspberry Pi 10" touchscreen at 1280x720
+
+### Standard Sizes
+
+| Element | Size/Value |
+|---------|------------|
+| Window min-height | 650px (leaves room for taskbar) |
+| Button min-width | 70px |
+| Button min-height | 32px |
+| Scrollbar width | 20px (touch-friendly) |
+| Font (body/buttons) | Liberation Sans 12pt |
+| Font (section titles) | 12pt bold |
+| Font (node name header) | 16pt bold |
+
+### Standard Spacing (tight layout for more data)
+
+| Element | Margin/Padding |
+|---------|----------------|
+| Window margins | 10px |
+| Window spacing | 5px |
+| Button bar padding | 6px |
+| Button bar spacing | 4px |
+| Section frame padding | 4px |
+| Section content margins | 8px horizontal, 4px vertical |
+| Content row spacing | 2px |
+| Scroll area content margins | 4px |
+| Scroll area content spacing | 6px |
+
+### Color Scheme (dark theme)
+
+```python
+colors = {
+    'bg_main': '#1e1e1e',      # Main window background
+    'bg_frame': '#2b2b2b',     # Section/frame background
+    'fg_normal': '#e0e0e0',    # Normal text
+    'fg_secondary': '#b0b0b0', # Labels, less important text
+    'fg_good': '#228B22',      # Online/good status
+    'fg_warning': '#FFA500',   # Warning status
+    'fg_bad': '#FF6B9D',       # Offline/bad status (pink, colorblind-safe)
+    'button_bg': '#0d47a1',    # Primary button (blue)
+    'button_fg': '#ffffff'     # Button text
+}
+```
+
+### Scrollbar Styling (touch-friendly)
+
+```python
+QScrollBar:vertical {
+    background-color: #2b2b2b;
+    width: 20px;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical {
+    background-color: #555555;
+    border-radius: 4px;
+    min-height: 30px;
+}
+QScrollBar::handle:vertical:hover {
+    background-color: #777777;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+```
 
 ---
 
