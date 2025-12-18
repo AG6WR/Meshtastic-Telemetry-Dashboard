@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from config_manager import ConfigManager
+from qt_styles import create_button, create_ok_button, create_apply_button, create_cancel_button, COLORS
 
 logger = logging.getLogger(__name__)
 
@@ -137,26 +138,20 @@ class SettingsDialogQt(QDialog):
         button_layout = QHBoxLayout()
         button_layout.setContentsMargins(0, 10, 0, 0)
         
-        # Test Email button (left side)
-        test_email_btn = QPushButton("Test Email")
-        test_email_btn.setMinimumSize(100, 32)
-        test_email_btn.clicked.connect(self.test_email)
+        # Test Email button (left side - uses orange/warning color)
+        test_email_btn = create_button("Test Email", "warning", self.test_email)
         button_layout.addWidget(test_email_btn)
         
         button_layout.addStretch()
         
-        # OK, Apply, Cancel buttons (right side)
-        ok_btn = QPushButton("OK")
-        ok_btn.setMinimumSize(80, 32)
-        ok_btn.clicked.connect(self.ok)
+        # OK button (primary action - blue)
+        ok_btn = create_button("OK", "primary", self.ok)
         
-        apply_btn = QPushButton("Apply")
-        apply_btn.setMinimumSize(80, 32)
-        apply_btn.clicked.connect(self.apply)
+        # Apply button (green)
+        apply_btn = create_apply_button(self.apply)
         
-        cancel_btn = QPushButton("Cancel")
-        cancel_btn.setMinimumSize(80, 32)
-        cancel_btn.clicked.connect(self.cancel)
+        # Cancel button (gray)
+        cancel_btn = create_cancel_button(self.cancel)
         
         button_layout.addWidget(ok_btn)
         button_layout.addWidget(apply_btn)

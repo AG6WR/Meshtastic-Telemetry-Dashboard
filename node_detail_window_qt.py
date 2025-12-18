@@ -23,6 +23,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
+from qt_styles import create_button, create_close_button, COLORS, BUTTON_STYLES, get_font
+
 logger = logging.getLogger(__name__)
 
 
@@ -157,99 +159,53 @@ class NodeDetailWindowQt(QDialog):
         
         scroll_area.setWidget(content_widget)
         layout.addWidget(scroll_area)
+        
+        # Bottom bar with Forget Node (destructive action on left)
+        self._create_bottom_bar(layout)
+    
+    def _create_bottom_bar(self, parent_layout):
+        """Create bottom bar with Forget Node button"""
+        bottom_frame = QFrame()
+        bottom_frame.setStyleSheet(f"background-color: {self.colors['bg_frame']}; padding: 6px;")
+        bottom_layout = QHBoxLayout(bottom_frame)
+        bottom_layout.setContentsMargins(6, 6, 6, 6)
+        
+        # Forget Node button (left side - destructive action)
+        forget_btn = create_button("Forget Node", "danger", self._forget_node)
+        bottom_layout.addWidget(forget_btn)
+        
+        bottom_layout.addStretch()
+        
+        parent_layout.addWidget(bottom_frame)
     
     def _create_button_bar(self, parent_layout):
-        """Create button bar at top"""
+        """Create button bar at top - single row: Plot, CSV, Logs, Close"""
         button_frame = QFrame()
         button_frame.setStyleSheet(f"background-color: {self.colors['bg_frame']}; padding: 6px;")
-        button_layout = QVBoxLayout(button_frame)
+        button_layout = QHBoxLayout(button_frame)
         button_layout.setContentsMargins(6, 6, 6, 6)
-        button_layout.setSpacing(4)
+        button_layout.setSpacing(6)
         
-        # Button styling
-        btn_style = f"""
-            QPushButton {{
-                background-color: {self.colors['button_bg']};
-                color: {self.colors['button_fg']};
-                min-width: 70px;
-                min-height: 32px;
-            }}
-            QPushButton:hover {{
-                background-color: #1565c0;
-            }}
-        """
-        
-        # ROW 1: Logs, CSV, Close
-        row1 = QHBoxLayout()
-        
-        if self.on_logs:
-            logs_btn = QPushButton("Logs")
-            logs_btn.setStyleSheet(btn_style)
-            logs_btn.clicked.connect(self.on_logs)
-            row1.addWidget(logs_btn)
-        
-        if self.on_csv:
-            csv_btn = QPushButton("CSV")
-            csv_btn.setStyleSheet(btn_style)
-            csv_btn.clicked.connect(self.on_csv)
-            row1.addWidget(csv_btn)
-        
-        row1.addStretch()
-        
-        close_btn = QPushButton("Close")
-        close_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #424242;
-                color: white;
-                min-width: 70px;
-                min-height: 32px;
-            }
-            QPushButton:hover {
-                background-color: #616161;
-            }
-        """)
-        close_btn.clicked.connect(self.close)
-        row1.addWidget(close_btn)
-        
-        button_layout.addLayout(row1)
-        
-        # ROW 2: Plot, Forget Node
-        row2 = QHBoxLayout()
-        
+        # Plot button (green - action)
         if self.on_plot:
-            plot_btn = QPushButton("Plot")
-            plot_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #2e7d32;
-                    color: white;
-                    min-width: 70px;
-                    min-height: 32px;
-                }
-                QPushButton:hover {
-                    background-color: #388e3c;
-                }
-            """)
-            plot_btn.clicked.connect(self.on_plot)
-            row2.addWidget(plot_btn)
+            plot_btn = create_button("Plot", "success", self.on_plot)
+            button_layout.addWidget(plot_btn)
         
-        row2.addStretch()
+        # CSV button (blue - primary)
+        if self.on_csv:
+            csv_btn = create_button("CSV", "primary", self.on_csv)
+            button_layout.addWidget(csv_btn)
         
-        forget_btn = QPushButton("Forget Node")
-        forget_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #c62828;
-                color: white;
-                min-width: 90px;
-                min-height: 32px;
-            }
-            QPushButton:hover {
-                background-color: #e53935;
-            }
-        """)
-        forget_btn.clicked.connect(self._forget_node)
-        row2.addWidget(forget_btn)
+        # Logs button (blue - primary)
+        if self.on_logs:
+            logs_btn = create_button("Logs", "primary", self.on_logs)
+            button_layout.addWidget(logs_btn)
         
-        button_layout.addLayout(row2)
+        button_layout.addStretch()
+        
+        # Close button (gray - dismissive, right side)
+        close_btn = create_close_button(self.close)
+        button_layout.addWidget(close_btn)
         
         parent_layout.addWidget(button_frame)
     

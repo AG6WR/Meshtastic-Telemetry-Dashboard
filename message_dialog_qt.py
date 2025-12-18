@@ -23,6 +23,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QColor, QPalette
 
+from qt_styles import create_button, create_send_button, create_cancel_button, COLORS, get_font
+
 logger = logging.getLogger(__name__)
 
 # Meshtastic maximum payload length is 233 bytes
@@ -168,36 +170,10 @@ class MessageDialogQt(QDialog):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         
-        cancel_btn = QPushButton("Cancel")
-        cancel_btn.setMinimumSize(80, 32)
-        cancel_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #424242;
-                color: white;
-                border: none;
-                padding: 8px 16px;
-            }
-            QPushButton:hover {
-                background-color: #616161;
-            }
-        """)
-        cancel_btn.clicked.connect(self._cancel)
+        cancel_btn = create_cancel_button(self._cancel)
         button_layout.addWidget(cancel_btn)
         
-        send_btn = QPushButton("Send")
-        send_btn.setMinimumSize(80, 32)
-        send_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {self.colors['fg_good']};
-                color: white;
-                border: none;
-                padding: 8px 16px;
-            }}
-            QPushButton:hover {{
-                background-color: #2E7D32;
-            }}
-        """)
-        send_btn.clicked.connect(self._send_message)
+        send_btn = create_send_button(self._send_message)
         button_layout.addWidget(send_btn)
         
         layout.addLayout(button_layout)

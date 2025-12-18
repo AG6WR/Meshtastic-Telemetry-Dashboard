@@ -1,11 +1,90 @@
 # Meshtastic Telemetry Dashboard - Design Architecture
 
 ## Version History
+- **v1.3.0** (2025-12-17): Qt/PySide6 UI port - all dialogs and main dashboard ported
+- **v1.2.x** (2025-12): Messaging feature, virtual keyboard for Wayland
 - **v1.0.9** (2025-11-17): Documentation improvements, alert threshold UI enhancement, code comment clarification
 - **v1.0.8** (2025-11-16): Offline threshold fix, preloaded packet handling, forget node feature, plotting improvements
 - **v1.0.7a** (2025-11-15): Card view flash mechanism, table feature parity
 - **v1.0.6** (2025-11-14): Grid layout implementation
 - **v1.0.0** (2025-11-02): Initial release
+
+---
+
+## Qt/PySide6 UI Design (v1.3.0)
+
+### Target Display
+- **Hardware:** Raspberry Pi 10" touchscreen
+- **Resolution:** 1280×720
+- **Compositor:** Wayland (better Qt support than Tkinter)
+
+### Centralized Styling (`qt_styles.py`)
+
+All Qt components share common styling defined in `qt_styles.py`:
+
+```python
+COLORS = {
+    'bg_dark': '#1e1e1e',       # Main background
+    'bg_card': '#2b2b2b',       # Card/frame background  
+    'bg_input': '#3c3c3c',      # Input field background
+    'fg_normal': '#e0e0e0',     # Primary text
+    'fg_secondary': '#a0a0a0',  # Secondary/label text
+    'fg_online': '#00e676',     # Online status (green)
+    'fg_offline': '#ff5252',    # Offline status (red)
+    'fg_warning': '#ffab40',    # Warning (orange)
+    'accent': '#0d47a1',        # Primary button blue
+}
+
+FONTS = {
+    'normal': QFont('Liberation Sans', 11),
+    'large': QFont('Liberation Sans', 14),
+    'title': QFont('Liberation Sans', 16, QFont.Weight.Bold),
+}
+```
+
+### Component Dimensions
+
+| Component | Dimension | Rationale |
+|-----------|-----------|----------|
+| Dashboard window | 1160×720 | Fits 1280px with margins |
+| Node card width | 368px | 3 cards fit in 1160px with gaps |
+| Card border | 2px | Visible but not heavy |
+| Button min-height | 32px | Touch-friendly |
+| Scrollbar width | 20px | Touch-friendly |
+| Right margin | 24px | Aligns controls with card edges |
+
+### Alert Configuration Dialog
+
+**6 Alert Types per Node:**
+1. Low Voltage (below threshold, e.g., 3.4V)
+2. High Voltage (above threshold, e.g., 4.3V)  
+3. Low Temperature (below threshold, e.g., 32°F)
+4. High Temperature (above threshold, e.g., 100°F)
+5. Motion Detected (any motion event)
+6. Node Offline (no packets for threshold minutes)
+
+**UI Layout:**
+- Per-node collapsible sections
+- 3×2 checkbox grid for alert types
+- Disabled checkboxes for nodes missing telemetry data
+- Clicking disabled checkbox shows info dialog
+- Enable All / Disable All utility buttons
+- Threshold values shown as notes under each checkbox
+
+### Button Placement Convention
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ [Enable All] [Disable All]          [Cancel] [Save]    │
+│ └── utility buttons ──┘              └── actions ──┘   │
+│        (left side)                     (right side)    │
+└─────────────────────────────────────────────────────────┘
+```
+
+- **Positive action** (Save, OK, Send): Far right
+- **Cancel**: Left of positive action
+- **Utility buttons**: Left side, separated from actions
+- **Destructive buttons**: Red styling, with confirmation dialogs
 
 ---
 

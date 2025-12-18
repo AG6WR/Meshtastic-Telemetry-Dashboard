@@ -36,7 +36,67 @@ This applies especially to:
 **Date Started:** 2025-11-17
 **Current Version:** v1.2.2b
 **Active Branch:** main (feature/messaging merged)
-**Last Updated:** 2025-12-14
+**Last Updated:** 2025-12-17
+
+---
+
+## 🖥️ Qt/PySide6 Port Status (2025-12-17)
+
+### Overview
+Porting all Tkinter UI components to PySide6 for better Wayland support and modern touchscreen experience on Raspberry Pi.
+
+### Completed Qt Components
+
+| File | Purpose | Status |
+|------|---------|--------|
+| `qt_styles.py` | Centralized styling (colors, fonts, button factory) | ✅ Complete |
+| `card_renderer_qt.py` | NodeCardQt widget for dashboard cards | ✅ Complete |
+| `dashboard_qt.py` | Main dashboard window (1160px width) | ✅ Complete |
+| `settings_dialog_qt.py` | Settings dialog with all tabs | ✅ Complete |
+| `message_dialog_qt.py` | Compose message dialog | ✅ Complete |
+| `node_detail_window_qt.py` | Node detail view with all sections | ✅ Complete |
+| `message_list_window_qt.py` | Message center (inbox/sent/archived) | ✅ Complete |
+| `node_alert_config_qt.py` | Per-node alert enable/disable dialog | ✅ Complete |
+
+### Pending Qt Components
+
+| File | Purpose | Status |
+|------|---------|--------|
+| `plotter_qt.py` | Matplotlib plotting dialog | 🔜 Next |
+| `virtual_keyboard_qt.py` | On-screen keyboard for touchscreen | ⏳ Pending |
+| `run_monitor_qt.py` | Qt entry point / launcher | ⏳ Pending |
+
+### Key Qt Design Decisions
+
+1. **Centralized Styling (`qt_styles.py`)**
+   - `COLORS` dict for all color constants
+   - `FONTS` dict for Liberation Sans at various sizes
+   - `create_button()` factory for consistent button styling
+   - `CHECKBOX_STYLE` for 14pt checkboxes with 20px indicators
+
+2. **Card Layout (`card_renderer_qt.py`)**
+   - 368px fixed width cards, 2px borders
+   - Environment row order: Temp | Pressure | Humidity
+   - Motion row shows when recent motion detected
+   - Click handler opens node detail window
+
+3. **Dashboard Layout (`dashboard_qt.py`)**
+   - 1160px window width for 1280px display
+   - 24px right margin on header/controls for alignment
+   - Responsive card grid reflows on resize
+   - Demo mode for UI testing without backend
+
+4. **Dialog Conventions**
+   - Positive action (Save/OK) on far right
+   - Cancel button to the left of positive action
+   - Utility buttons (Enable All, Disable All) on left side
+   - Disabled controls show info dialog when clicked
+
+5. **Alert Configuration (`node_alert_config_qt.py`)**
+   - 6 alert types: Low/High Voltage, Low/High Temp, Motion, Offline
+   - 3×2 checkbox grid per node
+   - Threshold notes shown under each checkbox
+   - Disabled checkboxes for missing telemetry data
 
 ---
 

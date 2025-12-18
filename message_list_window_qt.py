@@ -23,6 +23,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QCursor
 
+from qt_styles import create_button, create_close_button, create_cancel_button, COLORS, BUTTON_STYLES, get_font
+
 logger = logging.getLogger(__name__)
 
 
@@ -203,39 +205,21 @@ class MessageListWindowQt(QDialog):
         title_layout = QHBoxLayout(title_frame)
         title_layout.setContentsMargins(10, 6, 10, 6)
         
-        # Title
+        # Compose button (left side - additive action)
+        compose_btn = create_button("Compose", "success", self._on_compose)
+        title_layout.addWidget(compose_btn)
+        
+        title_layout.addStretch()
+        
+        # Title (center)
         title_label = QLabel("Message Center")
         title_label.setStyleSheet(f"color: {self.colors['fg_normal']}; font-size: 14pt; font-weight: bold;")
         title_layout.addWidget(title_label)
         
         title_layout.addStretch()
         
-        # Compose button
-        compose_btn = QPushButton("Compose")
-        compose_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2e7d32;
-                color: white;
-            }
-            QPushButton:hover {
-                background-color: #388e3c;
-            }
-        """)
-        compose_btn.clicked.connect(self._on_compose)
-        title_layout.addWidget(compose_btn)
-        
-        # Close button
-        close_btn = QPushButton("Close")
-        close_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #424242;
-                color: white;
-            }
-            QPushButton:hover {
-                background-color: #616161;
-            }
-        """)
-        close_btn.clicked.connect(self.close)
+        # Close button (right side - dismissive action)
+        close_btn = create_close_button(self.close)
         title_layout.addWidget(close_btn)
         
         parent_layout.addWidget(title_frame)
@@ -282,17 +266,7 @@ class MessageListWindowQt(QDialog):
         action_layout.addStretch()
         
         # Delete button (separated from other actions)
-        delete_btn = QPushButton("Delete")
-        delete_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #c62828;
-                color: white;
-            }
-            QPushButton:hover {
-                background-color: #e53935;
-            }
-        """)
-        delete_btn.clicked.connect(self._on_delete_selected)
+        delete_btn = create_button("Delete", "danger", self._on_delete_selected)
         action_layout.addWidget(delete_btn)
         
         # Spacer between delete and other actions
@@ -301,45 +275,15 @@ class MessageListWindowQt(QDialog):
         action_layout.addWidget(spacer)
         
         # Archive button
-        archive_btn = QPushButton("Archive")
-        archive_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f57c00;
-                color: white;
-            }
-            QPushButton:hover {
-                background-color: #ff9800;
-            }
-        """)
-        archive_btn.clicked.connect(self._on_archive_selected)
+        archive_btn = create_button("Archive", "warning", self._on_archive_selected)
         action_layout.addWidget(archive_btn)
         
         # Reply button
-        reply_btn = QPushButton("Reply")
-        reply_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2e7d32;
-                color: white;
-            }
-            QPushButton:hover {
-                background-color: #388e3c;
-            }
-        """)
-        reply_btn.clicked.connect(self._on_reply_selected)
+        reply_btn = create_button("Reply", "success", self._on_reply_selected)
         action_layout.addWidget(reply_btn)
         
         # View button (rightmost - primary action)
-        view_btn = QPushButton("View")
-        view_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {self.colors['button_bg']};
-                color: white;
-            }}
-            QPushButton:hover {{
-                background-color: #1565c0;
-            }}
-        """)
-        view_btn.clicked.connect(self._on_view_selected)
+        view_btn = create_button("View", "primary", self._on_view_selected)
         action_layout.addWidget(view_btn)
         
         parent_layout.addWidget(action_frame)
@@ -761,33 +705,8 @@ class MessageListWindowQt(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
         
-        compose_btn = QPushButton("Compose")
-        compose_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2e7d32;
-                color: white;
-                min-width: 80px;
-                min-height: 32px;
-                padding: 8px 16px;
-            }
-            QPushButton:hover {
-                background-color: #388e3c;
-            }
-        """)
-        
-        cancel_btn = QPushButton("Cancel")
-        cancel_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #424242;
-                color: white;
-                min-width: 80px;
-                min-height: 32px;
-                padding: 8px 16px;
-            }
-            QPushButton:hover {
-                background-color: #616161;
-            }
-        """)
+        compose_btn = create_button("Compose", "success")
+        cancel_btn = create_cancel_button()
         
         def on_compose_click():
             selected_nodes = [(nid, nodes_data[nid].get('Node LongName', nid))

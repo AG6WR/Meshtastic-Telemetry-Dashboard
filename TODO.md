@@ -48,6 +48,21 @@
 
 ### Code Quality & Technical Debt
 
+#### Qt Port (In Progress)
+- [x] `settings_dialog_qt.py` - Settings dialog ported to PySide6
+- [x] `message_dialog_qt.py` - Message compose dialog ported to PySide6
+- [ ] `node_detail_window_qt.py` - Node detail window (in progress)
+- [ ] `message_list_window_qt.py` - Message list window
+- [ ] `dashboard_qt.py` - Main dashboard window
+
+#### Qt Virtual Keyboard (Open Issue)
+- [ ] **Test Qt native virtual keyboard on Pi**
+  - Tkinter version uses custom `virtual_keyboard.py` for Wayland compatibility
+  - Qt should support `QT_IM_MODULE=qtvirtualkeyboard` environment variable
+  - May need `qt6-virtualkeyboard` package installed on Pi
+  - Test when deploying Qt version to Pi - if native doesn't work, port custom keyboard to Qt
+  - Affects: `message_dialog_qt.py` and any other text input dialogs
+
 #### Existing TODOs in Codebase
 - [ ] Implement external battery update (dashboard.py:2808)
 - [ ] Refactor card field registry system (dashboard.py:3064) - See CARD_REGISTRY_DESIGN.md
