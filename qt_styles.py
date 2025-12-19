@@ -127,12 +127,23 @@ COLORS = {
 # DARK THEME WIDGET STYLES
 # =============================================================================
 
-# Checkbox style - set text color for dark theme
+# Checkbox style - set text color and indicator styling for dark theme
 # The fix for checkbox visibility in message center is using #id selectors
 # on parent widgets instead of raw background-color properties
 CHECKBOX_STYLE = """
     QCheckBox {
         color: #e0e0e0;
+    }
+    QCheckBox::indicator {
+        width: 18px;
+        height: 18px;
+        background-color: #3c3c3c;
+        border: 1px solid #888888;
+        border-radius: 3px;
+    }
+    QCheckBox::indicator:checked {
+        background-color: #4a90d9;
+        border: 1px solid #4a90d9;
     }
 """
 

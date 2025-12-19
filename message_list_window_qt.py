@@ -149,11 +149,8 @@ class MessageListWindowQt(QDialog):
         
         title_layout.addStretch()
         
-        # Close button (right side - BRIGHT ORANGE to confirm correct file is loaded)
-        close_btn = QPushButton("Close")
-        close_btn.setFixedSize(100, 40)
-        close_btn.setStyleSheet("background-color: #FF6600; color: white; font-weight: bold; border-radius: 5px;")
-        close_btn.clicked.connect(self.close)
+        # Close button (right side - standard neutral/grey style)
+        close_btn = create_close_button(self.close)
         title_layout.addWidget(close_btn)
         
         parent_layout.addWidget(title_frame)

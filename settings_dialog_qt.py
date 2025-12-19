@@ -323,15 +323,15 @@ class SettingsDialogQt(QDialog):
         
         # Telemetry field checkboxes
         telemetry_fields = [
-            ("voltage", "⚡ Voltage", "Show battery/power voltage readings"),
-            ("temperature", "🌡 Temperature", "Show temperature sensor readings"),
-            ("humidity", "💧 Humidity", "Show humidity sensor readings"),
-            ("pressure", "🌪 Pressure", "Show atmospheric pressure readings"),
-            ("battery", "🔋 Battery", "Show battery percentage levels"),
-            ("snr", "📶 SNR", "Show signal-to-noise ratio"),
-            ("channel_utilization", "📻 Channel Usage", "Show mesh channel utilization"),
-            ("current", "⚡ Current", "Show current consumption readings"),
-            ("uptime", "⏰ Uptime", "Show device uptime information")
+            ("voltage", "Voltage", "Show battery/power voltage readings"),
+            ("temperature", "Temperature", "Show temperature sensor readings"),
+            ("humidity", "Humidity", "Show humidity sensor readings"),
+            ("pressure", "Pressure", "Show atmospheric pressure readings"),
+            ("battery", "Battery", "Show battery percentage levels"),
+            ("snr", "SNR", "Show signal-to-noise ratio"),
+            ("channel_utilization", "Channel Usage", "Show mesh channel utilization"),
+            ("current", "Current", "Show current consumption readings"),
+            ("uptime", "Uptime", "Show device uptime information")
         ]
         
         for field_key, display_name, description in telemetry_fields:
