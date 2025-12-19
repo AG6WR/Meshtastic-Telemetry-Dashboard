@@ -27,7 +27,7 @@ from datetime import datetime
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QScrollArea, QGridLayout, QFrame, QMenu,
-    QSizePolicy, QSpacerItem
+    QSizePolicy, QSpacerItem, QMessageBox
 )
 from PySide6.QtCore import Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QFont, QAction
@@ -180,7 +180,7 @@ class DashboardQt(QMainWindow):
         controls_layout.addWidget(self.btn_refresh)
         
         # Messages button
-        self.btn_messages = create_button("Messages", "primary")
+        self.btn_messages = create_button("Messages", "success")
         self.btn_messages.clicked.connect(self._open_messages)
         controls_layout.addWidget(self.btn_messages)
         
@@ -460,11 +460,25 @@ class DashboardQt(QMainWindow):
         try:
             from node_detail_window_qt import NodeDetailWindowQt
             node_data = self.last_node_data.get(node_id, {})
+            
+            # Create callbacks for buttons
+            def on_logs():
+                self._open_logs_for(node_id)
+            
+            def on_csv():
+                self._open_csv_for(node_id)
+            
+            def on_plot():
+                self._show_plot_for(node_id)
+            
             detail_window = NodeDetailWindowQt(
+                parent=self,
                 node_id=node_id,
                 node_data=node_data,
-                config_manager=self.config_manager,
-                parent=self
+                on_logs=on_logs,
+                on_csv=on_csv,
+                on_plot=on_plot,
+                data_collector=self.data_collector
             )
             detail_window.show()
         except Exception as e:
@@ -531,8 +545,8 @@ class DashboardQt(QMainWindow):
         try:
             from message_list_window_qt import MessageListWindowQt
             window = MessageListWindowQt(
-                filter_node_id=node_id,
-                parent=self
+                parent=self,
+                message_manager=self.message_manager,
             )
             window.show()
         except Exception as e:
@@ -541,7 +555,63 @@ class DashboardQt(QMainWindow):
     def _show_plot_for(self, node_id: str):
         """Show plot for specific node"""
         logger.info(f"Show plot for {node_id}")
-        # TODO: Implement Qt plotter
+        try:
+            from plotter_qt import TelemetryPlotterQt
+            plotter = TelemetryPlotterQt(self, self.config_manager)
+            plotter.show_plot_dialog(preselect_node_id=node_id)
+        except Exception as e:
+            logger.error(f"Failed to show plot: {e}")
+    
+    def _open_logs_for(self, node_id: str):
+        """Open logs folder for specific node"""
+        import os
+        import subprocess
+        
+        log_dir = 'logs'
+        if self.config_manager:
+            log_dir = self.config_manager.get('data.log_directory', 'logs')
+        
+        clean_id = node_id[1:] if node_id.startswith('!') else node_id
+        node_log_path = os.path.join(log_dir, clean_id)
+        
+        if os.path.exists(node_log_path):
+            self._open_path(node_log_path)
+        else:
+            QMessageBox.information(self, "No Logs", f"No log directory found for {node_id}")
+    
+    def _open_csv_for(self, node_id: str):
+        """Open today's CSV file for specific node"""
+        import os
+        from datetime import datetime
+        
+        log_dir = 'logs'
+        if self.config_manager:
+            log_dir = self.config_manager.get('data.log_directory', 'logs')
+        
+        clean_id = node_id[1:] if node_id.startswith('!') else node_id
+        today = datetime.now()
+        csv_path = os.path.join(log_dir, clean_id, today.strftime('%Y'), today.strftime('%Y%m%d') + '.csv')
+        
+        if os.path.exists(csv_path):
+            self._open_path(csv_path)
+        else:
+            QMessageBox.information(self, "No CSV", f"No CSV file found for today for {node_id}")
+    
+    def _open_path(self, path: str):
+        """Open file or folder in system default application"""
+        import os
+        import subprocess
+        import sys
+        
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(path)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", path])
+            else:
+                subprocess.Popen(["xdg-open", path])
+        except Exception as e:
+            QMessageBox.critical(self, "Open Error", f"Could not open {path}: {e}")
     
     # =========================================================================
     # Button Handlers
@@ -561,13 +631,24 @@ class DashboardQt(QMainWindow):
     
     def _force_refresh(self):
         """Force immediate refresh"""
+        logger.info("Manual refresh triggered")
+        # Clear cache to force full update
+        self.last_node_data.clear()
         self._refresh_display()
+        # Update status to show refresh happened
+        now = datetime.now()
+        self.status_label.setText(
+            f"Manual refresh: {now.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
     
     def _open_messages(self):
         """Open message list window"""
         try:
             from message_list_window_qt import MessageListWindowQt
-            window = MessageListWindowQt(parent=self)
+            window = MessageListWindowQt(
+                parent=self,
+                message_manager=self.message_manager
+            )
             window.show()
         except Exception as e:
             logger.error(f"Failed to open messages: {e}")
@@ -575,12 +656,41 @@ class DashboardQt(QMainWindow):
     def _show_plot(self):
         """Show telemetry plot"""
         logger.info("Show plot")
-        # TODO: Implement Qt plotter
+        try:
+            from plotter_qt import TelemetryPlotterQt
+            plotter = TelemetryPlotterQt(self, self.config_manager)
+            plotter.show_plot_dialog()
+        except Exception as e:
+            logger.error(f"Failed to show plot: {e}")
     
     def _open_alerts(self):
         """Open alerts configuration"""
         logger.info("Open alerts")
-        # TODO: Implement Qt alerts dialog
+        try:
+            from node_alert_config_qt import NodeAlertConfigDialogQt
+            
+            # Get current nodes data
+            nodes_data = {}
+            if self.data_collector:
+                nodes_data = self.data_collector.get_nodes_data()
+            
+            if not nodes_data:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.information(
+                    self, "No Nodes",
+                    "No nodes available to configure alerts for.\n\n"
+                    "Nodes will appear here once they are discovered on the mesh."
+                )
+                return
+            
+            dialog = NodeAlertConfigDialogQt(
+                nodes_data=nodes_data,
+                config_manager=self.config_manager,
+                parent=self
+            )
+            dialog.exec()
+        except Exception as e:
+            logger.error(f"Failed to open alerts dialog: {e}")
     
     def _toggle_fullscreen(self):
         """Toggle fullscreen mode"""

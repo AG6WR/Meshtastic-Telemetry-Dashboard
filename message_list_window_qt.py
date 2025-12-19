@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QCursor
 
-from qt_styles import create_button, create_close_button, create_cancel_button, COLORS, BUTTON_STYLES, get_font
+from qt_styles import create_button, create_close_button, create_cancel_button, COLORS, BUTTON_STYLES, get_font, TAB_STYLE, CHECKBOX_STYLE
 
 logger = logging.getLogger(__name__)
 
@@ -91,85 +91,16 @@ class MessageListWindowQt(QDialog):
             self.move(parent_geo.x() + 50, parent_geo.y() + 30)
     
     def _apply_dark_theme(self):
-        """Apply dark theme styling"""
+        """Apply dark theme styling - match settings_dialog_qt exactly"""
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {self.colors['bg_main']};
             }}
             QLabel {{
                 color: {self.colors['fg_normal']};
-                background: transparent;
             }}
-            QFrame {{
-                background-color: {self.colors['bg_frame']};
-                border-radius: 4px;
-            }}
-            QScrollArea {{
-                background-color: {self.colors['bg_main']};
-                border: none;
-            }}
-            QScrollBar:vertical {{
-                background-color: {self.colors['bg_frame']};
-                width: 20px;
-                border-radius: 4px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: #555555;
-                border-radius: 4px;
-                min-height: 30px;
-            }}
-            QScrollBar::handle:vertical:hover {{
-                background-color: #777777;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
-            QTabWidget::pane {{
-                border: none;
-                background-color: {self.colors['bg_main']};
-            }}
-            QTabBar::tab {{
-                background-color: {self.colors['bg_main']};
-                color: {self.colors['fg_normal']};
-                padding: 8px 20px;
-                font-size: 12pt;
-                border: none;
-                border-top-left-radius: 4px;
-                border-top-right-radius: 4px;
-            }}
-            QTabBar::tab:selected {{
-                background-color: {self.colors['bg_frame']};
-            }}
-            QTabBar::tab:hover {{
-                background-color: #3b3b3b;
-            }}
-            QCheckBox {{
-                color: {self.colors['fg_normal']};
-                spacing: 8px;
-                background-color: transparent;
-            }}
-            QCheckBox::indicator {{
-                width: 20px;
-                height: 20px;
-            }}
-            QCheckBox::indicator:unchecked {{
-                border: 2px solid #555555;
-                background-color: {self.colors['bg_frame']};
-                border-radius: 3px;
-            }}
-            QCheckBox::indicator:checked {{
-                border: 2px solid {self.colors['accent']};
-                background-color: {self.colors['accent']};
-                border-radius: 3px;
-            }}
-            QPushButton {{
-                padding: 8px 16px;
-                border-radius: 4px;
-                font-size: 12pt;
-                border: none;
-                min-width: 80px;
-                min-height: 32px;
-            }}
+            {CHECKBOX_STYLE}
+            {TAB_STYLE}
         """)
     
     def _create_ui(self):
@@ -218,8 +149,11 @@ class MessageListWindowQt(QDialog):
         
         title_layout.addStretch()
         
-        # Close button (right side - dismissive action)
-        close_btn = create_close_button(self.close)
+        # Close button (right side - BRIGHT ORANGE to confirm correct file is loaded)
+        close_btn = QPushButton("Close")
+        close_btn.setFixedSize(100, 40)
+        close_btn.setStyleSheet("background-color: #FF6600; color: white; font-weight: bold; border-radius: 5px;")
+        close_btn.clicked.connect(self.close)
         title_layout.addWidget(close_btn)
         
         parent_layout.addWidget(title_frame)
@@ -240,7 +174,9 @@ class MessageListWindowQt(QDialog):
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         
         content_widget = QWidget()
-        content_widget.setStyleSheet(f"background-color: {self.colors['bg_main']};")
+        content_widget.setObjectName("tabContent")
+        # Use specific selector to avoid cascading to child widgets (breaks checkboxes)
+        content_widget.setStyleSheet(f"QWidget#tabContent {{ background-color: {self.colors['bg_main']}; }}")
         content_layout = QVBoxLayout(content_widget)
         content_layout.setContentsMargins(4, 4, 4, 4)
         content_layout.setSpacing(4)
@@ -365,40 +301,15 @@ class MessageListWindowQt(QDialog):
         
         # Create row frame
         row_frame = QFrame()
-        row_frame.setStyleSheet(f"""
-            QFrame {{
-                background-color: {self.colors['bg_frame']};
-                border-radius: 4px;
-            }}
-            QFrame:hover {{
-                background-color: #3b3b3b;
-            }}
-        """)
+        row_frame.setObjectName("messageRow")
+        # TESTING: No stylesheet on row frame
         row_frame.setCursor(QCursor(Qt.PointingHandCursor))
         row_layout = QHBoxLayout(row_frame)
         row_layout.setContentsMargins(8, 6, 8, 6)
         row_layout.setSpacing(10)
         
-        # Checkbox with explicit background to prevent shadow artifact
+        # Checkbox for selection - no styling, use Qt defaults
         checkbox = QCheckBox()
-        checkbox.setStyleSheet(f"""
-            QCheckBox {{
-                background-color: transparent;
-                padding: 0px;
-                margin: 0px;
-            }}
-            QCheckBox::indicator {{
-                width: 20px;
-                height: 20px;
-                background-color: {self.colors['bg_frame']};
-                border: 2px solid #555555;
-                border-radius: 3px;
-            }}
-            QCheckBox::indicator:checked {{
-                background-color: {self.colors['accent']};
-                border: 2px solid {self.colors['accent']};
-            }}
-        """)
         checkbox.stateChanged.connect(self._update_selection_count)
         row_layout.addWidget(checkbox)
         
@@ -660,15 +571,6 @@ class MessageListWindowQt(QDialog):
                 background-color: #555555;
                 min-height: 30px;
             }}
-            QCheckBox {{
-                color: {self.colors['fg_normal']};
-                font-size: 14pt;
-                padding: 8px;
-            }}
-            QCheckBox::indicator {{
-                width: 20px;
-                height: 20px;
-            }}
         """)
         
         layout = QVBoxLayout(selector)
@@ -693,7 +595,6 @@ class MessageListWindowQt(QDialog):
             display_name = f"{node_name} ({node_id})"
             
             cb = QCheckBox(display_name)
-            cb.setStyleSheet(f"color: {self.colors['fg_normal']};")
             scroll_layout.addWidget(cb)
             node_checkboxes[node_id] = cb
         

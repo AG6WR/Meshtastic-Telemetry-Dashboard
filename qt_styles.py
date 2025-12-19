@@ -124,6 +124,69 @@ COLORS = {
 
 
 # =============================================================================
+# DARK THEME WIDGET STYLES
+# =============================================================================
+
+# Checkbox style - use Qt defaults (no customization)
+# The fix for checkbox visibility in message center is using #id selectors
+# on parent widgets instead of raw background-color properties
+CHECKBOX_STYLE = ""
+
+# Radio button style - use Qt defaults (no customization)
+RADIOBUTTON_STYLE = ""
+
+# Tab widget style - minimal dark theme colors
+TAB_STYLE = """
+    QTabWidget::pane {
+        border: 1px solid #555555;
+        background-color: #2b2b2b;
+    }
+    QTabWidget > QWidget {
+        background-color: #2b2b2b;
+    }
+    QTabBar::tab {
+        background-color: #3c3c3c;
+        color: #a0a0a0;
+        padding: 8px 16px;
+        margin-right: 2px;
+    }
+    QTabBar::tab:selected {
+        background-color: #2b2b2b;
+        color: #ffffff;
+    }
+    QTabBar::tab:hover:!selected {
+        background-color: #4a4a4a;
+    }
+"""
+
+# GroupBox style for dark theme
+GROUPBOX_STYLE = """
+    QGroupBox {
+        color: #e0e0e0;
+        font-size: 11pt;
+        font-weight: bold;
+        border: 1px solid #555555;
+        border-radius: 4px;
+        margin-top: 8px;
+        padding-top: 8px;
+    }
+    QGroupBox::title {
+        subcontrol-origin: margin;
+        left: 10px;
+        padding: 0 5px;
+    }
+"""
+
+# Combined dark theme styles for common widgets
+DARK_THEME_STYLES = f"""
+    {CHECKBOX_STYLE}
+    {RADIOBUTTON_STYLE}
+    {TAB_STYLE}
+    {GROUPBOX_STYLE}
+"""
+
+
+# =============================================================================
 # BUTTON STYLES
 # =============================================================================
 

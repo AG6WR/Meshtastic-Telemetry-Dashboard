@@ -1,6 +1,7 @@
 # Meshtastic Telemetry Dashboard - Design Architecture
 
 ## Version History
+- **v1.3.1** (2025-12-18): Fixed checkbox rendering in Message Center, connected Alerts button
 - **v1.3.0** (2025-12-17): Qt/PySide6 UI port - all dialogs and main dashboard ported
 - **v1.2.x** (2025-12): Messaging feature, virtual keyboard for Wayland
 - **v1.0.9** (2025-11-17): Documentation improvements, alert threshold UI enhancement, code comment clarification
@@ -41,6 +42,35 @@ FONTS = {
     'title': QFont('Liberation Sans', 16, QFont.Weight.Bold),
 }
 ```
+
+### Qt Stylesheet Gotchas
+
+#### Raw Properties vs Selectors (v1.3.1 Fix)
+
+**Problem:** Calling `widget.setStyleSheet("background-color: #1e1e1e;")` without a selector
+causes the style to cascade to ALL child widgets, breaking native Qt widget rendering
+(checkboxes, radio buttons, etc.).
+
+**Symptom:** Checkboxes appear as solid colored boxes without checkmarks.
+
+**Wrong:**
+```python
+content_widget.setStyleSheet(f"background-color: {COLORS['bg_main']};")
+```
+
+**Correct:**
+```python
+content_widget.setObjectName("tabContent")
+content_widget.setStyleSheet(f"QWidget#tabContent {{ background-color: {COLORS['bg_main']}; }}")
+```
+
+**Rule:** Always use a selector (`QWidget#id`, `QFrame#id`, etc.) when setting background colors
+on container widgets that have interactive children. The ID selector limits the style to that
+specific widget and prevents cascade to children.
+
+**Why it works in Settings Dialog:** Uses dialog-level stylesheets with proper selectors like
+`QDialog { ... }` and `QTabWidget > QWidget { ... }` (direct child selector), never raw
+properties on checkbox parent containers.
 
 ### Component Dimensions
 
