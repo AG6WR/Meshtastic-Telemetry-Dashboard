@@ -156,6 +156,8 @@ class PlotConfigDialog(QDialog):
         scroll.setFixedHeight(150)
         
         scroll_widget = QWidget()
+        scroll_widget.setObjectName("nodeScrollContent")
+        scroll_widget.setStyleSheet(f"QWidget#nodeScrollContent {{ background-color: {COLORS['bg_frame']}; }}")
         scroll_layout = QVBoxLayout(scroll_widget)
         scroll_layout.setSpacing(2)
         scroll_layout.setContentsMargins(5, 5, 5, 5)
@@ -176,18 +178,17 @@ class PlotConfigDialog(QDialog):
         
         layout.addWidget(node_group)
         
-        # Buttons
+        # Buttons - standard layout: stretch, then action buttons, Cancel on far right
         button_layout = QHBoxLayout()
         button_layout.addStretch()
+        
+        plot_btn = create_button("Plot", "success")
+        plot_btn.clicked.connect(self._on_plot)
+        button_layout.addWidget(plot_btn)
         
         cancel_btn = create_button("Cancel", "secondary")
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
-        
-        plot_btn = create_button("Plot", "primary")
-        plot_btn.setStyleSheet(plot_btn.styleSheet() + "background-color: #2e7d32;")
-        plot_btn.clicked.connect(self._on_plot)
-        button_layout.addWidget(plot_btn)
         
         layout.addLayout(button_layout)
     

@@ -174,6 +174,8 @@ class NodeAlertConfigDialogQt(QDialog):
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         
         container = QWidget()
+        container.setObjectName("nodeAlertContainer")
+        container.setStyleSheet(f"QWidget#nodeAlertContainer {{ background-color: {COLORS['bg_main']}; }}")
         container_layout = QVBoxLayout(container)
         container_layout.setContentsMargins(5, 5, 5, 5)
         container_layout.setSpacing(10)
@@ -200,6 +202,7 @@ class NodeAlertConfigDialogQt(QDialog):
         
         # Checkboxes in a grid (3 columns x 2 rows)
         checkbox_widget = QWidget()
+        checkbox_widget.setStyleSheet(f"background-color: transparent;")
         checkbox_layout = QGridLayout(checkbox_widget)
         checkbox_layout.setContentsMargins(0, 0, 0, 0)
         checkbox_layout.setHorizontalSpacing(15)
@@ -267,13 +270,13 @@ class NodeAlertConfigDialogQt(QDialog):
         
         button_layout.addStretch()
         
-        # Right side - Cancel then Save (positive action on far right)
-        btn_cancel = create_cancel_button(self.reject)
-        button_layout.addWidget(btn_cancel)
-        
+        # Right side - Save then Cancel (Cancel on far right per UI standard)
         btn_save = create_ok_button(self._save_settings)
         btn_save.setText("Save")
         button_layout.addWidget(btn_save)
+        
+        btn_cancel = create_cancel_button(self.reject)
+        button_layout.addWidget(btn_cancel)
         
         parent_layout.addWidget(button_widget)
     
