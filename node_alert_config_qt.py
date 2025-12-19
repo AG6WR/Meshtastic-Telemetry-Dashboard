@@ -225,7 +225,7 @@ class NodeAlertConfigDialogQt(QDialog):
             
             # Checkbox
             checkbox = QCheckBox(label)
-            checkbox.setChecked(True)  # Default enabled
+            checkbox.setChecked(has_data)  # Only check if data available
             checkbox.setEnabled(has_data)
             
             # For disabled checkboxes, install event filter to show dialog on click

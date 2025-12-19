@@ -167,6 +167,7 @@ class PlotConfigDialog(QDialog):
             
             display_name = f"{node_info['long_name']} ({node_info['short_name']})"
             cb = QCheckBox(display_name)
+            cb.setStyleSheet("background-color: transparent;")
             cb.setChecked(should_select)
             cb.setProperty("node_id", node_id)
             self.node_checkboxes[node_id] = cb
