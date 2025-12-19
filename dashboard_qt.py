@@ -625,9 +625,18 @@ class DashboardQt(QMainWindow):
                 config_manager=self.config_manager,
                 parent=self
             )
+            # Connect to settings_changed signal for immediate refresh on Apply
+            dialog.settings_changed.connect(self._on_settings_changed)
             dialog.exec()
         except Exception as e:
             logger.error(f"Failed to open settings: {e}")
+    
+    def _on_settings_changed(self):
+        """Handle settings changed signal - refresh display immediately"""
+        logger.info("Settings changed, refreshing display")
+        # Clear cache to force full update with new settings
+        self.last_node_data.clear()
+        self._refresh_display()
     
     def _force_refresh(self):
         """Force immediate refresh"""

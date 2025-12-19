@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QPushButton, QRadioButton, QButtonGroup, QGridLayout,
     QFrame, QMessageBox, QSizePolicy
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 
 from config_manager import ConfigManager
 from qt_styles import (create_button, create_ok_button, create_apply_button, 
@@ -34,6 +34,9 @@ logger = logging.getLogger(__name__)
 
 class SettingsDialogQt(QDialog):
     """Qt-based configuration dialog for dashboard settings"""
+    
+    # Signal emitted when settings are applied (for immediate refresh)
+    settings_changed = Signal()
     
     def __init__(self, parent, config_manager: ConfigManager):
         super().__init__(parent)
@@ -117,6 +120,24 @@ class SettingsDialogQt(QDialog):
                 padding: 4px 8px;
                 font-size: 11pt;
             }}
+            QComboBox QAbstractItemView {{
+                background-color: {COLORS['bg_input']};
+                color: {COLORS['fg_normal']};
+                selection-background-color: #404040;
+                selection-color: {COLORS['fg_normal']};
+                border: 1px solid #555555;
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                background-color: {COLORS['bg_input']};
+            }}
+            QComboBox::down-arrow {{
+                image: none;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 6px solid {COLORS['fg_secondary']};
+                margin-right: 8px;
+            }}
             {CHECKBOX_STYLE}
             {RADIOBUTTON_STYLE}
             {TAB_STYLE}
@@ -160,10 +181,6 @@ class SettingsDialogQt(QDialog):
         # Button frame
         button_layout = QHBoxLayout()
         button_layout.setContentsMargins(0, 10, 0, 0)
-        
-        # Test Email button (left side - uses orange/warning color)
-        test_email_btn = create_button("Test Email", "warning", self.test_email)
-        button_layout.addWidget(test_email_btn)
         
         button_layout.addStretch()
         
@@ -464,6 +481,10 @@ class SettingsDialogQt(QDialog):
         self.use_tls = QCheckBox("Use TLS encryption")
         smtp_layout.addWidget(self.use_tls, 6, 1)
         
+        # Test Email button in SMTP group
+        test_email_btn = create_button("Test Email", "warning", self.test_email)
+        smtp_layout.addWidget(test_email_btn, 7, 1)
+        
         smtp_layout.setColumnStretch(1, 1)
         layout.addWidget(smtp_group)
         
@@ -761,7 +782,9 @@ class SettingsDialogQt(QDialog):
     
     def apply(self):
         """Apply button handler"""
-        self.save_values()
+        if self.save_values():
+            # Emit signal to trigger dashboard refresh
+            self.settings_changed.emit()
     
     def cancel(self):
         """Cancel button handler"""

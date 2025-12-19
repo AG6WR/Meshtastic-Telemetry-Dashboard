@@ -105,6 +105,9 @@ class NodeCardQt(QFrame):
         # Widget references for updates
         self._widgets: Dict[str, QWidget] = {}
         
+        # Cache telemetry field visibility settings
+        self._telemetry_fields = self._get_telemetry_field_settings()
+        
         # Colors
         self.colors = COLORS.copy()
         self.colors['bg_local_node'] = '#1e3d1e'    # Dark green tint for home node
@@ -354,6 +357,38 @@ class NodeCardQt(QFrame):
     # Status/Data Helpers
     # =========================================================================
     
+    def _get_telemetry_field_settings(self) -> Dict[str, bool]:
+        """Get telemetry field visibility settings from config.
+        
+        Returns:
+            Dict mapping field keys to visibility (True = show, False = hide)
+        """
+        defaults = {
+            'voltage': True,
+            'temperature': True,
+            'humidity': True,
+            'pressure': True,
+            'battery': True,
+            'snr': True,
+            'channel_utilization': True,
+            'current': True,
+            'uptime': True
+        }
+        if self.config_manager:
+            return self.config_manager.get('dashboard.telemetry_fields', defaults)
+        return defaults
+    
+    def _is_field_enabled(self, field_key: str) -> bool:
+        """Check if a telemetry field should be displayed.
+        
+        Args:
+            field_key: The config key for the field (e.g., 'temperature', 'snr')
+            
+        Returns:
+            True if the field should be shown, False to hide it
+        """
+        return self._telemetry_fields.get(field_key, True)
+    
     def _get_status(self) -> Tuple[str, str]:
         """Get node status and color based on last heard time"""
         current_time = time.time()
@@ -454,7 +489,7 @@ class NodeCardQt(QFrame):
         icp_bar = self._widgets.get('icp_batt_bar')
         if icp_bar:
             ch3_voltage = self.node_data.get('Ch3 Voltage')
-            if ch3_voltage is not None and self.data_collector:
+            if ch3_voltage is not None and self.data_collector and self._is_field_enabled('voltage'):
                 battery_pct = self.data_collector.voltage_to_percentage(ch3_voltage)
                 if battery_pct is not None:
                     icp_bar.set_value(battery_pct, stale=is_stale)
@@ -468,7 +503,7 @@ class NodeCardQt(QFrame):
         current_label = self._widgets.get('current_label')
         if current_label:
             ch3_current = self.node_data.get('Ch3 Current')
-            if ch3_current is not None:
+            if ch3_current is not None and self._is_field_enabled('current'):
                 if ch3_current > 0:
                     current_text = f"+{ch3_current:.0f}mA ↑"
                     current_color = self.colors['fg_good']
@@ -489,7 +524,7 @@ class NodeCardQt(QFrame):
         node_bar = self._widgets.get('node_batt_bar')
         if node_bar:
             battery_level = self.node_data.get('Battery Level')
-            if battery_level is not None:
+            if battery_level is not None and self._is_field_enabled('battery'):
                 node_bar.set_value(battery_level, stale=is_stale)
             else:
                 node_bar.set_value(0, stale=True)
@@ -503,34 +538,31 @@ class NodeCardQt(QFrame):
         snr_bar = self._widgets.get('snr_bar')
         if snr_bar:
             snr = self.node_data.get('SNR')
-            if snr is not None:
+            if snr is not None and self._is_field_enabled('snr'):
                 snr_bar.set_value(snr, stale=is_stale)
-                snr_bar.setVisible(True)
             else:
                 snr_bar.set_value(0, stale=True)
-                snr_bar.setVisible(True)  # Keep visible to preserve column position
+            snr_bar.setVisible(True)  # Keep visible to preserve column position
         
         # Channel Utilization bar
         ch_bar = self._widgets.get('channel_util_bar')
         if ch_bar:
             channel_util = self.node_data.get('Channel Utilization')
-            if channel_util is not None:
+            if channel_util is not None and self._is_field_enabled('channel_utilization'):
                 ch_bar.set_value(channel_util, stale=is_stale)
-                ch_bar.setVisible(True)
             else:
                 ch_bar.set_value(0, stale=True)
-                ch_bar.setVisible(True)  # Keep visible to preserve column position
+            ch_bar.setVisible(True)  # Keep visible to preserve column position
         
-        # Air Utilization bar
+        # Air Utilization bar (uses same setting as channel_utilization)
         air_bar = self._widgets.get('air_util_bar')
         if air_bar:
             air_util = self.node_data.get('Air Utilization (TX)')
-            if air_util is not None:
+            if air_util is not None and self._is_field_enabled('channel_utilization'):
                 air_bar.set_value(air_util, stale=is_stale)
-                air_bar.setVisible(True)
             else:
                 air_bar.set_value(0, stale=True)
-                air_bar.setVisible(True)  # Keep visible to preserve column position
+            air_bar.setVisible(True)  # Keep visible to preserve column position
     
     def _update_environment_row(self):
         """Update Row 3: Temperature, Humidity, Pressure"""
@@ -541,7 +573,7 @@ class NodeCardQt(QFrame):
         temp_value_label = self._widgets.get('temp_value')
         if temp_value_label:
             temp = self.node_data.get('Temperature')
-            if temp is not None:
+            if temp is not None and self._is_field_enabled('temperature'):
                 temp_value, temp_unit, _ = convert_temperature(temp, self.config_manager)
                 temp_color = get_temperature_color(temp, self.colors, self.config_manager)
                 display_color = stale_color if is_stale else temp_color
@@ -554,7 +586,7 @@ class NodeCardQt(QFrame):
         hum_value_label = self._widgets.get('hum_value')
         if hum_value_label:
             humidity = self.node_data.get('Humidity')
-            if humidity is not None:
+            if humidity is not None and self._is_field_enabled('humidity'):
                 if humidity < 20 or humidity > 60:
                     hum_color = self.colors['fg_warning']
                 else:
@@ -569,7 +601,7 @@ class NodeCardQt(QFrame):
         pres_value_label = self._widgets.get('pres_value')
         if pres_value_label:
             pressure = self.node_data.get('Pressure')
-            if pressure is not None:
+            if pressure is not None and self._is_field_enabled('pressure'):
                 display_color = stale_color if is_stale else self.colors['fg_normal']
                 pres_value_label.setText(f" {pressure:.1f}hPa")
                 pres_value_label.setStyleSheet(f"color: {display_color}; background: transparent;")
