@@ -105,8 +105,8 @@ class NodeCardQt(QFrame):
         # Widget references for updates
         self._widgets: Dict[str, QWidget] = {}
         
-        # Cache telemetry field visibility settings
-        self._telemetry_fields = self._get_telemetry_field_settings()
+        # Cache telemetry field visibility settings - DISABLED for now
+        # self._telemetry_fields = self._get_telemetry_field_settings()
         
         # Colors
         self.colors = COLORS.copy()
@@ -210,7 +210,7 @@ class NodeCardQt(QFrame):
         
         # Column 1: ICP Battery bar (left-aligned, no % value shown)
         self._widgets['icp_batt_bar'] = create_battery_bar(
-            value=0, label="🔋 ICP", width=BAR_WIDTH, 
+            value=0, label="ICP", width=BAR_WIDTH, 
             show_value=False, label_width=LABEL_WIDTH
         )
         row_layout.addWidget(self._widgets['icp_batt_bar'])
@@ -228,7 +228,7 @@ class NodeCardQt(QFrame):
         
         # Column 3: Node Battery bar (right-aligned, no % value shown)
         self._widgets['node_batt_bar'] = create_battery_bar(
-            value=0, label="🔋 Node", width=BAR_WIDTH,
+            value=0, label="Node", width=BAR_WIDTH,
             show_value=False, label_width=LABEL_WIDTH
         )
         row_layout.addWidget(self._widgets['node_batt_bar'])
@@ -387,7 +387,9 @@ class NodeCardQt(QFrame):
         Returns:
             True if the field should be shown, False to hide it
         """
-        return self._telemetry_fields.get(field_key, True)
+        # DISABLED: Telemetry field visibility feature needs more work
+        # return self._telemetry_fields.get(field_key, True)
+        return True  # Always show all fields for now
     
     def _get_status(self) -> Tuple[str, str]:
         """Get node status and color based on last heard time"""

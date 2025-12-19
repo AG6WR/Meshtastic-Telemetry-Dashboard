@@ -123,20 +123,8 @@ class SettingsDialogQt(QDialog):
             QComboBox QAbstractItemView {{
                 background-color: {COLORS['bg_input']};
                 color: {COLORS['fg_normal']};
-                selection-background-color: #404040;
-                selection-color: {COLORS['fg_normal']};
-                border: 1px solid #555555;
-            }}
-            QComboBox::drop-down {{
-                border: none;
-                background-color: {COLORS['bg_input']};
-            }}
-            QComboBox::down-arrow {{
-                image: none;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 6px solid {COLORS['fg_secondary']};
-                margin-right: 8px;
+                selection-background-color: #555555;
+                selection-color: white;
             }}
             {CHECKBOX_STYLE}
             {RADIOBUTTON_STYLE}
@@ -158,10 +146,10 @@ class SettingsDialogQt(QDialog):
         tab_widget.addTab(dash_tab, "Dashboard")
         self.create_dashboard_tab(dash_tab)
         
-        # Telemetry tab
-        telemetry_tab = QWidget()
-        tab_widget.addTab(telemetry_tab, "Telemetry")
-        self.create_telemetry_tab(telemetry_tab)
+        # Telemetry tab - DISABLED for now, needs more work
+        # telemetry_tab = QWidget()
+        # tab_widget.addTab(telemetry_tab, "Telemetry")
+        # self.create_telemetry_tab(telemetry_tab)
         
         # Alerts tab
         alerts_tab = QWidget()
@@ -481,8 +469,9 @@ class SettingsDialogQt(QDialog):
         self.use_tls = QCheckBox("Use TLS encryption")
         smtp_layout.addWidget(self.use_tls, 6, 1)
         
-        # Test Email button in SMTP group
+        # Test Email button in SMTP group - constrain width
         test_email_btn = create_button("Test Email", "warning", self.test_email)
+        test_email_btn.setMaximumWidth(120)
         smtp_layout.addWidget(test_email_btn, 7, 1)
         
         smtp_layout.setColumnStretch(1, 1)
