@@ -127,13 +127,21 @@ COLORS = {
 # DARK THEME WIDGET STYLES
 # =============================================================================
 
-# Checkbox style - use Qt defaults (no customization)
+# Checkbox style - set text color for dark theme
 # The fix for checkbox visibility in message center is using #id selectors
 # on parent widgets instead of raw background-color properties
-CHECKBOX_STYLE = ""
+CHECKBOX_STYLE = """
+    QCheckBox {
+        color: #e0e0e0;
+    }
+"""
 
-# Radio button style - use Qt defaults (no customization)
-RADIOBUTTON_STYLE = ""
+# Radio button style - set text color for dark theme
+RADIOBUTTON_STYLE = """
+    QRadioButton {
+        color: #e0e0e0;
+    }
+"""
 
 # Tab widget style - minimal dark theme colors
 TAB_STYLE = """
