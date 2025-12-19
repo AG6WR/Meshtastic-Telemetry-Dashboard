@@ -142,15 +142,26 @@ CHECKBOX_STYLE = """
         border-radius: 3px;
     }
     QCheckBox::indicator:checked {
-        background-color: #4a90d9;
-        border: 1px solid #4a90d9;
+        background-color: #2e7d32;
+        border: 1px solid #2e7d32;
     }
 """
 
-# Radio button style - set text color for dark theme
+# Radio button style - set text color and indicator styling for dark theme
 RADIOBUTTON_STYLE = """
     QRadioButton {
         color: #e0e0e0;
+    }
+    QRadioButton::indicator {
+        width: 18px;
+        height: 18px;
+        background-color: #3c3c3c;
+        border: 1px solid #888888;
+        border-radius: 9px;
+    }
+    QRadioButton::indicator:checked {
+        background-color: #2e7d32;
+        border: 1px solid #2e7d32;
     }
 """
 
