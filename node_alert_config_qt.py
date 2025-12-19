@@ -32,7 +32,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
-from qt_styles import COLORS, FONTS, get_font, create_button, create_ok_button, create_cancel_button
+from qt_styles import (COLORS, FONTS, get_font, create_button, 
+                       create_ok_button, create_cancel_button,
+                       CHECKBOX_STYLE, GROUPBOX_STYLE)
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +73,7 @@ class NodeAlertConfigDialogQt(QDialog):
         self.setMinimumSize(650, 500)
         self.resize(700, 550)
         
-        # Dark theme
+        # Dark theme using standard styles
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {COLORS['bg_main']};
@@ -79,44 +81,8 @@ class NodeAlertConfigDialogQt(QDialog):
             QLabel {{
                 color: {COLORS['fg_normal']};
             }}
-            QGroupBox {{
-                background-color: {COLORS['bg_frame']};
-                border: 1px solid {COLORS['fg_secondary']};
-                border-radius: 4px;
-                margin-top: 12px;
-                padding-top: 8px;
-            }}
-            QGroupBox::title {{
-                subcontrol-origin: margin;
-                left: 10px;
-                color: {COLORS['fg_normal']};
-            }}
-            QCheckBox {{
-                color: {COLORS['fg_normal']};
-                spacing: 8px;
-                font-size: 14pt;
-            }}
-            QCheckBox::indicator {{
-                width: 20px;
-                height: 20px;
-            }}
-            QCheckBox::indicator:unchecked {{
-                border: 2px solid {COLORS['fg_secondary']};
-                background-color: {COLORS['bg_main']};
-                border-radius: 3px;
-            }}
-            QCheckBox::indicator:checked {{
-                border: 2px solid {COLORS['accent']};
-                background-color: {COLORS['accent']};
-                border-radius: 3px;
-            }}
-            QCheckBox:disabled {{
-                color: {COLORS['fg_secondary']};
-            }}
-            QCheckBox::indicator:disabled {{
-                border: 2px solid #555555;
-                background-color: #3d3d3d;
-            }}
+            {GROUPBOX_STYLE}
+            {CHECKBOX_STYLE}
             QScrollArea {{
                 background-color: {COLORS['bg_main']};
                 border: none;

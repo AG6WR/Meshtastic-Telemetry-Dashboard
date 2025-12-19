@@ -25,7 +25,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from config_manager import ConfigManager
-from qt_styles import create_button, create_ok_button, create_apply_button, create_cancel_button, COLORS
+from qt_styles import (create_button, create_ok_button, create_apply_button, 
+                       create_cancel_button, COLORS, CHECKBOX_STYLE, 
+                       RADIOBUTTON_STYLE, TAB_STYLE, GROUPBOX_STYLE)
 
 logger = logging.getLogger(__name__)
 
@@ -99,9 +101,30 @@ class SettingsDialogQt(QDialog):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
         
+        # Apply dark theme styles to this dialog
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {COLORS['bg_main']};
+            }}
+            QLabel {{
+                color: {COLORS['fg_normal']};
+            }}
+            QLineEdit, QComboBox {{
+                background-color: {COLORS['bg_input']};
+                color: {COLORS['fg_normal']};
+                border: 1px solid #555555;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11pt;
+            }}
+            {CHECKBOX_STYLE}
+            {RADIOBUTTON_STYLE}
+            {TAB_STYLE}
+            {GROUPBOX_STYLE}
+        """)
+        
         # Tab widget
         tab_widget = QTabWidget()
-        tab_widget.setStyleSheet("QTabBar::tab { font-size: 12pt; padding: 8px 16px; }")
         layout.addWidget(tab_widget)
         
         # Connection tab
@@ -317,7 +340,6 @@ class SettingsDialogQt(QDialog):
             field_layout.setContentsMargins(10, 2, 10, 2)
             
             checkbox = QCheckBox(display_name)
-            checkbox.setStyleSheet("font-weight: bold; font-size: 11pt;")
             checkbox.setMinimumWidth(180)
             field_layout.addWidget(checkbox)
             

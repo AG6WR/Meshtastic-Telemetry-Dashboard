@@ -124,7 +124,7 @@ class NodeCardQt(QFrame):
         self.setStyleSheet(f"""
             NodeCardQt {{
                 background-color: {bg_color};
-                border: 2px solid {self.colors['border_normal']};
+                border: 1px solid {self.colors['border_normal']};
                 border-radius: 4px;
             }}
         """)
@@ -641,7 +641,7 @@ class NodeCardQt(QFrame):
         self.setStyleSheet(f"""
             NodeCardQt {{
                 background-color: {flash_bg};
-                border: 2px solid {self.colors['border_normal']};
+                border: 1px solid {self.colors['border_normal']};
                 border-radius: 4px;
             }}
         """)
@@ -673,7 +673,7 @@ class NodeCardQt(QFrame):
         self.setStyleSheet(f"""
             NodeCardQt {{
                 background-color: {bg_color};
-                border: 2px solid {self.colors['border_normal']};
+                border: 1px solid {self.colors['border_normal']};
                 border-radius: 4px;
             }}
         """)

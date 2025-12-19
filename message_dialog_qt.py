@@ -161,7 +161,7 @@ class MessageDialogQt(QDialog):
         counter_layout.addStretch()
         
         self.char_count_label = QLabel(f"0/{MAX_MESSAGE_LENGTH}")
-        self.char_count_label.setStyleSheet(f"color: {self.colors['fg_secondary']}; font-size: 12pt;")
+        self.char_count_label.setStyleSheet(f"color: {self.colors['fg_secondary']}; font-size: 12pt; background: transparent;")
         counter_layout.addWidget(self.char_count_label)
         
         layout.addLayout(counter_layout)
@@ -192,7 +192,7 @@ class MessageDialogQt(QDialog):
         
         # Change color based on length
         if byte_count > MAX_MESSAGE_LENGTH:
-            self.char_count_label.setStyleSheet("color: #FF6B9D; font-size: 12pt;")  # Coral pink for error
+            self.char_count_label.setStyleSheet("color: #FF6B9D; font-size: 12pt; background: transparent;")  # Coral pink for error
             
             # Trim to max length
             while byte_count > MAX_MESSAGE_LENGTH and text:
@@ -214,9 +214,9 @@ class MessageDialogQt(QDialog):
             self.char_count_label.setText(f"{byte_count}/{MAX_MESSAGE_LENGTH}")
             
         elif byte_count > MAX_MESSAGE_LENGTH * 0.9:
-            self.char_count_label.setStyleSheet("color: #FFA500; font-size: 12pt;")  # Orange for warning
+            self.char_count_label.setStyleSheet("color: #FFA500; font-size: 12pt; background: transparent;")  # Orange for warning
         else:
-            self.char_count_label.setStyleSheet(f"color: {self.colors['fg_secondary']}; font-size: 12pt;")
+            self.char_count_label.setStyleSheet(f"color: {self.colors['fg_secondary']}; font-size: 12pt; background: transparent;")
     
     def _send_message(self):
         """Send the message"""

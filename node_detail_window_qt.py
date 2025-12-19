@@ -186,9 +186,9 @@ class NodeDetailWindowQt(QDialog):
         button_layout.setContentsMargins(6, 6, 6, 6)
         button_layout.setSpacing(6)
         
-        # Plot button (green - action)
+        # Plot button (blue - primary, matches main window)
         if self.on_plot:
-            plot_btn = create_button("Plot", "success", self.on_plot)
+            plot_btn = create_button("Plot", "primary", self.on_plot)
             button_layout.addWidget(plot_btn)
         
         # CSV button (blue - primary)
