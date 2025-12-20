@@ -106,20 +106,12 @@ class MessageDialogQt(QDialog):
         """)
     
     def _center_dialog(self, reference_widget):
-        """Center dialog on screen"""
+        """Position dialog at top of screen to leave room for virtual keyboard"""
         self.adjustSize()
-        if reference_widget and hasattr(reference_widget, 'geometry'):
-            # Center relative to reference widget
-            ref_geo = reference_widget.geometry()
-            x = ref_geo.x() + (ref_geo.width() - self.width()) // 2
-            y = ref_geo.y() + (ref_geo.height() - self.height()) // 2
-            self.move(x, y)
-        else:
-            # Center on screen
-            screen = self.screen().geometry()
-            x = (screen.width() - self.width()) // 2
-            y = 50  # Near top to leave room for virtual keyboard
-            self.move(x, y)
+        screen = self.screen().geometry()
+        x = (screen.width() - self.width()) // 2
+        y = 10  # Near top of screen for keyboard room
+        self.move(x, y)
     
     def _create_widgets(self):
         """Create dialog widgets"""
