@@ -137,7 +137,7 @@ class MessageListWindowQt(QDialog):
         title_layout.setContentsMargins(10, 6, 10, 6)
         
         # Compose button (left side - additive action) with envelope icon
-        compose_btn = create_button("✉ Compose", "success", self._on_compose)
+        compose_btn = create_button("Compose", "success", self._on_compose)
         title_layout.addWidget(compose_btn)
         
         title_layout.addStretch()
@@ -575,7 +575,7 @@ class MessageListWindowQt(QDialog):
         
         # Title
         title = QLabel("Select recipient(s):")
-        title.setStyleSheet(f"color: {self.colors['fg_normal']}; font-size: 12pt; font-weight: bold;")
+        title.setStyleSheet(f"color: {self.colors['fg_normal']}; font-size: 14pt; font-weight: bold;")
         layout.addWidget(title)
         
         # Scrollable checkbox list
@@ -603,7 +603,7 @@ class MessageListWindowQt(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
         
-        compose_btn = create_button("✉ Compose", "success")
+        compose_btn = create_button("Compose", "success")
         cancel_btn = create_cancel_button()
         
         def on_compose_click():

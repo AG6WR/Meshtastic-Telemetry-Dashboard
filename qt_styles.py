@@ -134,13 +134,14 @@ COLORS = {
 CHECKBOX_STYLE = """
     QCheckBox {
         color: #e0e0e0;
+        font-size: 14pt;
     }
     QCheckBox:disabled {
         color: #666666;
     }
     QCheckBox::indicator {
-        width: 18px;
-        height: 18px;
+        width: 24px;
+        height: 24px;
         background-color: #3c3c3c;
         border: 1px solid #888888;
         border-radius: 3px;

@@ -180,7 +180,7 @@ class DashboardQt(QMainWindow):
         controls_layout.addWidget(self.btn_refresh)
         
         # Messages button
-        self.btn_messages = create_button("Messages", "success")
+        self.btn_messages = create_button("Messages", "primary")
         self.btn_messages.clicked.connect(self._open_messages)
         controls_layout.addWidget(self.btn_messages)
         
@@ -190,14 +190,14 @@ class DashboardQt(QMainWindow):
         controls_layout.addWidget(self.btn_plot)
         
         # Alerts button
-        self.btn_alerts = create_button("Alerts", "warning")
+        self.btn_alerts = create_button("Alerts", "primary")
         self.btn_alerts.clicked.connect(self._open_alerts)
         controls_layout.addWidget(self.btn_alerts)
         
         controls_layout.addStretch()
         
         # Fullscreen toggle
-        self.btn_fullscreen = create_button("Fullscreen", "danger")
+        self.btn_fullscreen = create_button("Fullscreen", "primary")
         self.btn_fullscreen.clicked.connect(self._toggle_fullscreen)
         controls_layout.addWidget(self.btn_fullscreen)
         
@@ -547,6 +547,7 @@ class DashboardQt(QMainWindow):
             window = MessageListWindowQt(
                 parent=self,
                 message_manager=self.message_manager,
+                on_send_message=self._send_message_to
             )
             window.show()
         except Exception as e:
@@ -656,7 +657,8 @@ class DashboardQt(QMainWindow):
             from message_list_window_qt import MessageListWindowQt
             window = MessageListWindowQt(
                 parent=self,
-                message_manager=self.message_manager
+                message_manager=self.message_manager,
+                on_send_message=self._send_message_to
             )
             window.show()
         except Exception as e:
