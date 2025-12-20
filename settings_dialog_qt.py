@@ -469,10 +469,10 @@ class SettingsDialogQt(QDialog):
         self.use_tls = QCheckBox("Use TLS encryption")
         smtp_layout.addWidget(self.use_tls, 6, 1)
         
-        # Test Email button in SMTP group - constrain width
+        # Test Email button - right side, aligned with TLS checkbox row
         test_email_btn = create_button("Test Email", "warning", self.test_email)
         test_email_btn.setMaximumWidth(120)
-        smtp_layout.addWidget(test_email_btn, 7, 1)
+        smtp_layout.addWidget(test_email_btn, 6, 3, Qt.AlignRight)
         
         smtp_layout.setColumnStretch(1, 1)
         layout.addWidget(smtp_group)
