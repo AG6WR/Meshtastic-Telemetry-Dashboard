@@ -202,7 +202,7 @@ class DashboardQt(QMainWindow):
         controls_layout.addWidget(self.btn_fullscreen)
         
         # Quit button
-        self.btn_quit = create_button("Quit", "neutral")
+        self.btn_quit = create_button("✗ Quit", "neutral")
         self.btn_quit.clicked.connect(self.close)
         controls_layout.addWidget(self.btn_quit)
         
@@ -529,16 +529,59 @@ class DashboardQt(QMainWindow):
         """Open message dialog to send message to node"""
         try:
             from message_dialog_qt import MessageDialogQt
-            node_data = self.last_node_data.get(node_id, {})
-            node_name = node_data.get('Node LongName', node_id)
+            
+            # Get node name - check both data_collector and last_node_data
+            node_name = node_id
+            if self.data_collector:
+                nodes_data = self.data_collector.get_nodes_data()
+                if nodes_data and node_id in nodes_data:
+                    node_name = nodes_data[node_id].get('Node LongName', node_id)
+            elif node_id in self.last_node_data:
+                node_name = self.last_node_data[node_id].get('Node LongName', node_id)
+            
             dialog = MessageDialogQt(
-                recipient_id=node_id,
-                recipient_name=node_name,
-                parent=self
+                parent=self,
+                node_id=node_id,
+                node_name=node_name,
+                send_callback=self._actual_send_message
             )
             dialog.exec()
         except Exception as e:
             logger.error(f"Failed to open message dialog: {e}")
+    
+    def _actual_send_message(self, node_id: str, message: str, bell_flag: bool = False):
+        """Actually send the message via connection manager"""
+        import time
+        try:
+            if self.data_collector and hasattr(self.data_collector, 'connection_manager'):
+                success = self.data_collector.connection_manager.send_message(node_id, message)
+                if success:
+                    logger.info(f"Message sent to {node_id}")
+                    # Also save to message manager for tracking
+                    if self.message_manager:
+                        local_node_id = self._get_local_node_id()
+                        message_dict = {
+                            'message_id': f"{local_node_id}_{int(time.time() * 1000)}",
+                            'from_node_id': local_node_id,
+                            'from_name': 'Me',
+                            'to_node_ids': [node_id],
+                            'text': message,
+                            'timestamp': time.time(),
+                            'direction': 'sent',
+                            'is_bulletin': False,
+                            'read': True,  # We read our own message
+                            'delivery_status': 'sent'
+                        }
+                        self.message_manager.save_message(message_dict)
+                else:
+                    logger.error(f"Failed to send message to {node_id}")
+                    QMessageBox.warning(self, "Send Failed", f"Failed to send message to {node_id}")
+            else:
+                logger.error("No connection manager available")
+                QMessageBox.warning(self, "Not Connected", "Cannot send message: not connected to Meshtastic")
+        except Exception as e:
+            logger.error(f"Error sending message: {e}")
+            QMessageBox.critical(self, "Error", f"Error sending message: {e}")
     
     def _view_messages_for(self, node_id: str):
         """Open message list for specific node"""
