@@ -300,8 +300,8 @@ def create_cancel_button(callback=None) -> QPushButton:
 
 
 def create_close_button(callback=None) -> QPushButton:
-    """Create standard Close button (gray)"""
-    return create_button("Close", "neutral", callback)
+    """Create standard Close button (gray) with X"""
+    return create_button("✗ Close", "neutral", callback)
 
 
 def create_apply_button(callback=None) -> QPushButton:
