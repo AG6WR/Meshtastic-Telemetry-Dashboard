@@ -136,8 +136,8 @@ class MessageListWindowQt(QDialog):
         title_layout = QHBoxLayout(title_frame)
         title_layout.setContentsMargins(10, 6, 10, 6)
         
-        # Compose button (left side - additive action)
-        compose_btn = create_button("Compose", "success", self._on_compose)
+        # Compose button (left side - additive action) with envelope icon
+        compose_btn = create_button("✉ Compose", "success", self._on_compose)
         title_layout.addWidget(compose_btn)
         
         title_layout.addStretch()
@@ -603,7 +603,7 @@ class MessageListWindowQt(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
         
-        compose_btn = create_button("Compose", "success")
+        compose_btn = create_button("✉ Compose", "success")
         cancel_btn = create_cancel_button()
         
         def on_compose_click():

@@ -290,13 +290,13 @@ def create_button(text: str, style: str = 'primary', callback=None) -> QPushButt
 # =============================================================================
 
 def create_ok_button(callback=None) -> QPushButton:
-    """Create standard OK button (green)"""
-    return create_button("OK", "success", callback)
+    """Create standard OK button (green) with checkmark"""
+    return create_button("✓ OK", "success", callback)
 
 
 def create_cancel_button(callback=None) -> QPushButton:
-    """Create standard Cancel button (gray)"""
-    return create_button("Cancel", "neutral", callback)
+    """Create standard Cancel button (gray) with X"""
+    return create_button("✗ Cancel", "neutral", callback)
 
 
 def create_close_button(callback=None) -> QPushButton:
@@ -603,15 +603,17 @@ def create_utilization_bar(value: float = 0, stale: bool = False,
                            label: str = "Util", width: int = 60, 
                            show_value: bool = True, label_width: int = 0) -> ColorBar:
     """
-    Create a utilization bar (0-100%) where LOWER is better.
+    Create a utilization bar (0-20% scale) where LOWER is better.
     
-    Color thresholds (inverted - high util is bad):
-    - <25%: Green (good - low utilization)
-    - 25-50%: Orange (moderate)
-    - >50%: Red (congested)
+    Color thresholds:
+    - <5%: Green (good - low utilization)
+    - 5-10%: Yellow/Orange (moderate)
+    - >10%: Red (congested)
+    
+    Full scale is 20% since typical mesh utilization should be low.
     
     Args:
-        value: Utilization percentage (0-100)
+        value: Utilization percentage (0-100, but bar shows 0-20 scale)
         stale: Whether data is stale (grey display)
         label: Label text
         width: Bar width in pixels
@@ -621,13 +623,13 @@ def create_utilization_bar(value: float = 0, stale: bool = False,
     Returns:
         Configured ColorBar widget
     """
-    # Inverted thresholds - lower values are better
+    # Thresholds for 0-20% scale: >10% bad, 5-10% warning, <5% good
     bar = ColorBar(
         label=label,
         value=value,
         min_value=0,
-        max_value=100,
-        thresholds=[(50, 'bad'), (25, 'warning'), (0, 'good')],
+        max_value=20,  # Full scale is 20%
+        thresholds=[(10, 'bad'), (5, 'warning'), (0, 'good')],
         width=width,
         height=12,
         show_value=show_value,

@@ -173,7 +173,7 @@ class SettingsDialogQt(QDialog):
         button_layout.addStretch()
         
         # OK button (primary action - blue)
-        ok_btn = create_button("OK", "primary", self.ok)
+        ok_btn = create_button("✓ OK", "primary", self.ok)
         
         # Apply button (green)
         apply_btn = create_apply_button(self.apply)

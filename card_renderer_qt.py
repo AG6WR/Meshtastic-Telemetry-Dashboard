@@ -8,9 +8,9 @@ Card Layout:
 ┌─────────────────────────────────────────────────────────────────┐
 │ [Node Name]                                    [Online/Offline] │  Header
 ├─────────────────────────────────────────────────────────────────┤
-│ [MSG] From: message preview... OR Last: 12-17 14:30 OR Motion   │  Line 2 (status)
+│ [✉ MSG] From: message preview... OR Last: 12-17 14:30 OR Motion │  Line 2 (status)
 ├─────────────────────────────────────────────────────────────────┤
-│ ICP Batt:80%     +2.5mA ↑           Node Batt:100%              │  Row 1 (batteries)
+│ ⚡ ICP Batt:80%   +2.5mA ⬆          ⚡ Node Batt:100%           │  Row 1 (batteries)
 ├─────────────────────────────────────────────────────────────────┤
 │ SNR:||||          Ch:45.2%                     Air:12.3%        │  Row 2 (radio)
 ├─────────────────────────────────────────────────────────────────┤
@@ -210,7 +210,7 @@ class NodeCardQt(QFrame):
         
         # Column 1: ICP Battery bar (left-aligned, no % value shown)
         self._widgets['icp_batt_bar'] = create_battery_bar(
-            value=0, label="ICP", width=BAR_WIDTH, 
+            value=0, label="⚡ ICP", width=BAR_WIDTH, 
             show_value=False, label_width=LABEL_WIDTH
         )
         row_layout.addWidget(self._widgets['icp_batt_bar'])
@@ -228,7 +228,7 @@ class NodeCardQt(QFrame):
         
         # Column 3: Node Battery bar (right-aligned, no % value shown)
         self._widgets['node_batt_bar'] = create_battery_bar(
-            value=0, label="Node", width=BAR_WIDTH,
+            value=0, label="⚡ Node", width=BAR_WIDTH,
             show_value=False, label_width=LABEL_WIDTH
         )
         row_layout.addWidget(self._widgets['node_batt_bar'])
@@ -507,10 +507,10 @@ class NodeCardQt(QFrame):
             ch3_current = self.node_data.get('Ch3 Current')
             if ch3_current is not None and self._is_field_enabled('current'):
                 if ch3_current > 0:
-                    current_text = f"+{ch3_current:.0f}mA ↑"
+                    current_text = f"+{ch3_current:.0f}mA ⬆"
                     current_color = self.colors['fg_good']
                 elif ch3_current < 0:
-                    current_text = f"{ch3_current:.0f}mA ↓"
+                    current_text = f"{ch3_current:.0f}mA ⬇"
                     current_color = self.colors['fg_warning']
                 else:
                     current_text = f"{ch3_current:.0f}mA"

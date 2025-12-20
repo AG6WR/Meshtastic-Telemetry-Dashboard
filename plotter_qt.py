@@ -187,7 +187,7 @@ class PlotConfigDialog(QDialog):
         plot_btn.clicked.connect(self._on_plot)
         button_layout.addWidget(plot_btn)
         
-        cancel_btn = create_button("Cancel", "secondary")
+        cancel_btn = create_button("✗ Cancel", "neutral")
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
         
