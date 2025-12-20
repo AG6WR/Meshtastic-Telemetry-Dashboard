@@ -71,7 +71,7 @@ class MessageDialogQt(QDialog):
         })
         
         self.setWindowTitle(f"Send Message to {node_name}")
-        self.setMinimumSize(630, 280)
+        self.setMinimumSize(630, 200)
         self.setModal(True)
         
         # Use FramelessWindowHint - Wayland may allow positioning frameless windows
@@ -115,7 +115,7 @@ class MessageDialogQt(QDialog):
         self.adjustSize()
         screen = self.screen().geometry()
         dialog_width = max(self.width(), 630)
-        dialog_height = max(self.height(), 280)
+        dialog_height = max(self.height(), 200)
         x = (screen.width() - dialog_width) // 2
         y = 10  # Near top of screen for keyboard room
         # Use setGeometry which may work better on some Wayland compositors
@@ -149,25 +149,20 @@ class MessageDialogQt(QDialog):
         
         # Text area for message
         self.text_area = QTextEdit()
-        self.text_area.setMinimumHeight(80)
-        self.text_area.setMaximumHeight(120)
+        self.text_area.setMinimumHeight(60)
+        self.text_area.setMaximumHeight(80)
         self.text_area.setPlaceholderText("Type your message here...")
         self.text_area.setFont(QFont("Liberation Sans", 12))
         self.text_area.textChanged.connect(self._on_text_change)
         layout.addWidget(self.text_area)
         
-        # Character counter
-        counter_layout = QHBoxLayout()
-        counter_layout.addStretch()
+        # Button row with character counter on left
+        button_layout = QHBoxLayout()
         
         self.char_count_label = QLabel(f"0/{MAX_MESSAGE_LENGTH}")
         self.char_count_label.setStyleSheet(f"color: {self.colors['fg_secondary']}; font-size: 12pt; background: transparent;")
-        counter_layout.addWidget(self.char_count_label)
+        button_layout.addWidget(self.char_count_label)
         
-        layout.addLayout(counter_layout)
-        
-        # Button row
-        button_layout = QHBoxLayout()
         button_layout.addStretch()
         
         cancel_btn = create_cancel_button(self._cancel)
