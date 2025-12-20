@@ -14,7 +14,7 @@ from PySide6.QtGui import QFont, QFontDatabase
 
 # Symbol categories to test
 BATTERY_SYMBOLS = {
-    "ASCII Only (Should Always Work)": [
+    "ASCII Only (Always Works)": [
         ("+", "Plus"),
         ("-", "Minus"),
         ("*", "Asterisk"),
@@ -24,47 +24,117 @@ BATTERY_SYMBOLS = {
         ("[+]", "Bracketed plus"),
         ("(+)", "Paren plus"),
     ],
-    "Basic Latin Extended": [
-        ("±", "Plus-Minus U+00B1"),
-        ("×", "Multiply U+00D7"),
-        ("÷", "Divide U+00F7"),
-        ("°", "Degree U+00B0"),
-        ("µ", "Micro U+00B5"),
-        ("·", "Middle dot U+00B7"),
-        ("«", "Left guillemet"),
-        ("»", "Right guillemet"),
+    "Lightning/Power (for battery telemetry)": [
+        ("⚡", "U+26A1 High voltage"),
+        ("↯", "U+21AF Downwards zigzag"),
+        ("϶", "U+03F6 Lunate epsilon"),
+        ("ϟ", "U+03DF Greek koppa"),
+        ("⌁", "U+2301 Electric arrow"),
+        ("⏻", "U+23FB Power symbol"),
+        ("⏼", "U+23FC Power on-off"),
+        ("⏽", "U+23FD Power on"),
     ],
-    "Box Drawing (U+2500 range)": [
-        ("─", "U+2500 Light horiz"),
-        ("│", "U+2502 Light vert"),
-        ("┌", "U+250C Corner"),
-        ("└", "U+2514 Corner"),
-        ("├", "U+251C T-left"),
-        ("┼", "U+253C Cross"),
-        ("═", "U+2550 Double horiz"),
-        ("║", "U+2551 Double vert"),
+    "Mail/Envelope (for messaging)": [
+        ("✉", "U+2709 Envelope"),
+        ("✆", "U+2706 Telephone"),
+        ("☎", "U+260E Black telephone"),
+        ("☏", "U+260F White telephone"),
+        ("✇", "U+2707 Tape drive"),
+        ("⌨", "U+2328 Keyboard"),
+        ("📧", "U+1F4E7 Email symbol"),
+        ("📨", "U+1F4E8 Incoming envelope"),
     ],
-    "Block Elements (U+2580 range)": [
-        ("▀", "U+2580 Upper half"),
-        ("▄", "U+2584 Lower half"),
-        ("█", "U+2588 Full block"),
-        ("▌", "U+258C Left half"),
-        ("▐", "U+2590 Right half"),
-        ("░", "U+2591 Light shade"),
-        ("▒", "U+2592 Medium shade"),
-        ("▓", "U+2593 Dark shade"),
+    "Temperature/Thermometer": [
+        ("℃", "U+2103 Celsius"),
+        ("℉", "U+2109 Fahrenheit"),
+        ("°", "U+00B0 Degree"),
+        ("˚", "U+02DA Ring above"),
+        ("⌂", "U+2302 House"),
+        ("Θ", "U+0398 Theta"),
+        ("θ", "U+03B8 Small theta"),
+        ("⏱", "U+23F1 Stopwatch"),
     ],
-    "Geometric Shapes (U+25A0 range)": [
+    "WiFi/Antenna/Signal (for SNR)": [
+        ("⚲", "U+26B2 Neuter"),
+        ("⏃", "U+23C3 Dentistry symbol"),
+        ("⌗", "U+2317 Viewdata square"),
+        ("⌖", "U+2316 Position indicator"),
+        ("⎍", "U+238D Monostable"),
+        ("⎎", "U+238E Hysteresis"),
+        ("⎓", "U+2393 Direct current"),
+        ("⎌", "U+238C Benchmark"),
+    ],
+    "Water/Humidity": [
+        ("∿", "U+223F Sine wave"),
+        ("≈", "U+2248 Almost equal"),
+        ("≋", "U+224B Triple tilde"),
+        ("∼", "U+223C Tilde operator"),
+        ("⌇", "U+2307 Wavy line"),
+        ("⎰", "U+23B0 Upper left tortoise"),
+        ("⎱", "U+23B1 Lower right tortoise"),
+        ("〰", "U+3030 Wavy dash"),
+    ],
+    "Arrows (directional indicators)": [
+        ("→", "U+2192 Right arrow"),
+        ("←", "U+2190 Left arrow"),
+        ("↑", "U+2191 Up arrow"),
+        ("↓", "U+2193 Down arrow"),
+        ("↔", "U+2194 Left right"),
+        ("↕", "U+2195 Up down"),
+        ("⇒", "U+21D2 Double right"),
+        ("⇐", "U+21D0 Double left"),
+    ],
+    "Up/Down Arrows (for current measurement)": [
+        ("↑", "U+2191 Up arrow"),
+        ("↓", "U+2193 Down arrow"),
+        ("⇑", "U+21D1 Double up"),
+        ("⇓", "U+21D3 Double down"),
+        ("⇡", "U+21E1 Dashed up"),
+        ("⇣", "U+21E3 Dashed down"),
+        ("↟", "U+219F Two headed up"),
+        ("↡", "U+21A1 Two headed down"),
+    ],
+    "More Up/Down Arrows": [
+        ("⬆", "U+2B06 Black up arrow"),
+        ("⬇", "U+2B07 Black down arrow"),
+        ("▲", "U+25B2 Black up tri"),
+        ("▼", "U+25BC Black down tri"),
+        ("△", "U+25B3 White up tri"),
+        ("▽", "U+25BD White down tri"),
+        ("⏶", "U+23F6 Black medium up tri"),
+        ("⏷", "U+23F7 Black medium down tri"),
+    ],
+    "Arrow Variants": [
+        ("↥", "U+21A5 Up from bar"),
+        ("↧", "U+21A7 Down from bar"),
+        ("⤊", "U+290A Up triple arrow"),
+        ("⤋", "U+290B Down triple arrow"),
+        ("⥉", "U+2949 Up with horiz"),
+        ("⥌", "U+294C Up paired"),
+        ("⥍", "U+294D Down paired"),
+        ("⥏", "U+294F Up triangle-head"),
+    ],
+    "Location/GPS": [
+        ("⌖", "U+2316 Position indicator"),
+        ("⊕", "U+2295 Circled plus"),
+        ("⊗", "U+2297 Circled times"),
+        ("⊙", "U+2299 Circled dot"),
+        ("◎", "U+25CE Bullseye"),
+        ("◉", "U+25C9 Fisheye"),
+        ("⌾", "U+233E APL circle"),
+        ("⎊", "U+238A Circled triangle"),
+    ],
+    "Geometric Shapes": [
         ("■", "U+25A0 Black square"),
         ("□", "U+25A1 White square"),
         ("▪", "U+25AA Small black sq"),
         ("▫", "U+25AB Small white sq"),
         ("▬", "U+25AC Black rect"),
         ("▮", "U+25AE Black vert rect"),
-        ("▰", "U+25B0 Black parallelogram"),
-        ("▱", "U+25B1 White parallelogram"),
+        ("●", "U+25CF Black circle"),
+        ("○", "U+25CB White circle"),
     ],
-    "Triangles and Arrows": [
+    "Triangles": [
         ("▲", "U+25B2 Black up tri"),
         ("△", "U+25B3 White up tri"),
         ("▶", "U+25B6 Black right tri"),
@@ -74,25 +144,65 @@ BATTERY_SYMBOLS = {
         ("►", "U+25BA Black right ptr"),
         ("◄", "U+25C4 Black left ptr"),
     ],
-    "Circles": [
-        ("●", "U+25CF Black circle"),
-        ("○", "U+25CB White circle"),
-        ("◉", "U+25C9 Fisheye"),
-        ("◎", "U+25CE Bullseye"),
-        ("◐", "U+25D0 Half black"),
-        ("◑", "U+25D1 Half black R"),
-        ("◒", "U+25D2 Half black B"),
-        ("◓", "U+25D3 Half black T"),
-    ],
-    "Misc Symbols": [
+    "Stars and Checks": [
         ("★", "U+2605 Black star"),
         ("☆", "U+2606 White star"),
         ("✓", "U+2713 Check mark"),
-        ("✗", "U+2717 X mark"),
-        ("✦", "U+2726 4-pointed star"),
-        ("⬤", "U+2B24 Large circle"),
-        ("⚡", "U+26A1 Lightning"),
-        ("⏻", "U+23FB Power"),
+        ("✔", "U+2714 Heavy check"),
+        ("✗", "U+2717 Ballot X"),
+        ("✘", "U+2718 Heavy ballot X"),
+        ("✦", "U+2726 Black 4-star"),
+        ("✧", "U+2727 White 4-star"),
+    ],
+    "Misc Technical": [
+        ("⚙", "U+2699 Gear"),
+        ("⚠", "U+26A0 Warning"),
+        ("⛔", "U+26D4 No entry"),
+        ("☢", "U+2622 Radioactive"),
+        ("☣", "U+2623 Biohazard"),
+        ("⚛", "U+269B Atom symbol"),
+        ("⚬", "U+26AC Medium circle"),
+        ("⛭", "U+26ED Gear no hub"),
+    ],
+    "Weather/Nature": [
+        ("☀", "U+2600 Black sun"),
+        ("☁", "U+2601 Cloud"),
+        ("☂", "U+2602 Umbrella"),
+        ("☃", "U+2603 Snowman"),
+        ("☄", "U+2604 Comet"),
+        ("★", "U+2605 Star"),
+        ("☇", "U+2607 Lightning"),
+        ("☈", "U+2608 Thunderstorm"),
+    ],
+    "Block Elements": [
+        ("▀", "U+2580 Upper half"),
+        ("▄", "U+2584 Lower half"),
+        ("█", "U+2588 Full block"),
+        ("▌", "U+258C Left half"),
+        ("▐", "U+2590 Right half"),
+        ("░", "U+2591 Light shade"),
+        ("▒", "U+2592 Medium shade"),
+        ("▓", "U+2593 Dark shade"),
+    ],
+    "Greek Letters (common in tech)": [
+        ("Ω", "U+03A9 Omega"),
+        ("Δ", "U+0394 Delta"),
+        ("Σ", "U+03A3 Sigma"),
+        ("Π", "U+03A0 Pi"),
+        ("μ", "U+03BC Mu (micro)"),
+        ("α", "U+03B1 Alpha"),
+        ("β", "U+03B2 Beta"),
+        ("γ", "U+03B3 Gamma"),
+    ],
+    "Math Symbols": [
+        ("±", "U+00B1 Plus-minus"),
+        ("×", "U+00D7 Multiply"),
+        ("÷", "U+00F7 Divide"),
+        ("∞", "U+221E Infinity"),
+        ("√", "U+221A Square root"),
+        ("∑", "U+2211 Summation"),
+        ("∏", "U+220F Product"),
+        ("∂", "U+2202 Partial diff"),
     ],
 }
 
@@ -224,28 +334,44 @@ class SymbolTestWindow(QWidget):
             layout.addWidget(group)
         
         # Example usage section
-        example_group = QGroupBox("Example Usage in Card Labels")
+        example_group = QGroupBox("Example Usage in Dashboard Labels")
         example_layout = QVBoxLayout(example_group)
         
         examples = [
-            ("ICP", "Current label (no symbol)"),
-            ("Node", "Current label (no symbol)"),
-            ("[+] ICP", "Brackets + plus"),
-            ("[+] Node", "Brackets + plus"),
-            ("▮ ICP", "Black rectangle"),
-            ("▮ Node", "Black rectangle"),
-            ("■ ICP", "Black square"),
-            ("■ Node", "Black square"),
-            ("► ICP", "Triangle"),
-            ("► Node", "Triangle"),
-            ("● ICP", "Filled circle"),
-            ("● Node", "Filled circle"),
+            # Power/Battery items
+            ("⚡ ICP", "ICP battery"),
+            ("⚡ Node", "Node battery"),
+            ("⚡ Ch0", "Channel power"),
+            ("↯ Power", "Alt lightning"),
+            # Temperature
+            ("℃ Temp", "Celsius temp"),
+            ("° Temp", "Degree temp"),
+            # SNR/Signal
+            ("⌖ SNR", "Position SNR"),
+            ("⊕ SNR", "Circle+ SNR"),
+            # Humidity
+            ("≈ Humid", "Approx humidity"),
+            ("∿ Humid", "Wave humidity"),
+            # Messages
+            ("✉ Msg", "Envelope msg"),
+            ("☎ Call", "Phone"),
+            # Location
+            ("◎ GPS", "Bullseye GPS"),
+            ("⊙ Loc", "Circled dot"),
+            # Misc
+            ("⚙ Set", "Gear settings"),
+            ("⚠ Alert", "Warning alert"),
+            ("★ Fav", "Star favorite"),
+            ("✓ OK", "Check OK"),
+            # Weather
+            ("☀ Sun", "Sun weather"),
+            ("☁ Cloud", "Cloud"),
         ]
         
         example_grid = QGridLayout()
         for i, (label, desc) in enumerate(examples):
-            row = i // 4
-            col = i % 4
+            row = i // 6
+            col = i % 6
             
             example_widget = QWidget()
             example_widget_layout = QVBoxLayout(example_widget)
