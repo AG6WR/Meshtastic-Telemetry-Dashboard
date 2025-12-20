@@ -270,23 +270,38 @@ class PlotWindow(QDialog):
         # Create canvas
         self.canvas = FigureCanvas(self.figure)
         
-        # Create navigation toolbar
+        # Create navigation toolbar with light background (matplotlib icons are dark)
         self.toolbar = NavigationToolbar(self.canvas, self)
-        self.toolbar.setStyleSheet(f"""
-            QToolBar {{
-                background-color: {COLORS['bg_frame']};
+        self.toolbar.setStyleSheet("""
+            QToolBar {
+                background-color: #c0c0c0;
                 border: none;
                 spacing: 5px;
-            }}
-            QToolButton {{
-                background-color: {COLORS['bg_frame']};
-                color: {COLORS['fg_normal']};
-                border: none;
-                padding: 5px;
-            }}
-            QToolButton:hover {{
-                background-color: {COLORS['bg_input']};
-            }}
+                padding: 2px;
+            }
+            QToolButton {
+                background-color: #c0c0c0;
+                color: #000000;
+                border: 1px solid #a0a0a0;
+                border-radius: 3px;
+                padding: 4px;
+                margin: 1px;
+            }
+            QToolButton:hover {
+                background-color: #d8d8d8;
+                border: 1px solid #808080;
+            }
+            QToolButton:pressed {
+                background-color: #b0b0b0;
+            }
+            QLabel {
+                color: #000000;
+            }
+            QLineEdit {
+                background-color: #ffffff;
+                color: #000000;
+                border: 1px solid #a0a0a0;
+            }
         """)
         
         layout.addWidget(self.toolbar)

@@ -169,24 +169,41 @@ class DashboardQt(QMainWindow):
         title.setStyleSheet(f"color: {COLORS['fg_normal']};")
         header_layout.addWidget(title)
         
-        # Version
-        version_label = QLabel(f"v{VERSION}")
-        version_label.setFont(get_font('ui_notes'))
-        version_label.setStyleSheet(f"color: {COLORS['fg_secondary']};")
-        header_layout.addWidget(version_label)
-        
         header_layout.addStretch()
         
-        # Connection status
+        # Right side: connection info stacked vertically
+        right_info = QWidget()
+        right_layout = QVBoxLayout(right_info)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(2)
+        
+        # Connection status row
+        conn_row = QWidget()
+        conn_row_layout = QHBoxLayout(conn_row)
+        conn_row_layout.setContentsMargins(0, 0, 0, 0)
+        conn_row_layout.setSpacing(5)
+        
         conn_label = QLabel("Connection:")
         conn_label.setFont(get_font('ui_body'))
         conn_label.setStyleSheet(f"color: {COLORS['fg_secondary']};")
-        header_layout.addWidget(conn_label)
+        conn_row_layout.addWidget(conn_label)
         
         self.conn_status = QLabel("Disconnected")
         self.conn_status.setFont(get_font('ui_body'))
         self.conn_status.setStyleSheet(f"color: {COLORS['fg_bad']};")
-        header_layout.addWidget(self.conn_status)
+        conn_row_layout.addWidget(self.conn_status)
+        conn_row_layout.addStretch()
+        
+        right_layout.addWidget(conn_row)
+        
+        # Version row (below connection)
+        version_label = QLabel(f"v{VERSION}")
+        version_label.setFont(get_font('ui_notes'))
+        version_label.setStyleSheet(f"color: {COLORS['fg_secondary']};")
+        version_label.setAlignment(Qt.AlignRight)
+        right_layout.addWidget(version_label)
+        
+        header_layout.addWidget(right_info)
         
         # Status line (nodes count, last update)
         self.status_label = QLabel("Initializing...")
