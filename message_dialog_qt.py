@@ -103,6 +103,26 @@ class MessageDialogQt(QDialog):
                 border-radius: 4px;
                 padding: 4px;
             }}
+            QScrollBar:vertical {{
+                background-color: {self.colors['bg_main']};
+                width: 14px;
+                border-radius: 7px;
+                margin: 2px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: #555;
+                border-radius: 5px;
+                min-height: 20px;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background-color: #666;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
             QPushButton {{
                 padding: 8px 16px;
                 border-radius: 4px;
