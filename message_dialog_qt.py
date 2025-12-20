@@ -74,13 +74,16 @@ class MessageDialogQt(QDialog):
         self.setMinimumSize(630, 280)
         self.setModal(True)
         
+        # Use Tool flag - Wayland often respects positioning for tool windows
+        self.setWindowFlags(Qt.Dialog | Qt.Tool | Qt.WindowStaysOnTopHint)
+        
         # Apply dark theme
         self._apply_dark_theme()
         
         self._create_widgets()
         
-        # Center on screen (or relative to parent)
-        self._center_dialog(positioning_parent or parent)
+        # Position at top of screen for virtual keyboard
+        self._position_for_keyboard()
     
     def _apply_dark_theme(self):
         """Apply dark theme colors to dialog"""
@@ -105,13 +108,16 @@ class MessageDialogQt(QDialog):
             }}
         """)
     
-    def _center_dialog(self, reference_widget):
+    def _position_for_keyboard(self):
         """Position dialog at top of screen to leave room for virtual keyboard"""
         self.adjustSize()
         screen = self.screen().geometry()
-        x = (screen.width() - self.width()) // 2
+        dialog_width = max(self.width(), 630)
+        dialog_height = max(self.height(), 280)
+        x = (screen.width() - dialog_width) // 2
         y = 10  # Near top of screen for keyboard room
-        self.move(x, y)
+        # Use setGeometry which may work better on some Wayland compositors
+        self.setGeometry(x, y, dialog_width, dialog_height)
     
     def _create_widgets(self):
         """Create dialog widgets"""
