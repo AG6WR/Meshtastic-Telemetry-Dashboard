@@ -5,6 +5,24 @@ All notable changes to the Meshtastic Telemetry Dashboard will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-12-19
+
+### Added
+- **Qt Message Reception**: Full messaging support in the Qt/PySide6 dashboard
+  - Receive incoming messages with thread-safe Qt signal handling
+  - Yellow notification banner at bottom of screen with 10-minute display duration
+  - Banner rotates through recent messages (5-second rotation) with `[1/N]` indicator
+  - Banner format: `<HH:MM> **FromName** to **ToName**: message text`
+  - Received messages appear on recipient's card flex-use line with ✉ icon
+  - Message Center dialog: view full message details, mark as read
+  - Reply button in message view opens compose dialog pre-addressed to sender
+  - Messages button in header shows unread count badge
+
+### Fixed
+- **Message Display Logic**: Messages now correctly appear on recipient's card (not sender's)
+  - Home card shows messages sent TO you, making it your inbox
+  - Broadcasts (`^all`) also appear on home card
+
 ## [1.2.2b] - 2025-12-14
 
 ### Fixed

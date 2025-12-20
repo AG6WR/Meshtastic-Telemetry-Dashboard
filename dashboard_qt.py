@@ -46,6 +46,7 @@ class DashboardQt(QMainWindow):
     
     # Signals
     node_selected = Signal(str)  # node_id
+    message_received = Signal(dict)  # message_data - for thread-safe message handling
     
     # Layout constants (narrowed ~20% for better fit)
     CARD_WIDTH = 368
@@ -71,8 +72,14 @@ class DashboardQt(QMainWindow):
         self.unread_messages: Dict[str, List[Dict]] = {}  # node_id -> list of unread messages
         
         # Message notification state
-        self.notification_timer: Optional[QTimer] = None
+        self.notification_timer: Optional[QTimer] = None  # Timer to hide banner after 10 min
+        self.notification_rotate_timer: Optional[QTimer] = None  # Timer to rotate messages
         self.notification_banner: Optional[QLabel] = None
+        self.recent_notifications: List[Dict] = []  # Messages to rotate through
+        self.current_notification_index: int = 0
+        
+        # Connect message signal to handler (for thread-safe message processing)
+        self.message_received.connect(self._handle_message_on_main_thread)
         
         # Setup UI
         self._setup_window()
@@ -120,9 +127,6 @@ class DashboardQt(QMainWindow):
         self.main_layout.setContentsMargins(8, 8, 8, 8)
         self.main_layout.setSpacing(8)
         
-        # Message notification banner (hidden by default)
-        self._create_notification_banner(self.main_layout)
-        
         # Header section
         self._create_header(self.main_layout)
         
@@ -131,18 +135,21 @@ class DashboardQt(QMainWindow):
         
         # Scrollable card area
         self._create_card_area(self.main_layout)
+        
+        # Message notification banner at bottom (hidden by default)
+        self._create_notification_banner(self.main_layout)
     
     def _create_notification_banner(self, parent_layout: QVBoxLayout):
         """Create the message notification banner (hidden initially)"""
         self.notification_banner = QLabel("")
         self.notification_banner.setFont(get_font('ui_body'))
+        self.notification_banner.setTextFormat(Qt.RichText)  # Enable rich text for bold names
         self.notification_banner.setStyleSheet("""
             QLabel {
                 background-color: #FFA500;
                 color: black;
                 padding: 8px 12px;
                 border-radius: 4px;
-                font-weight: bold;
             }
         """)
         self.notification_banner.setWordWrap(True)
@@ -362,7 +369,8 @@ class DashboardQt(QMainWindow):
             for node_id, node_data in nodes_data.items():
                 if node_id in self.card_widgets:
                     card = self.card_widgets[node_id]
-                    card.update_data(node_data)
+                    unread = self.unread_messages.get(node_id, [])
+                    card.update_data(node_data, unread_messages=unread)
         
         self.last_node_data = {k: dict(v) for k, v in nodes_data.items()}
     
@@ -397,6 +405,10 @@ class DashboardQt(QMainWindow):
             
             is_local = node_id == local_node_id
             unread = self.unread_messages.get(node_id, [])
+            
+            # Debug: Log unread messages for each card
+            if unread:
+                logger.info(f"Card {node_id}: has {len(unread)} unread messages")
             
             card = NodeCardQt(
                 node_id=node_id,
@@ -612,7 +624,17 @@ class DashboardQt(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error sending message: {e}")
     
     def _on_message_received(self, message_data: Dict):
-        """Handle incoming message from data collector"""
+        """Handle incoming message from data collector (called from background thread)
+        
+        This method is called from the Meshtastic connection thread.
+        We emit a signal to safely process on the main UI thread.
+        """
+        # Emit signal to process on main thread (thread-safe)
+        self.message_received.emit(message_data)
+    
+    @Slot(dict)
+    def _handle_message_on_main_thread(self, message_data: Dict):
+        """Process message on the main UI thread (connected via signal)"""
         try:
             from_node = message_data.get('from', 'Unknown')
             to_node = message_data.get('to', 'Unknown')
@@ -628,12 +650,23 @@ class DashboardQt(QMainWindow):
                 logger.debug(f"Ignoring message not addressed to us: to={to_node}")
                 return
             
-            logger.info(f"Processing incoming message from {from_name} ({from_node})")
+            logger.info(f"Processing incoming message from {from_name} ({from_node}) to {to_node}")
             
-            # Add to unread messages for the sender
-            if from_node not in self.unread_messages:
-                self.unread_messages[from_node] = []
-            self.unread_messages[from_node].append(message_data)
+            # Store messages under RECIPIENT's node ID so they appear on the receiving card
+            # This means the home/local card shows messages sent TO us
+            recipient_key = to_node if to_node != '^all' else local_node_id
+            
+            # Debug: Log node ID formats for comparison
+            if self.data_collector:
+                known_ids = list(self.data_collector.nodes_data.keys())
+                logger.debug(f"Storing message under recipient: '{recipient_key}' | Known nodes: {known_ids}")
+            
+            # Add to unread messages for the RECIPIENT (enrich with from_name for card display)
+            if recipient_key not in self.unread_messages:
+                self.unread_messages[recipient_key] = []
+            enriched_message = dict(message_data)
+            enriched_message['from_name'] = from_name
+            self.unread_messages[recipient_key].append(enriched_message)
             
             # Save to message manager if available
             if self.message_manager:
@@ -671,28 +704,102 @@ class DashboardQt(QMainWindow):
         return node_id
     
     def _show_message_notification(self, from_node: str, from_name: str, text: str):
-        """Show yellow notification banner for 15 seconds"""
-        # Cancel existing timer if any
-        if self.notification_timer:
-            self.notification_timer.stop()
+        """Add message to notification rotation and show banner for 10 minutes"""
+        import time as time_module
         
-        # Truncate long messages
-        display_text = text[:100] + '...' if len(text) > 100 else text
+        # Get local node name
+        local_node_id = self._get_local_node_id()
+        local_name = self._get_node_name(local_node_id) if local_node_id else "Local"
         
-        # Update and show banner
-        self.notification_banner.setText(f"Message from {from_name}: {display_text}")
+        # Add to recent notifications
+        notification = {
+            'from_name': from_name,
+            'to_name': local_name,
+            'text': text,
+            'timestamp': time_module.time()
+        }
+        self.recent_notifications.append(notification)
+        
+        # Remove notifications older than 10 minutes
+        cutoff = time_module.time() - 600  # 10 minutes
+        self.recent_notifications = [n for n in self.recent_notifications if n['timestamp'] > cutoff]
+        
+        # Update the banner display
+        self._update_notification_display()
         self.notification_banner.show()
         
-        # Set timer to hide after 15 seconds
+        # Reset the hide timer to 10 minutes from now
+        if self.notification_timer:
+            self.notification_timer.stop()
         self.notification_timer = QTimer(self)
         self.notification_timer.setSingleShot(True)
         self.notification_timer.timeout.connect(self._hide_notification)
-        self.notification_timer.start(15000)
+        self.notification_timer.start(600000)  # 10 minutes
+        
+        # Start rotation timer if multiple messages (rotate every 5 seconds)
+        if len(self.recent_notifications) > 1:
+            if not self.notification_rotate_timer:
+                self.notification_rotate_timer = QTimer(self)
+                self.notification_rotate_timer.timeout.connect(self._rotate_notification)
+                self.notification_rotate_timer.start(5000)  # Rotate every 5 seconds
+    
+    def _update_notification_display(self):
+        """Update the banner with the current notification"""
+        if not self.recent_notifications:
+            return
+        
+        # Get current notification
+        idx = self.current_notification_index % len(self.recent_notifications)
+        notif = self.recent_notifications[idx]
+        
+        # Format time as HH:MM
+        from datetime import datetime
+        dt = datetime.fromtimestamp(notif['timestamp'])
+        time_str = dt.strftime("%H:%M")
+        
+        # Truncate long messages
+        text = notif['text']
+        display_text = text[:80] + '...' if len(text) > 80 else text
+        
+        # Format with bold names: <HH:MM> **FromNode** to **ToNode**: message
+        html = f"&lt;{time_str}&gt; <b>{notif['from_name']}</b> to <b>{notif['to_name']}</b>: {display_text}"
+        
+        # Add indicator if multiple messages
+        if len(self.recent_notifications) > 1:
+            html = f"[{idx + 1}/{len(self.recent_notifications)}] " + html
+        
+        self.notification_banner.setText(html)
+    
+    def _rotate_notification(self):
+        """Rotate to the next notification"""
+        import time as time_module
+        
+        # Remove old notifications first
+        cutoff = time_module.time() - 600
+        self.recent_notifications = [n for n in self.recent_notifications if n['timestamp'] > cutoff]
+        
+        if not self.recent_notifications:
+            self._hide_notification()
+            return
+        
+        # Advance to next message
+        self.current_notification_index = (self.current_notification_index + 1) % len(self.recent_notifications)
+        self._update_notification_display()
+        
+        # Stop rotation timer if only one message left
+        if len(self.recent_notifications) <= 1 and self.notification_rotate_timer:
+            self.notification_rotate_timer.stop()
+            self.notification_rotate_timer = None
     
     def _hide_notification(self):
-        """Hide the notification banner"""
+        """Hide the notification banner and clear state"""
         if self.notification_banner:
             self.notification_banner.hide()
+        if self.notification_rotate_timer:
+            self.notification_rotate_timer.stop()
+            self.notification_rotate_timer = None
+        self.recent_notifications.clear()
+        self.current_notification_index = 0
     
     def _update_messages_button(self):
         """Update Messages button text with unread count"""
@@ -709,6 +816,7 @@ class DashboardQt(QMainWindow):
             window = MessageListWindowQt(
                 parent=self,
                 message_manager=self.message_manager,
+                on_view_message=self._view_message,
                 on_send_message=self._send_message_to
             )
             window.show()
@@ -820,6 +928,7 @@ class DashboardQt(QMainWindow):
             window = MessageListWindowQt(
                 parent=self,
                 message_manager=self.message_manager,
+                on_view_message=self._view_message,
                 on_send_message=self._send_message_to
             )
             window.show()
@@ -890,6 +999,137 @@ class DashboardQt(QMainWindow):
         new_columns = self._calculate_columns()
         if new_columns != self.current_columns and self.card_widgets:
             self._refresh_display()
+    
+    def _view_message(self, message_id: str):
+        """View a single message in a dialog"""
+        try:
+            if not self.message_manager:
+                logger.warning("No message manager available")
+                return
+            
+            message = self.message_manager.get_message_by_id(message_id)
+            if not message:
+                QMessageBox.warning(self, "Not Found", "Message not found.")
+                return
+            
+            # Mark as read
+            self.message_manager.mark_as_read(message_id)
+            
+            # Clear from unread tracking - messages are keyed by recipient (local node)
+            # For received messages, the recipient is our local node
+            local_node_id = self._get_local_node_id()
+            to_node_ids = message.get('to_node_ids', [])
+            recipient_key = to_node_ids[0] if to_node_ids and to_node_ids[0] != '^all' else local_node_id
+            
+            if recipient_key in self.unread_messages:
+                self.unread_messages[recipient_key] = [
+                    m for m in self.unread_messages[recipient_key] 
+                    if m.get('message_id') != message_id
+                ]
+                if not self.unread_messages[recipient_key]:
+                    del self.unread_messages[recipient_key]
+            self._update_messages_button()
+            
+            # Build message details
+            direction = message.get('direction', 'received')
+            from_name = message.get('from_name', 'Unknown')
+            to_ids = message.get('to_node_ids', [])
+            is_bulletin = message.get('is_bulletin', False)
+            text = message.get('text', '')
+            timestamp = message.get('timestamp', 0)
+            
+            # Format timestamp
+            dt = datetime.fromtimestamp(timestamp)
+            time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+            
+            # Build header info
+            if direction == 'sent':
+                if is_bulletin:
+                    header = f"Sent Bulletin\nTo: Everyone\nTime: {time_str}"
+                elif len(to_ids) > 1:
+                    header = f"Sent Message\nTo: {', '.join(to_ids)}\nTime: {time_str}"
+                else:
+                    header = f"Sent Message\nTo: {to_ids[0] if to_ids else 'Unknown'}\nTime: {time_str}"
+            else:
+                if is_bulletin:
+                    header = f"Bulletin from {from_name}\nTime: {time_str}"
+                else:
+                    header = f"Message from {from_name}\nTime: {time_str}"
+            
+            # Create view dialog
+            from PySide6.QtWidgets import QDialog, QTextEdit
+            dialog = QDialog(self)
+            dialog.setWindowTitle("View Message")
+            dialog.setMinimumSize(500, 350)
+            dialog.setStyleSheet(f"""
+                QDialog {{
+                    background-color: {COLORS['bg_main']};
+                }}
+                QLabel {{
+                    color: {COLORS['fg_normal']};
+                }}
+                QTextEdit {{
+                    background-color: {COLORS['bg_frame']};
+                    color: {COLORS['fg_normal']};
+                    border: 1px solid {COLORS['fg_secondary']};
+                    border-radius: 4px;
+                    padding: 8px;
+                }}
+            """)
+            
+            layout = QVBoxLayout(dialog)
+            layout.setSpacing(12)
+            layout.setContentsMargins(16, 16, 16, 16)
+            
+            # Header label
+            header_label = QLabel(header)
+            header_label.setFont(get_font('ui_body'))
+            header_label.setStyleSheet(f"color: {COLORS['fg_secondary']};")
+            layout.addWidget(header_label)
+            
+            # Message text
+            text_edit = QTextEdit()
+            text_edit.setFont(get_font('ui_body'))
+            text_edit.setPlainText(text)
+            text_edit.setReadOnly(True)
+            layout.addWidget(text_edit, stretch=1)
+            
+            # Buttons
+            btn_layout = QHBoxLayout()
+            btn_layout.addStretch()
+            
+            # Reply button (if received message)
+            if direction == 'received':
+                reply_btn = create_button("Reply", "success")
+                reply_btn.clicked.connect(lambda: self._reply_to_message(message, dialog))
+                btn_layout.addWidget(reply_btn)
+            
+            close_btn = create_button("Close", "secondary")
+            close_btn.clicked.connect(dialog.accept)
+            btn_layout.addWidget(close_btn)
+            
+            layout.addLayout(btn_layout)
+            
+            # Position relative to parent
+            parent_geo = self.geometry()
+            dialog.move(parent_geo.x() + 100, parent_geo.y() + 50)
+            
+            dialog.exec()
+            
+        except Exception as e:
+            logger.error(f"Error viewing message: {e}")
+            QMessageBox.critical(self, "Error", f"Failed to view message: {e}")
+    
+    def _reply_to_message(self, message: Dict, parent_dialog: QWidget):
+        """Reply to a message"""
+        logger.info(f"Reply button clicked, message: {message}")
+        parent_dialog.accept()  # Close view dialog
+        from_node = message.get('from_node_id', '')
+        logger.info(f"Reply to from_node: '{from_node}'")
+        if from_node:
+            self._send_message_to(from_node)
+        else:
+            logger.warning("No from_node_id in message, cannot reply")
     
     def keyPressEvent(self, event):
         """Handle key presses"""
