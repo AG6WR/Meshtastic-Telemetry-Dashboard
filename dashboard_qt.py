@@ -171,13 +171,13 @@ class DashboardQt(QMainWindow):
         
         header_layout.addStretch()
         
-        # Right side: connection info stacked vertically
+        # Right side: connection info stacked vertically, right-aligned
         right_info = QWidget()
         right_layout = QVBoxLayout(right_info)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(2)
         
-        # Connection status row
+        # Connection status row (right-aligned)
         conn_row = QWidget()
         conn_row_layout = QHBoxLayout(conn_row)
         conn_row_layout.setContentsMargins(0, 0, 0, 0)
@@ -192,16 +192,14 @@ class DashboardQt(QMainWindow):
         self.conn_status.setFont(get_font('ui_body'))
         self.conn_status.setStyleSheet(f"color: {COLORS['fg_bad']};")
         conn_row_layout.addWidget(self.conn_status)
-        conn_row_layout.addStretch()
         
-        right_layout.addWidget(conn_row)
+        right_layout.addWidget(conn_row, 0, Qt.AlignRight)
         
-        # Version row (below connection)
+        # Version row (below connection, right-aligned)
         version_label = QLabel(f"v{VERSION}")
         version_label.setFont(get_font('ui_notes'))
         version_label.setStyleSheet(f"color: {COLORS['fg_secondary']};")
-        version_label.setAlignment(Qt.AlignRight)
-        right_layout.addWidget(version_label)
+        right_layout.addWidget(version_label, 0, Qt.AlignRight)
         
         header_layout.addWidget(right_info)
         
