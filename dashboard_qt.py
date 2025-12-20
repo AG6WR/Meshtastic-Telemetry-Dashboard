@@ -38,7 +38,7 @@ from card_renderer_qt import NodeCardQt
 logger = logging.getLogger(__name__)
 
 # Version
-VERSION = "2.0.0-qt"
+VERSION = "2.0.1a"
 
 
 class DashboardQt(QMainWindow):
