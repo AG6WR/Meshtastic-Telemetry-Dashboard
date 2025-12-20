@@ -246,9 +246,8 @@ class SymbolTestWindow(QWidget):
         main_layout = QVBoxLayout(self)
         main_layout.setSpacing(10)
         
-        # Show available fonts for debugging
-        font_db = QFontDatabase()
-        families = font_db.families()
+        # Show available fonts for debugging (use static method to avoid deprecation)
+        families = QFontDatabase.families()
         print(f"Available font families ({len(families)}):")
         for f in families[:20]:  # First 20
             print(f"  - {f}")
