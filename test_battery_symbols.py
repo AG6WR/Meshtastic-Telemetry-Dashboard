@@ -7,69 +7,92 @@ Run this to see which symbols render correctly on your display.
 import sys
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-    QFrame, QGridLayout, QGroupBox
+    QFrame, QGridLayout, QGroupBox, QScrollArea
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QFontDatabase
 
 # Symbol categories to test
 BATTERY_SYMBOLS = {
-    "Unicode Battery Icons": [
-        ("🔋", "U+1F50B Battery"),
-        ("🪫", "U+1FAAB Low Battery"),
-        ("⚡", "U+26A1 Lightning"),
-        ("⏻", "U+23FB Power Symbol"),
-        ("⌁", "U+2301 Electric Arrow"),
+    "ASCII Only (Should Always Work)": [
+        ("+", "Plus"),
+        ("-", "Minus"),
+        ("*", "Asterisk"),
+        ("#", "Hash"),
+        ("@", "At"),
+        ("=", "Equals"),
+        ("[+]", "Bracketed plus"),
+        ("(+)", "Paren plus"),
     ],
-    "Box Drawing / Geometric": [
-        ("▮", "U+25AE Black Rectangle"),
-        ("█", "U+2588 Full Block"),
-        ("▌", "U+258C Left Half Block"),
-        ("▐", "U+2590 Right Half Block"),
-        ("■", "U+25A0 Black Square"),
-        ("□", "U+25A1 White Square"),
-        ("▪", "U+25AA Black Small Square"),
-        ("▫", "U+25AB White Small Square"),
+    "Basic Latin Extended": [
+        ("±", "Plus-Minus U+00B1"),
+        ("×", "Multiply U+00D7"),
+        ("÷", "Divide U+00F7"),
+        ("°", "Degree U+00B0"),
+        ("µ", "Micro U+00B5"),
+        ("·", "Middle dot U+00B7"),
+        ("«", "Left guillemet"),
+        ("»", "Right guillemet"),
     ],
-    "Arrows / Indicators": [
-        ("►", "U+25BA Black Right Triangle"),
-        ("▶", "U+25B6 Black Right Triangle"),
-        ("◄", "U+25C4 Black Left Triangle"),
-        ("▲", "U+25B2 Black Up Triangle"),
-        ("▼", "U+25BC Black Down Triangle"),
-        ("→", "U+2192 Right Arrow"),
-        ("↑", "U+2191 Up Arrow"),
-        ("↓", "U+2193 Down Arrow"),
+    "Box Drawing (U+2500 range)": [
+        ("─", "U+2500 Light horiz"),
+        ("│", "U+2502 Light vert"),
+        ("┌", "U+250C Corner"),
+        ("└", "U+2514 Corner"),
+        ("├", "U+251C T-left"),
+        ("┼", "U+253C Cross"),
+        ("═", "U+2550 Double horiz"),
+        ("║", "U+2551 Double vert"),
     ],
-    "Miscellaneous Symbols": [
-        ("●", "U+25CF Black Circle"),
-        ("○", "U+25CB White Circle"),
+    "Block Elements (U+2580 range)": [
+        ("▀", "U+2580 Upper half"),
+        ("▄", "U+2584 Lower half"),
+        ("█", "U+2588 Full block"),
+        ("▌", "U+258C Left half"),
+        ("▐", "U+2590 Right half"),
+        ("░", "U+2591 Light shade"),
+        ("▒", "U+2592 Medium shade"),
+        ("▓", "U+2593 Dark shade"),
+    ],
+    "Geometric Shapes (U+25A0 range)": [
+        ("■", "U+25A0 Black square"),
+        ("□", "U+25A1 White square"),
+        ("▪", "U+25AA Small black sq"),
+        ("▫", "U+25AB Small white sq"),
+        ("▬", "U+25AC Black rect"),
+        ("▮", "U+25AE Black vert rect"),
+        ("▰", "U+25B0 Black parallelogram"),
+        ("▱", "U+25B1 White parallelogram"),
+    ],
+    "Triangles and Arrows": [
+        ("▲", "U+25B2 Black up tri"),
+        ("△", "U+25B3 White up tri"),
+        ("▶", "U+25B6 Black right tri"),
+        ("▷", "U+25B7 White right tri"),
+        ("▼", "U+25BC Black down tri"),
+        ("◀", "U+25C0 Black left tri"),
+        ("►", "U+25BA Black right ptr"),
+        ("◄", "U+25C4 Black left ptr"),
+    ],
+    "Circles": [
+        ("●", "U+25CF Black circle"),
+        ("○", "U+25CB White circle"),
         ("◉", "U+25C9 Fisheye"),
         ("◎", "U+25CE Bullseye"),
-        ("★", "U+2605 Black Star"),
-        ("☆", "U+2606 White Star"),
-        ("+", "Plus Sign (ASCII)"),
-        ("-", "Minus Sign (ASCII)"),
+        ("◐", "U+25D0 Half black"),
+        ("◑", "U+25D1 Half black R"),
+        ("◒", "U+25D2 Half black B"),
+        ("◓", "U+25D3 Half black T"),
     ],
-    "Technical / Electrical": [
-        ("Ω", "U+03A9 Omega (resistance)"),
-        ("±", "U+00B1 Plus-Minus"),
-        ("∞", "U+221E Infinity"),
-        ("℃", "U+2103 Celsius"),
-        ("℉", "U+2109 Fahrenheit"),
-        ("µ", "U+00B5 Micro"),
-        ("Δ", "U+0394 Delta"),
-        ("V", "V for Voltage (ASCII)"),
-    ],
-    "ASCII Art Style Labels": [
-        ("[+]", "Plus in brackets"),
-        ("(+)", "Plus in parens"),
-        ("[V]", "V in brackets"),
-        ("[B]", "B in brackets"),
-        ("Batt", "Text: Batt"),
-        ("Pwr", "Text: Pwr"),
-        ("V:", "V colon"),
-        ("B:", "B colon"),
+    "Misc Symbols": [
+        ("★", "U+2605 Black star"),
+        ("☆", "U+2606 White star"),
+        ("✓", "U+2713 Check mark"),
+        ("✗", "U+2717 X mark"),
+        ("✦", "U+2726 4-pointed star"),
+        ("⬤", "U+2B24 Large circle"),
+        ("⚡", "U+26A1 Lightning"),
+        ("⏻", "U+23FB Power"),
     ],
 }
 
@@ -110,14 +133,35 @@ class SymbolTestWindow(QWidget):
         self._setup_ui()
     
     def _setup_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setSpacing(10)
+        main_layout = QVBoxLayout(self)
+        main_layout.setSpacing(10)
+        
+        # Show available fonts for debugging
+        font_db = QFontDatabase()
+        families = font_db.families()
+        print(f"Available font families ({len(families)}):")
+        for f in families[:20]:  # First 20
+            print(f"  - {f}")
+        if len(families) > 20:
+            print(f"  ... and {len(families) - 20} more")
+        
+        # Use Liberation Sans - the font installed on Pi
+        FONT_FAMILY = "Liberation Sans"
         
         # Title
         title = QLabel("Battery Symbol Options - Test on Raspberry Pi")
-        title.setFont(QFont("Arial", 14, QFont.Bold))
+        title_font = QFont(FONT_FAMILY, 14)
+        title_font.setBold(True)
+        title.setFont(title_font)
         title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title)
+        main_layout.addWidget(title)
+        
+        # Show which font is being used
+        actual_font = QFont(FONT_FAMILY)
+        font_info = QLabel(f"Requested: {FONT_FAMILY} | Actual: {actual_font.family()}")
+        font_info.setStyleSheet("color: #00ff00; font-size: 9pt;")
+        font_info.setAlignment(Qt.AlignCenter)
+        main_layout.addWidget(font_info)
         
         instructions = QLabel(
             "Symbols that render as boxes or question marks won't work on the Pi.\n"
@@ -125,7 +169,15 @@ class SymbolTestWindow(QWidget):
         )
         instructions.setStyleSheet("color: #888888; font-size: 10pt;")
         instructions.setAlignment(Qt.AlignCenter)
-        layout.addWidget(instructions)
+        main_layout.addWidget(instructions)
+        
+        # Scrollable area for the content
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("QScrollArea { border: none; }")
+        
+        content = QWidget()
+        layout = QVBoxLayout(content)
         
         # Create groups for each category
         for category_name, symbols in BATTERY_SYMBOLS.items():
@@ -143,9 +195,10 @@ class SymbolTestWindow(QWidget):
                 container_layout.setContentsMargins(5, 5, 5, 5)
                 container_layout.setSpacing(2)
                 
-                # Large symbol display
+                # Large symbol display - use Liberation Sans
                 symbol_label = QLabel(symbol)
-                symbol_label.setFont(QFont("Arial", 16))
+                symbol_font = QFont(FONT_FAMILY, 16)
+                symbol_label.setFont(symbol_font)
                 symbol_label.setAlignment(Qt.AlignCenter)
                 symbol_label.setStyleSheet("""
                     background-color: #2d2d2d;
@@ -157,9 +210,10 @@ class SymbolTestWindow(QWidget):
                 """)
                 container_layout.addWidget(symbol_label)
                 
-                # Description
+                # Description - use Liberation Sans
                 desc_label = QLabel(description)
-                desc_label.setFont(QFont("Arial", 7))
+                desc_font = QFont(FONT_FAMILY, 7)
+                desc_label.setFont(desc_font)
                 desc_label.setStyleSheet("color: #888888;")
                 desc_label.setAlignment(Qt.AlignCenter)
                 desc_label.setWordWrap(True)
@@ -199,7 +253,8 @@ class SymbolTestWindow(QWidget):
             example_widget_layout.setSpacing(1)
             
             label_display = QLabel(label)
-            label_display.setFont(QFont("Arial", 11))
+            label_font = QFont(FONT_FAMILY, 11)
+            label_display.setFont(label_font)
             label_display.setAlignment(Qt.AlignCenter)
             label_display.setStyleSheet("""
                 background-color: #2d2d2d;
@@ -210,7 +265,8 @@ class SymbolTestWindow(QWidget):
             example_widget_layout.addWidget(label_display)
             
             desc_label = QLabel(desc)
-            desc_label.setFont(QFont("Arial", 7))
+            desc_font = QFont(FONT_FAMILY, 7)
+            desc_label.setFont(desc_font)
             desc_label.setStyleSheet("color: #666666;")
             desc_label.setAlignment(Qt.AlignCenter)
             example_widget_layout.addWidget(desc_label)
@@ -219,6 +275,9 @@ class SymbolTestWindow(QWidget):
         
         example_layout.addLayout(example_grid)
         layout.addWidget(example_group)
+        
+        scroll.setWidget(content)
+        main_layout.addWidget(scroll)
 
 
 def main():
