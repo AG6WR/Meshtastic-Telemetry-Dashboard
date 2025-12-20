@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QPushButton, QScrollArea, QFrame, QMessageBox, QGridLayout
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QImage, QPixmap, QIcon
 
 # Matplotlib imports for Qt integration
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
@@ -26,6 +26,80 @@ import matplotlib.dates as mdates
 from qt_styles import COLORS, FONTS, create_button, CHECKBOX_STYLE, RADIOBUTTON_STYLE, GROUPBOX_STYLE
 
 logger = logging.getLogger(__name__)
+
+
+class DarkNavigationToolbar(NavigationToolbar):
+    """Custom NavigationToolbar that ensures light icons for dark theme backgrounds.
+    
+    On some platforms (like Raspberry Pi / Linux), matplotlib uses dark icons
+    even when we want a dark-themed toolbar. This class inverts the icons
+    if they appear to be dark (designed for light backgrounds).
+    """
+    
+    def __init__(self, canvas, parent=None, coordinates=True):
+        super().__init__(canvas, parent, coordinates)
+        self._ensure_light_icons()
+    
+    def _ensure_light_icons(self):
+        """Check if icons are dark and invert them if needed for dark backgrounds."""
+        for action in self.actions():
+            icon = action.icon()
+            if icon.isNull():
+                continue
+            
+            # Get all available sizes
+            sizes = icon.availableSizes()
+            if not sizes:
+                continue
+            
+            # Check if this icon is "dark" (designed for light background)
+            # by sampling the pixmap - if mostly dark, we need to invert
+            pixmap = icon.pixmap(sizes[0])
+            image = pixmap.toImage()
+            
+            if self._is_dark_icon(image):
+                # Create a new icon with inverted colors
+                new_icon = QIcon()
+                for size in sizes:
+                    pixmap = icon.pixmap(size)
+                    image = pixmap.toImage()
+                    image.invertPixels(QImage.InvertMode.InvertRgb)
+                    new_pixmap = QPixmap.fromImage(image)
+                    new_icon.addPixmap(new_pixmap)
+                action.setIcon(new_icon)
+    
+    def _is_dark_icon(self, image: QImage) -> bool:
+        """Determine if an icon is dark (designed for light background).
+        
+        Sample pixels and check if the average brightness is low.
+        """
+        if image.isNull():
+            return False
+        
+        total_brightness = 0
+        sample_count = 0
+        
+        # Sample a grid of pixels
+        width = image.width()
+        height = image.height()
+        step = max(1, min(width, height) // 8)
+        
+        for x in range(0, width, step):
+            for y in range(0, height, step):
+                color = image.pixelColor(x, y)
+                # Only count non-transparent pixels
+                if color.alpha() > 128:
+                    # Calculate brightness (0-255)
+                    brightness = (color.red() + color.green() + color.blue()) / 3
+                    total_brightness += brightness
+                    sample_count += 1
+        
+        if sample_count == 0:
+            return False
+        
+        avg_brightness = total_brightness / sample_count
+        # If average brightness is below 128, it's a "dark" icon
+        return avg_brightness < 128
 
 
 class PlotConfigDialog(QDialog):
@@ -270,38 +344,38 @@ class PlotWindow(QDialog):
         # Create canvas
         self.canvas = FigureCanvas(self.figure)
         
-        # Create navigation toolbar with light background (matplotlib icons are dark)
-        self.toolbar = NavigationToolbar(self.canvas, self)
-        self.toolbar.setStyleSheet("""
-            QToolBar {
-                background-color: #c0c0c0;
+        # Create navigation toolbar with inverted icons for dark theme
+        self.toolbar = DarkNavigationToolbar(self.canvas, self)
+        self.toolbar.setStyleSheet(f"""
+            QToolBar {{
+                background-color: {COLORS['bg_frame']};
                 border: none;
                 spacing: 5px;
                 padding: 2px;
-            }
-            QToolButton {
-                background-color: #c0c0c0;
-                color: #000000;
-                border: 1px solid #a0a0a0;
+            }}
+            QToolButton {{
+                background-color: {COLORS['bg_frame']};
+                color: {COLORS['fg_normal']};
+                border: 1px solid #505050;
                 border-radius: 3px;
                 padding: 4px;
                 margin: 1px;
-            }
-            QToolButton:hover {
-                background-color: #d8d8d8;
-                border: 1px solid #808080;
-            }
-            QToolButton:pressed {
-                background-color: #b0b0b0;
-            }
-            QLabel {
-                color: #000000;
-            }
-            QLineEdit {
-                background-color: #ffffff;
-                color: #000000;
-                border: 1px solid #a0a0a0;
-            }
+            }}
+            QToolButton:hover {{
+                background-color: {COLORS['bg_input']};
+                border: 1px solid #707070;
+            }}
+            QToolButton:pressed {{
+                background-color: #404040;
+            }}
+            QLabel {{
+                color: {COLORS['fg_normal']};
+            }}
+            QLineEdit {{
+                background-color: {COLORS['bg_input']};
+                color: {COLORS['fg_normal']};
+                border: 1px solid #505050;
+            }}
         """)
         
         layout.addWidget(self.toolbar)
