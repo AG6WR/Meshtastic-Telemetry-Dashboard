@@ -74,10 +74,10 @@ class MessageDialogQt(QDialog):
         self.setMinimumSize(630, 280)
         self.setModal(True)
         
-        # Use Tool flag - Wayland often respects positioning for tool windows
-        self.setWindowFlags(Qt.Dialog | Qt.Tool | Qt.WindowStaysOnTopHint)
+        # Use FramelessWindowHint - Wayland may allow positioning frameless windows
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         
-        # Apply dark theme
+        # Apply dark theme (with border since frameless)
         self._apply_dark_theme()
         
         self._create_widgets()
@@ -90,6 +90,8 @@ class MessageDialogQt(QDialog):
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {self.colors['bg_frame']};
+                border: 2px solid #555;
+                border-radius: 8px;
             }}
             QLabel {{
                 color: {self.colors['fg_normal']};
