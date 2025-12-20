@@ -79,8 +79,8 @@ class MessageDialogQt(QDialog):
         
         self._create_widgets()
         
-        # Center on screen (or relative to parent)
-        self._center_dialog(positioning_parent or parent)
+        # Position at top of screen to leave room for virtual keyboard
+        self._position_for_keyboard()
     
     def _apply_dark_theme(self):
         """Apply dark theme colors to dialog"""
@@ -105,21 +105,15 @@ class MessageDialogQt(QDialog):
             }}
         """)
     
-    def _center_dialog(self, reference_widget):
-        """Center dialog on screen"""
+    def _position_for_keyboard(self):
+        """Position dialog at top of screen to leave room for virtual keyboard"""
         self.adjustSize()
-        if reference_widget and hasattr(reference_widget, 'geometry'):
-            # Center relative to reference widget
-            ref_geo = reference_widget.geometry()
-            x = ref_geo.x() + (ref_geo.width() - self.width()) // 2
-            y = ref_geo.y() + (ref_geo.height() - self.height()) // 2
-            self.move(x, y)
-        else:
-            # Center on screen
-            screen = self.screen().geometry()
-            x = (screen.width() - self.width()) // 2
-            y = 50  # Near top to leave room for virtual keyboard
-            self.move(x, y)
+        # Always position near top of screen, centered horizontally
+        # This leaves room for the Wayland/system virtual keyboard at the bottom
+        screen = self.screen().geometry()
+        x = (screen.width() - self.width()) // 2
+        y = 10  # Near top of screen, matching Tkinter version
+        self.move(x, y)
     
     def _create_widgets(self):
         """Create dialog widgets"""
