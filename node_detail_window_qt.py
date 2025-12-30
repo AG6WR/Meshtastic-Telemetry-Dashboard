@@ -139,9 +139,12 @@ class NodeDetailWindowQt(QDialog):
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        # Explicitly set viewport background to prevent system theme bleed-through
+        scroll_area.viewport().setStyleSheet(f"background-color: {self.colors['bg_main']};")
         
         # Content widget inside scroll area
         content_widget = QWidget()
+        content_widget.setStyleSheet(f"background-color: {self.colors['bg_main']};")
         content_layout = QVBoxLayout(content_widget)
         content_layout.setContentsMargins(4, 4, 4, 4)
         content_layout.setSpacing(6)
