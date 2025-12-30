@@ -437,7 +437,7 @@ class NodeCardQt(QFrame):
     # =========================================================================
     
     def _update_status_line(self):
-        """Update line 2 based on priority: messages > motion > last heard"""
+        """Update line 2 based on priority: messages > motion > last heard (for stale/offline)"""
         label = self._widgets.get('status_line')
         if not label:
             return
@@ -457,9 +457,10 @@ class NodeCardQt(QFrame):
         
         status, _ = self._get_status()
         current_time = time.time()
+        is_stale = self._is_telemetry_stale()
         
-        # Priority 2: Motion detected (online nodes only) - use 🚶 or ⚡ icon
-        if status == "Online":
+        # Priority 2: Motion detected (online, non-stale nodes only)
+        if status == "Online" and not is_stale:
             last_motion = self.node_data.get('Last Motion')
             if last_motion:
                 motion_threshold = self.MOTION_DISPLAY_SECONDS
@@ -467,18 +468,26 @@ class NodeCardQt(QFrame):
                     motion_threshold = self.config_manager.get('dashboard.motion_display_seconds', 900)
                 
                 if (current_time - last_motion) <= motion_threshold:
-                    label.setText("⚡ Motion detected")
+                    label.setText("Motion detected")
                     label.setStyleSheet(f"color: {self.colors['fg_good']}; background: transparent;")
                     return
         
-        # Priority 3: Last heard (offline nodes)
-        if status == "Offline":
-            last_heard = self.node_data.get('Last Heard', 0)
-            if last_heard:
+        # Priority 3: Last heard (offline nodes OR stale telemetry)
+        if status == "Offline" or is_stale:
+            last_heard = self.node_data.get('Last Heard')
+            if last_heard and last_heard > 0:
                 heard_dt = datetime.fromtimestamp(last_heard)
-                label.setText(f"Last: {heard_dt.strftime('%m-%d %H:%M')}")
-                label.setStyleSheet(f"color: {self.colors['fg_bad']}; background: transparent;")
+                # Use different colors: orange for stale-but-online, red for offline
+                color = self.colors['fg_warning'] if status == "Online" else self.colors['fg_bad']
+                label.setText(f"Last Heard: {heard_dt.strftime('%m-%d %H:%M')}")
+                label.setStyleSheet(f"color: {color}; background: transparent;")
                 return
+            else:
+                # No Last Heard data - show "Never heard" for offline nodes
+                if status == "Offline":
+                    label.setText("Last Heard: Never")
+                    label.setStyleSheet(f"color: {self.colors['fg_bad']}; background: transparent;")
+                    return
         
         # Default: empty
         label.setText("")
