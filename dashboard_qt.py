@@ -118,11 +118,11 @@ class DashboardQt(QMainWindow):
         if not geometry_restored:
             width = settings.value("window/width", 1160, type=int)
             height = settings.value("window/height", 720, type=int)
-            x = settings.value("window/x", type=int)
-            y = settings.value("window/y", type=int)
+            # Sanity check: constrain to reasonable defaults for Pi (1280x720)
+            width = min(max(width, 800), 1260)
+            height = min(max(height, 480), 670)
             self.resize(width, height)
-            if x is not None and y is not None:
-                self.move(x, y)
+            # Skip position restore here - let showEvent handle it with screen info
         
         # Dark theme
         self.setStyleSheet(f"""
@@ -1184,16 +1184,45 @@ class DashboardQt(QMainWindow):
             QTimer.singleShot(50, self._apply_saved_geometry)
     
     def _apply_saved_geometry(self):
-        """Apply saved geometry after window is shown"""
+        """Apply saved geometry after window is shown, with sanity checks"""
         settings = QSettings("AG6WR", "MeshtasticDashboard")
         width = settings.value("window/width", type=int)
         height = settings.value("window/height", type=int)
         x = settings.value("window/x", type=int)
         y = settings.value("window/y", type=int)
         
+        # Get available screen geometry
+        screen = self.screen()
+        if screen:
+            screen_rect = screen.availableGeometry()
+            screen_width = screen_rect.width()
+            screen_height = screen_rect.height()
+            screen_x = screen_rect.x()
+            screen_y = screen_rect.y()
+        else:
+            # Fallback to common Pi resolution
+            screen_width, screen_height = 1280, 720
+            screen_x, screen_y = 0, 0
+        
+        # Leave room for window decorations (title bar ~30px, borders ~10px)
+        max_width = screen_width - 20
+        max_height = screen_height - 50
+        
+        # Apply size with sanity checks
         if width and height:
+            # Constrain to screen size
+            width = min(width, max_width)
+            height = min(height, max_height)
+            # Ensure minimum size
+            width = max(width, 800)
+            height = max(height, 480)
             self.resize(width, height)
+        
+        # Apply position with sanity checks
         if x is not None and y is not None:
+            # Ensure window is visible (at least 100px on screen)
+            x = max(screen_x, min(x, screen_x + screen_width - 100))
+            y = max(screen_y, min(y, screen_y + screen_height - 100))
             self.move(x, y)
     
     def closeEvent(self, event):
