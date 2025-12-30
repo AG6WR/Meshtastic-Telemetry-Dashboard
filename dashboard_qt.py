@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
     QLabel, QPushButton, QScrollArea, QGridLayout, QFrame, QMenu,
     QSizePolicy, QSpacerItem, QMessageBox
 )
-from PySide6.QtCore import Qt, QTimer, Signal, Slot
+from PySide6.QtCore import Qt, QTimer, Signal, Slot, QSettings, QByteArray
 from PySide6.QtGui import QFont, QAction
 
 from qt_styles import COLORS, FONTS, get_font, create_button
@@ -101,8 +101,15 @@ class DashboardQt(QMainWindow):
         """Configure main window properties"""
         self.setWindowTitle(f"CERT ICP Telemetry Dashboard v{VERSION}")
         self.setMinimumSize(800, 480)
-        # Width for 3 cards: 3*368 + margins(16) + spacing(16) + scrollbar(24) = 1160
-        self.resize(1160, 720)
+        
+        # Restore saved geometry or use defaults
+        settings = QSettings("AG6WR", "MeshtasticDashboard")
+        geometry = settings.value("window/geometry")
+        if geometry:
+            self.restoreGeometry(geometry)
+        else:
+            # Default: Width for 3 cards: 3*368 + margins(16) + spacing(16) + scrollbar(24) = 1160
+            self.resize(1160, 720)
         
         # Dark theme
         self.setStyleSheet(f"""
@@ -1154,6 +1161,12 @@ class DashboardQt(QMainWindow):
             self._toggle_fullscreen()
         else:
             super().keyPressEvent(event)
+    
+    def closeEvent(self, event):
+        """Save window geometry on close"""
+        settings = QSettings("AG6WR", "MeshtasticDashboard")
+        settings.setValue("window/geometry", self.saveGeometry())
+        super().closeEvent(event)
 
 
 # =============================================================================
