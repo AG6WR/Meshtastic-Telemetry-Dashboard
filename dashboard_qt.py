@@ -66,6 +66,7 @@ class DashboardQt(QMainWindow):
         self.selected_node_id: Optional[str] = None
         self.is_fullscreen = False
         self.current_columns = 0
+        self._geometry_restored = False  # Track if geometry has been restored
         
         # Track data for change detection
         self.last_node_data: Dict[str, Dict] = {}
@@ -105,11 +106,23 @@ class DashboardQt(QMainWindow):
         # Restore saved geometry or use defaults
         settings = QSettings("AG6WR", "MeshtasticDashboard")
         geometry = settings.value("window/geometry")
+        window_state = settings.value("window/state")
+        
+        geometry_restored = False
         if geometry:
-            self.restoreGeometry(geometry)
-        else:
-            # Default: Width for 3 cards: 3*368 + margins(16) + spacing(16) + scrollbar(24) = 1160
-            self.resize(1160, 720)
+            geometry_restored = self.restoreGeometry(geometry)
+        if window_state:
+            self.restoreState(window_state)
+        
+        # Use explicit size/position fallback if restoreGeometry failed or no geometry
+        if not geometry_restored:
+            width = settings.value("window/width", 1160, type=int)
+            height = settings.value("window/height", 720, type=int)
+            x = settings.value("window/x", type=int)
+            y = settings.value("window/y", type=int)
+            self.resize(width, height)
+            if x is not None and y is not None:
+                self.move(x, y)
         
         # Dark theme
         self.setStyleSheet(f"""
@@ -1162,10 +1175,37 @@ class DashboardQt(QMainWindow):
         else:
             super().keyPressEvent(event)
     
+    def showEvent(self, event):
+        """Restore geometry after window is shown (for Wayland/other WMs that need it)"""
+        super().showEvent(event)
+        if not self._geometry_restored:
+            self._geometry_restored = True
+            # Defer geometry restoration slightly to ensure window is fully shown
+            QTimer.singleShot(50, self._apply_saved_geometry)
+    
+    def _apply_saved_geometry(self):
+        """Apply saved geometry after window is shown"""
+        settings = QSettings("AG6WR", "MeshtasticDashboard")
+        width = settings.value("window/width", type=int)
+        height = settings.value("window/height", type=int)
+        x = settings.value("window/x", type=int)
+        y = settings.value("window/y", type=int)
+        
+        if width and height:
+            self.resize(width, height)
+        if x is not None and y is not None:
+            self.move(x, y)
+    
     def closeEvent(self, event):
         """Save window geometry on close"""
         settings = QSettings("AG6WR", "MeshtasticDashboard")
         settings.setValue("window/geometry", self.saveGeometry())
+        settings.setValue("window/state", self.saveState())
+        # Also save explicit size/position as fallback
+        settings.setValue("window/width", self.width())
+        settings.setValue("window/height", self.height())
+        settings.setValue("window/x", self.x())
+        settings.setValue("window/y", self.y())
         super().closeEvent(event)
 
 
