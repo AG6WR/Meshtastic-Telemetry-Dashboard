@@ -18,14 +18,126 @@ import time
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFrame, QScrollArea, QWidget, QGridLayout, QMessageBox,
-    QSizePolicy
+    QSizePolicy, QCheckBox
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
-from qt_styles import create_button, create_close_button, COLORS, BUTTON_STYLES, get_font
+from qt_styles import (
+    create_button, create_close_button, create_ok_button, create_cancel_button,
+    COLORS, BUTTON_STYLES, get_font, CHECKBOX_STYLE
+)
 
 logger = logging.getLogger(__name__)
+
+
+class StyledConfirmDialog(QDialog):
+    """A styled confirmation dialog matching the app's dark theme"""
+    
+    def __init__(self, parent, title: str, message: str, 
+                 show_checkbox: bool = False, checkbox_text: str = "",
+                 ok_text: str = "✓ OK", cancel_text: str = "✗ Cancel"):
+        super().__init__(parent)
+        
+        self.setWindowTitle(title)
+        self.setModal(True)
+        self.setMinimumWidth(450)
+        
+        # Result tracking
+        self.checkbox_checked = False
+        
+        # Apply dark theme
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {COLORS['bg_main']};
+            }}
+            QLabel {{
+                color: {COLORS['fg_normal']};
+                font-size: 11pt;
+            }}
+            {CHECKBOX_STYLE}
+        """)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+        
+        # Message label
+        msg_label = QLabel(message)
+        msg_label.setWordWrap(True)
+        msg_label.setFont(get_font('default'))
+        layout.addWidget(msg_label)
+        
+        # Optional checkbox
+        if show_checkbox:
+            self.checkbox = QCheckBox(checkbox_text)
+            self.checkbox.setFont(get_font('default'))
+            layout.addWidget(self.checkbox)
+        
+        # Spacer
+        layout.addStretch()
+        
+        # Button row
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        ok_btn = create_button(ok_text, "success", self._on_ok)
+        cancel_btn = create_button(cancel_text, "neutral", self.reject)
+        
+        button_layout.addWidget(ok_btn)
+        button_layout.addWidget(cancel_btn)
+        
+        layout.addLayout(button_layout)
+    
+    def _on_ok(self):
+        """Handle OK button click"""
+        if hasattr(self, 'checkbox'):
+            self.checkbox_checked = self.checkbox.isChecked()
+        self.accept()
+
+
+class StyledInfoDialog(QDialog):
+    """A styled information dialog matching the app's dark theme"""
+    
+    def __init__(self, parent, title: str, message: str):
+        super().__init__(parent)
+        
+        self.setWindowTitle(title)
+        self.setModal(True)
+        self.setMinimumWidth(400)
+        
+        # Apply dark theme
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {COLORS['bg_main']};
+            }}
+            QLabel {{
+                color: {COLORS['fg_normal']};
+                font-size: 11pt;
+            }}
+        """)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+        
+        # Message label
+        msg_label = QLabel(message)
+        msg_label.setWordWrap(True)
+        msg_label.setFont(get_font('default'))
+        layout.addWidget(msg_label)
+        
+        # Spacer
+        layout.addStretch()
+        
+        # Button row
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        ok_btn = create_button("✓ OK", "success", self.accept)
+        button_layout.addWidget(ok_btn)
+        
+        layout.addLayout(button_layout)
 
 
 class NodeDetailWindowQt(QDialog):
@@ -474,43 +586,48 @@ class NodeDetailWindowQt(QDialog):
         """Forget (remove) this node from the system"""
         node_name = self.node_data.get('Node LongName', self.node_id)
         
-        # Confirmation dialog
-        response = QMessageBox.question(
+        # Confirmation dialog with checkbox for log deletion
+        confirm_dialog = StyledConfirmDialog(
             self,
             "Forget Node",
             f"Forget node '{node_name}' ({self.node_id})?\n\n"
             "This will:\n"
             "• Remove all node data from the dashboard\n"
-            "• Clear alerts for this node\n"
-            "• Keep CSV logs (unless deleted manually)\n\n"
-            "This cannot be undone. Continue?",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
+            "• Clear alerts for this node\n\n"
+            "This cannot be undone.",
+            show_checkbox=True,
+            checkbox_text="Also delete CSV log files for this node"
         )
         
-        if response == QMessageBox.Yes:
-            # Ask about deleting logs
-            delete_logs = QMessageBox.question(
-                self,
-                "Delete Logs?",
-                f"Also delete CSV log files for '{node_name}'?\n\n"
-                "If you select No, logs will be preserved\n"
-                "and can be accessed manually.",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
-            ) == QMessageBox.Yes
+        if confirm_dialog.exec() == QDialog.Accepted:
+            delete_logs = confirm_dialog.checkbox_checked
             
             # Call data_collector to forget the node
             if self.data_collector:
                 success = self.data_collector.forget_node(self.node_id, delete_logs)
                 
                 if success:
-                    QMessageBox.information(self, "Node Forgotten", f"Node '{node_name}' has been removed.")
+                    info_dialog = StyledInfoDialog(
+                        self,
+                        "Node Forgotten",
+                        f"Node '{node_name}' has been removed."
+                    )
+                    info_dialog.exec()
                     self.close()
                 else:
-                    QMessageBox.critical(self, "Error", f"Failed to forget node '{node_name}'.")
+                    info_dialog = StyledInfoDialog(
+                        self,
+                        "Error",
+                        f"Failed to forget node '{node_name}'."
+                    )
+                    info_dialog.exec()
             else:
-                QMessageBox.critical(self, "Error", "Data collector not available.")
+                info_dialog = StyledInfoDialog(
+                    self,
+                    "Error",
+                    "Data collector not available."
+                )
+                info_dialog.exec()
     
     # === Color helper methods ===
     
