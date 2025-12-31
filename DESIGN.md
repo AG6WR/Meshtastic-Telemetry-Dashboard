@@ -1,6 +1,7 @@
 # Meshtastic Telemetry Dashboard - Design Architecture
 
 ## Version History
+- **v2.0.3b** (2025-12-31): Per-node current sensor scaling complete - node detail shows raw/scale/scaled
 - **v2.0.3a** (2025-12-30): Per-node current sensor scaling - different shunt resistors per node
 - **v2.0.2b** (2025-12-29): Current sense scaling feature with Hardware settings tab
 - **v1.3.1** (2025-12-18): Fixed checkbox rendering in Message Center, connected Alerts button

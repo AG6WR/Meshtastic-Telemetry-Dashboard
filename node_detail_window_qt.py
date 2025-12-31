@@ -27,7 +27,7 @@ from qt_styles import (
     create_button, create_close_button, create_ok_button, create_cancel_button,
     COLORS, BUTTON_STYLES, get_font, CHECKBOX_STYLE
 )
-from formatters import scale_current, format_current
+from formatters import scale_current, format_current, get_current_scale_factor
 
 logger = logging.getLogger(__name__)
 
@@ -504,10 +504,21 @@ class NodeDetailWindowQt(QDialog):
                 self._add_info_row(content_layout, "  Voltage:", ch3_text, voltage_color)
             
             if ch3_current is not None:
-                # Apply scaling from config (per-node or default)
-                scaled_current = scale_current(ch3_current, self.config_manager, self.node_id)
-                current_text = format_current(scaled_current, include_direction=False)
-                self._add_info_row(content_layout, "  Current:", current_text)
+                # Get scale factor for this node
+                scale_factor = get_current_scale_factor(self.config_manager, self.node_id)
+                
+                if scale_factor != 1.0:
+                    # Scaling is active - show raw, scale, and calculated
+                    raw_text = format_current(ch3_current, include_direction=False)
+                    self._add_info_row(content_layout, "  Current (raw):", raw_text)
+                    self._add_info_row(content_layout, "  Scale factor:", f"{scale_factor:.2f}x")
+                    scaled_current = ch3_current * scale_factor
+                    scaled_text = format_current(scaled_current, include_direction=False)
+                    self._add_info_row(content_layout, "  Current (scaled):", scaled_text)
+                else:
+                    # No scaling - just show current
+                    current_text = format_current(ch3_current, include_direction=False)
+                    self._add_info_row(content_layout, "  Current:", current_text)
         
         # Channel Utilization
         channel_util = self.node_data.get('Channel Utilization')

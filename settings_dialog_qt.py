@@ -507,7 +507,7 @@ class SettingsDialogQt(QDialog):
         
         # Add known nodes if data_collector is available
         if self.data_collector:
-            for node_id, node_data in self.data_collector.nodes.items():
+            for node_id, node_data in self.data_collector.nodes_data.items():
                 long_name = node_data.get('Node LongName', node_id)
                 short_name = node_data.get('Node ShortName', '')
                 display = f"{long_name} ({short_name})" if short_name else long_name
