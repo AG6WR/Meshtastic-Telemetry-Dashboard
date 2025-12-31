@@ -147,5 +147,15 @@ class ConfigManager:
                         "cooldown_minutes": 30
                     }
                 }
+            },
+            "hardware": {
+                "current_sensor": {
+                    "default": {
+                        "enabled": False,
+                        "full_scale_voltage_mv": 350,
+                        "full_scale_current_a": 3.5
+                    },
+                    "nodes": {}
+                }
             }
         }

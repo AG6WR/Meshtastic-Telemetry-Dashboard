@@ -9,12 +9,9 @@
   - Solution: Removed pin emoji entirely - green background already indicates local node
   - No longer renders empty box on Pi
 
-- [ ] **Research available glyphs in Liberation font family**
-  - Goal: Identify symbols that render correctly on Pi for UI indicators
-  - Need to find alternatives to emoji that won't render as boxes
-  - Consider: checkmarks, bullets, arrows, geometric shapes
-  - Test on actual Pi with Liberation Sans/Mono fonts
-  - Document working glyphs for future UI development
+- [x] **Research available glyphs in Liberation font family** - DONE
+  - Removed emoji icons from UI, using text labels instead
+  - Qt version avoids emoji rendering issues
 
 #### Window Layout Improvements
 - [x] **Node Detail window improvements** (Issue #d - DONE)
@@ -48,29 +45,32 @@
 
 ### Code Quality & Technical Debt
 
-#### Qt Port (In Progress)
+#### Qt Port (Complete)
 - [x] `settings_dialog_qt.py` - Settings dialog ported to PySide6
 - [x] `message_dialog_qt.py` - Message compose dialog ported to PySide6
-- [ ] `node_detail_window_qt.py` - Node detail window (in progress)
-- [ ] `message_list_window_qt.py` - Message list window
-- [ ] `dashboard_qt.py` - Main dashboard window
+- [x] `node_detail_window_qt.py` - Node detail window
+- [x] `message_list_window_qt.py` - Message list window
+- [x] `dashboard_qt.py` - Main dashboard window
+- [x] `card_renderer_qt.py` - Card widget (new, cleaner architecture)
+- [x] `plotter_qt.py` - Plot configuration and display
+- [x] `node_alert_config_qt.py` - Per-node alert configuration
+- [x] `qt_styles.py` - Centralized styling module
+- [x] `run_monitor_qt.py` - Entry point
 
-#### Qt Virtual Keyboard (Open Issue)
-- [ ] **Test Qt native virtual keyboard on Pi**
-  - Tkinter version uses custom `virtual_keyboard.py` for Wayland compatibility
-  - Qt should support `QT_IM_MODULE=qtvirtualkeyboard` environment variable
-  - May need `qt6-virtualkeyboard` package installed on Pi
-  - Test when deploying Qt version to Pi - if native doesn't work, port custom keyboard to Qt
-  - Affects: `message_dialog_qt.py` and any other text input dialogs
+**Note:** Table view mode not ported (Cards view is preferred for touch/kiosk use)
+
+#### Qt Virtual Keyboard
+- [x] **Test Qt native virtual keyboard on Pi** - DONE
+  - Qt handles virtual keyboard natively
+  - May need `qt6-virtualkeyboard` package and `QT_IM_MODULE=qtvirtualkeyboard` on Pi if needed
 
 #### Existing TODOs in Codebase
-- [ ] Implement external battery update (dashboard.py:2808)
-- [ ] Refactor card field registry system (dashboard.py:3064) - See CARD_REGISTRY_DESIGN.md
-- [ ] Add replied indicator to messages (message_list_window.py:319)
+- [x] Implement external battery voltage-to-percentage mapping (LiFePO4 12V curve in data_collector.py)
+- [x] Refactor card field registry system - N/A in Qt (Tkinter-only, not to be changed)
 
 ### Future Enhancements
-- [ ] Test fullscreen exit window state on Pi (ongoing issue - has workaround with Quit button)
-- [ ] Verify message list click-to-open on Pi (View button works as alternative)
+- [x] Test fullscreen exit window state on Pi - DONE (Quit button works)
+- [x] Verify message list click-to-open on Pi - DONE (View button works)
 
 ### Status Broadcast System (Future Branch)
 - [ ] **Dashboard Status Broadcasts** - Enable dashboards to share status with each other
@@ -95,16 +95,20 @@
   - **Branch**: Create dedicated feature branch when ready to implement
 
 ### Hardware Integration Features
-- [ ] **Current Sense Scaling** (New Feature)
+- [x] **Current Sense Scaling** (v2.0.2b - DONE)
   - Location: Ch3 Current telemetry display (ICP Main Batt current)
-  - Use case: Modified current sense resistor for higher current measurement
-  - Problem: INA sensor reports voltage, firmware assumes standard R to calculate I
-  - If sense resistor reduced by 50x or 100x, reported current needs scaling
-  - Implementation options:
-    - Per-node configuration in app_config.json (scale factor)
-    - Or global setting if all nodes use same modified hardware
-  - Affects: Card display, node detail window, plotter, CSV logging
-  - Consider: Store raw value + scaled value? Or just apply scaling at display?
+  - Implementation: Per-node configuration with default fallback
+  - Settings dialog: Hardware tab with node selector dropdown
+  - Config structure: `hardware.current_sensor.default` + `hardware.current_sensor.nodes.{node_id}`
+  - Affects: Card display, node detail window, CSV logging (raw + scaled columns)
+  - Auto units: Values <1000mA show as "XXXmA", ≥1000mA show as "X.XXA"
+  - Direction arrows: ⬆ charging, ⬇ discharging
+
+- [ ] **Current Sense Direction Inversion** (Enhancement)
+  - Add option to invert current sense direction for each measurement
+  - Use case: Shunt installed in opposite orientation
+  - Location: Hardware tab in settings, per-node configuration
+  - Implementation: Add `invert_direction` boolean to current sensor config
 
 ---
 

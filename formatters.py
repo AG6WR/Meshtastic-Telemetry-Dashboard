@@ -259,6 +259,146 @@ def get_battery_percentage_display(node_data: dict, colors: Dict[str, str],
 
 
 # =============================================================================
+# Current Functions (External Current Sensor with Scaling)
+# =============================================================================
+
+# Default shunt resistor: 350mV / 3.5A = 100mOhm
+DEFAULT_SHUNT_RESISTANCE_MOHM = 100.0
+
+def get_current_scale_factor(config_manager=None, node_id: str = None) -> float:
+    """Calculate current scaling factor from config settings
+    
+    The INA sensor measures voltage across a shunt resistor and the firmware
+    assumes a standard 100mOhm shunt (350mV at 3.5A). If the user has a different
+    shunt resistor, we need to scale the reported current.
+    
+    Scale factor = default_shunt / user_shunt
+    Where shunt = full_scale_voltage_mv / full_scale_current_a
+    
+    Args:
+        config_manager: ConfigManager instance
+        node_id: Optional node ID for per-node settings (falls back to default)
+        
+    Returns:
+        Scale factor to multiply raw current by (1.0 if disabled or not configured)
+    """
+    if not config_manager:
+        return 1.0
+    
+    # Try node-specific settings first, then fall back to default
+    if node_id:
+        node_settings = config_manager.get(f'hardware.current_sensor.nodes.{node_id}')
+        if node_settings:
+            if not node_settings.get('enabled', False):
+                return 1.0
+            full_scale_mv = node_settings.get('full_scale_voltage_mv', 350)
+            full_scale_a = node_settings.get('full_scale_current_a', 3.5)
+        else:
+            # Fall back to default settings
+            if not config_manager.get('hardware.current_sensor.default.enabled', False):
+                return 1.0
+            full_scale_mv = config_manager.get('hardware.current_sensor.default.full_scale_voltage_mv', 350)
+            full_scale_a = config_manager.get('hardware.current_sensor.default.full_scale_current_a', 3.5)
+    else:
+        # No node_id provided, use default
+        if not config_manager.get('hardware.current_sensor.default.enabled', False):
+            return 1.0
+        full_scale_mv = config_manager.get('hardware.current_sensor.default.full_scale_voltage_mv', 350)
+        full_scale_a = config_manager.get('hardware.current_sensor.default.full_scale_current_a', 3.5)
+    
+    # Avoid division by zero
+    if full_scale_a == 0:
+        return 1.0
+    
+    # Calculate user's shunt resistance in mOhm
+    # R = V / I, so R(mOhm) = V(mV) / I(A)
+    user_shunt_mohm = full_scale_mv / full_scale_a
+    
+    # Avoid division by zero
+    if user_shunt_mohm == 0:
+        return 1.0
+    
+    # Scale factor = default_shunt / user_shunt
+    return DEFAULT_SHUNT_RESISTANCE_MOHM / user_shunt_mohm
+
+
+def scale_current(current_ma: float, config_manager=None, node_id: str = None) -> float:
+    """Apply current scaling factor to raw current value
+    
+    Args:
+        current_ma: Raw current in milliamps from telemetry
+        config_manager: ConfigManager instance
+        node_id: Optional node ID for per-node settings
+        
+    Returns:
+        Scaled current in milliamps
+    """
+    if current_ma is None:
+        return None
+    
+    scale_factor = get_current_scale_factor(config_manager, node_id)
+    return current_ma * scale_factor
+
+
+def format_current(current_ma: float, config_manager=None, node_id: str = None, include_direction: bool = False) -> str:
+    """Format current value with automatic unit selection (mA or A)
+    
+    Values < 1000mA display as "XXXmA"
+    Values >= 1000mA display as "X.XXA"
+    
+    Args:
+        current_ma: Current in milliamps (already scaled if needed)
+        config_manager: ConfigManager instance (for scaling if raw value passed)
+        include_direction: If True, include up/down arrow based on sign
+        
+    Returns:
+        Formatted current string
+    """
+    if current_ma is None:
+        return ""
+    
+    # Determine direction indicator
+    direction = ""
+    if include_direction:
+        if current_ma > 0:
+            direction = " ⬆"
+        elif current_ma < 0:
+            direction = " ⬇"
+    
+    abs_current = abs(current_ma)
+    sign = "+" if current_ma > 0 and include_direction else ("-" if current_ma < 0 else "")
+    
+    if abs_current >= 1000:
+        # Display in Amps
+        amps = abs_current / 1000
+        return f"{sign}{amps:.2f}A{direction}"
+    else:
+        # Display in milliamps
+        return f"{sign}{abs_current:.0f}mA{direction}"
+
+
+def get_current_color(current_ma: float, colors: Dict[str, str]) -> str:
+    """Get color based on current direction (charging vs discharging)
+    
+    Args:
+        current_ma: Current in milliamps (positive = charging, negative = discharging)
+        colors: Color dictionary
+        
+    Returns:
+        Color string
+    """
+    if current_ma is None:
+        return colors.get('fg_secondary', DEFAULT_COLORS['fg_secondary'])
+    
+    if current_ma > 0:
+        return colors.get('fg_good', DEFAULT_COLORS['fg_good'])  # Charging
+    elif current_ma < 0:
+        return colors.get('fg_warning', DEFAULT_COLORS['fg_warning'])  # Discharging
+    else:
+        return colors.get('fg_normal', DEFAULT_COLORS['fg_normal'])  # Zero
+
+
+# =============================================================================
 # Signal Functions
 # =============================================================================
 

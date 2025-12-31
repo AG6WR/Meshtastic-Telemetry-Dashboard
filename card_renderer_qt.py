@@ -44,7 +44,8 @@ from qt_styles import (
     create_battery_bar, create_snr_bar, create_utilization_bar
 )
 from formatters import (
-    convert_temperature, format_temperature, get_temperature_color
+    convert_temperature, format_temperature, get_temperature_color,
+    scale_current, format_current, get_current_color
 )
 
 logger = logging.getLogger(__name__)
@@ -515,15 +516,11 @@ class NodeCardQt(QFrame):
         if current_label:
             ch3_current = self.node_data.get('Ch3 Current')
             if ch3_current is not None and self._is_field_enabled('current'):
-                if ch3_current > 0:
-                    current_text = f"+{ch3_current:.0f}mA ⬆"
-                    current_color = self.colors['fg_good']
-                elif ch3_current < 0:
-                    current_text = f"{ch3_current:.0f}mA ⬇"
-                    current_color = self.colors['fg_warning']
-                else:
-                    current_text = f"{ch3_current:.0f}mA"
-                    current_color = self.colors['fg_normal']
+                # Apply scaling from config (per-node or default)
+                scaled_current = scale_current(ch3_current, self.config_manager, self.node_id)
+                # Format with auto mA/A units and direction arrow
+                current_text = format_current(scaled_current, include_direction=True)
+                current_color = get_current_color(scaled_current, self.colors)
                 display_color = self.colors['fg_secondary'] if is_stale else current_color
                 current_label.setText(current_text)
                 current_label.setStyleSheet(f"color: {display_color}; background: transparent;")

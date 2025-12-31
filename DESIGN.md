@@ -1,6 +1,8 @@
 # Meshtastic Telemetry Dashboard - Design Architecture
 
 ## Version History
+- **v2.0.3a** (2025-12-30): Per-node current sensor scaling - different shunt resistors per node
+- **v2.0.2b** (2025-12-29): Current sense scaling feature with Hardware settings tab
 - **v1.3.1** (2025-12-18): Fixed checkbox rendering in Message Center, connected Alerts button
 - **v1.3.0** (2025-12-17): Qt/PySide6 UI port - all dialogs and main dashboard ported
 - **v1.2.x** (2025-12): Messaging feature, virtual keyboard for Wayland
@@ -215,6 +217,69 @@ Adding debug logging statements (even `logger.info()`) to card creation/update f
 - **Red:** 0-25%
 - **Yellow:** 25-50%
 - **Green:** >50%
+
+### Current Sensor Scaling (v2.0.2b/v2.0.3a)
+
+#### Purpose
+Support external current sensors with different shunt resistors than the default 100mΩ.
+
+#### Background
+The INA current sensor measures voltage across a shunt resistor. The Meshtastic firmware assumes a standard 100mΩ shunt (350mV at 3.5A full scale). When users install different shunt resistors for higher current measurement (e.g., 10mΩ for 35A range), the reported current needs scaling.
+
+#### Scaling Math
+```
+Default shunt:  100mΩ (350mV / 3.5A)
+User's shunt:   full_scale_voltage_mv / full_scale_current_a
+Scale factor:   default_shunt / user_shunt
+
+Example: 70mV/7A shunt = 10mΩ
+Scale factor = 100mΩ / 10mΩ = 10x
+100mA raw × 10 = 1000mA (1A) scaled
+```
+
+#### Configuration Structure
+```json
+{
+  "hardware": {
+    "current_sensor": {
+      "default": {
+        "enabled": false,
+        "full_scale_voltage_mv": 350,
+        "full_scale_current_a": 3.5
+      },
+      "nodes": {
+        "!a20a0de0": {
+          "enabled": true,
+          "full_scale_voltage_mv": 70,
+          "full_scale_current_a": 7.0
+        }
+      }
+    }
+  }
+}
+```
+
+#### Per-Node Settings (v2.0.3a)
+- Node selector dropdown in Hardware tab: "Default (all nodes)" + list of known nodes
+- Each node can have custom shunt settings or fall back to default
+- Node-specific settings only saved if different from default (auto-cleanup)
+
+#### Display Features
+- **Auto units:** Values <1000mA show as "XXXmA", ≥1000mA show as "X.XXA"
+- **Direction arrows:** ⬆ for charging (positive), ⬇ for discharging (negative)
+- **Color coding:** Green=charging, Orange=discharging, Gray=zero
+
+#### Implementation Files
+- `formatters.py`: `get_current_scale_factor()`, `scale_current()`, `format_current()`, `get_current_color()`
+- `settings_dialog_qt.py`: Hardware tab with node selector, voltage/current inputs, live calculations
+- `card_renderer_qt.py`: Uses scaled current for card display
+- `node_detail_window_qt.py`: Uses scaled current for detail view
+- `data_collector.py`: CSV logging with raw, scale factor, and scaled columns
+
+#### CSV Columns
+- `ch3_current_raw_ma`: Original telemetry value
+- `ch3_current_scale`: Applied scale factor (or empty if no scaling)
+- `ch3_current_scaled_ma`: Calculated scaled value
 
 ### Motion Detection
 

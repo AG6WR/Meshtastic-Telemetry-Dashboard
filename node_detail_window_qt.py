@@ -27,6 +27,7 @@ from qt_styles import (
     create_button, create_close_button, create_ok_button, create_cancel_button,
     COLORS, BUTTON_STYLES, get_font, CHECKBOX_STYLE
 )
+from formatters import scale_current, format_current
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +148,8 @@ class NodeDetailWindowQt(QDialog):
                  on_logs: Optional[Callable] = None,
                  on_csv: Optional[Callable] = None,
                  on_plot: Optional[Callable] = None,
-                 data_collector=None):
+                 data_collector=None,
+                 config_manager=None):
         """
         Create a node detail window
         
@@ -159,6 +161,7 @@ class NodeDetailWindowQt(QDialog):
             on_csv: Callback for CSV button
             on_plot: Callback for plot button
             data_collector: DataCollector instance for forget_node functionality
+            config_manager: ConfigManager instance for settings (current scaling, etc.)
         """
         super().__init__(parent)
         
@@ -169,6 +172,7 @@ class NodeDetailWindowQt(QDialog):
         self.on_csv = on_csv
         self.on_plot = on_plot
         self.data_collector = data_collector
+        self.config_manager = config_manager
         
         # Get color scheme from parent or use defaults
         self.colors = getattr(parent, 'colors', {
@@ -500,7 +504,9 @@ class NodeDetailWindowQt(QDialog):
                 self._add_info_row(content_layout, "  Voltage:", ch3_text, voltage_color)
             
             if ch3_current is not None:
-                current_text = f"{ch3_current:.0f}mA"
+                # Apply scaling from config (per-node or default)
+                scaled_current = scale_current(ch3_current, self.config_manager, self.node_id)
+                current_text = format_current(scaled_current, include_direction=False)
                 self._add_info_row(content_layout, "  Current:", current_text)
         
         # Channel Utilization

@@ -16,6 +16,7 @@ from pubsub import pub
 from config_manager import ConfigManager
 from connection_manager import ConnectionManager
 from alert_system import AlertManager
+from formatters import get_current_scale_factor, scale_current
 
 logger = logging.getLogger(__name__)
 
@@ -625,9 +626,19 @@ class DataCollector:
                         'iso_time', 'epoch', 'node_id', 'long_name', 'short_name', 'message_type', 'snr', 'hop',
                         'temperature', 'humidity', 'pressure', 'voltage', 'current',
                         'battery_level', 'channel_utilization', 'air_util_tx', 'uptime',
-                        'ch3_voltage', 'ch3_current', 'motion_detected'
+                        'ch3_voltage', 'ch3_current_raw_ma', 'ch3_current_scale', 'ch3_current_scaled_ma', 
+                        'motion_detected'
                     ]
                     writer.writerow(header)
+                
+                # Calculate current scaling for CSV (per-node or default)
+                ch3_current_raw = metrics.get('Ch3 Current')
+                ch3_current_scale = ''
+                ch3_current_scaled = ''
+                if ch3_current_raw is not None:
+                    scale_factor = get_current_scale_factor(self.config_manager, node_id)
+                    ch3_current_scale = scale_factor
+                    ch3_current_scaled = ch3_current_raw * scale_factor
                 
                 # Write data row
                 row = [
@@ -649,7 +660,9 @@ class DataCollector:
                     metrics.get('Air Utilization (TX)', ''),
                     metrics.get('Uptime', ''),
                     metrics.get('Ch3 Voltage', ''),
-                    metrics.get('Ch3 Current', ''),
+                    ch3_current_raw if ch3_current_raw is not None else '',
+                    ch3_current_scale,
+                    ch3_current_scaled if ch3_current_scaled != '' else '',
                     1 if motion_detected else 0
                 ]
                 writer.writerow(row)

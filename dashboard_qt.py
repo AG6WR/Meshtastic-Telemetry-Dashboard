@@ -38,7 +38,7 @@ from card_renderer_qt import NodeCardQt
 logger = logging.getLogger(__name__)
 
 # Version
-VERSION = "2.0.2b"
+VERSION = "2.0.3a"
 
 
 class DashboardQt(QMainWindow):
@@ -553,7 +553,8 @@ class DashboardQt(QMainWindow):
                 on_logs=on_logs,
                 on_csv=on_csv,
                 on_plot=on_plot,
-                data_collector=self.data_collector
+                data_collector=self.data_collector,
+                config_manager=self.config_manager
             )
             detail_window.show()
         except Exception as e:
@@ -935,6 +936,7 @@ class DashboardQt(QMainWindow):
             from settings_dialog_qt import SettingsDialogQt
             dialog = SettingsDialogQt(
                 config_manager=self.config_manager,
+                data_collector=self.data_collector,
                 parent=self
             )
             # Connect to settings_changed signal for immediate refresh on Apply

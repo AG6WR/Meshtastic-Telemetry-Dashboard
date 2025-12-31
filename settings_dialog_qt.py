@@ -38,10 +38,12 @@ class SettingsDialogQt(QDialog):
     # Signal emitted when settings are applied (for immediate refresh)
     settings_changed = Signal()
     
-    def __init__(self, parent, config_manager: ConfigManager):
+    def __init__(self, parent, config_manager: ConfigManager, data_collector=None):
         super().__init__(parent)
         self.config_manager = config_manager
+        self.data_collector = data_collector  # Optional, for per-node hardware settings
         self.result = None
+        self._current_hardware_node = "default"  # Track selected node for hardware settings
         
         self.setWindowTitle("Dashboard Settings")
         self.setMinimumSize(650, 550)
@@ -98,6 +100,15 @@ class SettingsDialogQt(QDialog):
         # Logging widgets
         self.log_level = None
         self.log_retention_days = None
+        
+        # Hardware widgets
+        self.hardware_node_selector = None
+        self.current_sensor_enabled = None
+        self.full_scale_voltage_mv = None
+        self.full_scale_current_a = None
+        self.shunt_resistance_display = None
+        self.scale_factor_display = None
+        self.example_display = None
     
     def create_widgets(self):
         """Create dialog widgets"""
@@ -160,6 +171,11 @@ class SettingsDialogQt(QDialog):
         email_tab = QWidget()
         tab_widget.addTab(email_tab, "Email")
         self.create_email_tab(email_tab)
+        
+        # Hardware tab
+        hardware_tab = QWidget()
+        tab_widget.addTab(hardware_tab, "Hardware")
+        self.create_hardware_tab(hardware_tab)
         
         # Logging tab
         logging_tab = QWidget()
@@ -479,6 +495,222 @@ class SettingsDialogQt(QDialog):
         
         layout.addStretch()
     
+    def create_hardware_tab(self, parent):
+        """Create hardware settings tab"""
+        layout = QVBoxLayout(parent)
+        
+        # Node Selector (for per-node settings)
+        node_select_layout = QHBoxLayout()
+        node_select_layout.addWidget(QLabel("Configure for:"))
+        self.hardware_node_selector = QComboBox()
+        self.hardware_node_selector.addItem("Default (all nodes)", "default")
+        
+        # Add known nodes if data_collector is available
+        if self.data_collector:
+            for node_id, node_data in self.data_collector.nodes.items():
+                long_name = node_data.get('Node LongName', node_id)
+                short_name = node_data.get('Node ShortName', '')
+                display = f"{long_name} ({short_name})" if short_name else long_name
+                self.hardware_node_selector.addItem(display, node_id)
+        
+        self.hardware_node_selector.setMinimumWidth(200)
+        self.hardware_node_selector.currentIndexChanged.connect(self._on_hardware_node_changed)
+        node_select_layout.addWidget(self.hardware_node_selector)
+        node_select_layout.addStretch()
+        layout.addLayout(node_select_layout)
+        
+        # External Current Sensor Group
+        sensor_group = QGroupBox("External Current Sensor")
+        sensor_layout = QGridLayout(sensor_group)
+        sensor_layout.setSpacing(8)
+        
+        # Enable checkbox
+        self.current_sensor_enabled = QCheckBox("Enable current scaling")
+        sensor_layout.addWidget(self.current_sensor_enabled, 0, 0, 1, 3)
+        
+        # Full Scale Voltage
+        sensor_layout.addWidget(QLabel("Full Scale Voltage:"), 1, 0)
+        self.full_scale_voltage_mv = QLineEdit()
+        self.full_scale_voltage_mv.setMaximumWidth(80)
+        self.full_scale_voltage_mv.setAlignment(Qt.AlignRight)
+        sensor_layout.addWidget(self.full_scale_voltage_mv, 1, 1)
+        sensor_layout.addWidget(QLabel("mV"), 1, 2)
+        
+        voltage_note = QLabel("Voltage measured across the shunt at the full scale current")
+        voltage_note.setStyleSheet("font-size: 8pt; color: gray;")
+        sensor_layout.addWidget(voltage_note, 2, 0, 1, 3)
+        
+        # Full Scale Current
+        sensor_layout.addWidget(QLabel("Full Scale Current:"), 3, 0)
+        self.full_scale_current_a = QLineEdit()
+        self.full_scale_current_a.setMaximumWidth(80)
+        self.full_scale_current_a.setAlignment(Qt.AlignRight)
+        sensor_layout.addWidget(self.full_scale_current_a, 3, 1)
+        sensor_layout.addWidget(QLabel("A"), 3, 2)
+        
+        current_note = QLabel("Maximum rated shunt current")
+        current_note.setStyleSheet("font-size: 8pt; color: gray;")
+        sensor_layout.addWidget(current_note, 4, 0, 1, 3)
+        
+        # Separator
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setStyleSheet("background-color: #555555;")
+        sensor_layout.addWidget(separator, 5, 0, 1, 3)
+        
+        # Calculated Values (read-only display)
+        calc_label = QLabel("Calculated Values:")
+        calc_label.setStyleSheet("font-weight: bold; margin-top: 8px;")
+        sensor_layout.addWidget(calc_label, 6, 0, 1, 3)
+        
+        # Shunt Resistance
+        sensor_layout.addWidget(QLabel("Shunt Resistance:"), 7, 0)
+        self.shunt_resistance_display = QLabel("100.00 mΩ")
+        self.shunt_resistance_display.setStyleSheet("font-weight: bold; color: #4a90d9;")
+        sensor_layout.addWidget(self.shunt_resistance_display, 7, 1, 1, 2)
+        
+        # Scaling Factor
+        sensor_layout.addWidget(QLabel("Scaling Factor:"), 8, 0)
+        self.scale_factor_display = QLabel("1.00x")
+        self.scale_factor_display.setStyleSheet("font-weight: bold; color: #4a90d9;")
+        sensor_layout.addWidget(self.scale_factor_display, 8, 1, 1, 2)
+        
+        # Example calculation
+        self.example_display = QLabel("Example: 100mA raw → 100mA scaled")
+        self.example_display.setStyleSheet("font-size: 9pt; color: #888888; margin-top: 4px;")
+        sensor_layout.addWidget(self.example_display, 9, 0, 1, 3)
+        
+        sensor_layout.setColumnStretch(2, 1)
+        layout.addWidget(sensor_group)
+        
+        # Help text
+        help_group = QGroupBox("About Current Scaling")
+        help_layout = QVBoxLayout(help_group)
+        
+        help_text = (
+            "The INA current sensor measures voltage across a shunt resistor.\n"
+            "The default shunt is 100mΩ (350mV at 3.5A full scale).\n\n"
+            "If you've installed a different shunt resistor for higher current\n"
+            "measurement, enter your shunt's specifications above.\n\n"
+            "The scaling factor adjusts the reported current to match your hardware."
+        )
+        help_label = QLabel(help_text)
+        help_label.setStyleSheet("font-size: 9pt; color: #aaaaaa;")
+        help_layout.addWidget(help_label)
+        
+        layout.addWidget(help_group)
+        
+        # Connect signals for live calculation update
+        self.full_scale_voltage_mv.textChanged.connect(self._update_current_calculations)
+        self.full_scale_current_a.textChanged.connect(self._update_current_calculations)
+        self.current_sensor_enabled.toggled.connect(self._update_current_calculations)
+        
+        layout.addStretch()
+    
+    def _update_current_calculations(self):
+        """Update the calculated shunt resistance and scaling factor display"""
+        try:
+            voltage_mv = float(self.full_scale_voltage_mv.text() or 0)
+            current_a = float(self.full_scale_current_a.text() or 0)
+            enabled = self.current_sensor_enabled.isChecked()
+            
+            if current_a > 0 and voltage_mv > 0:
+                # Calculate shunt resistance: R = V / I, R(mΩ) = V(mV) / I(A)
+                shunt_mohm = voltage_mv / current_a
+                self.shunt_resistance_display.setText(f"{shunt_mohm:.2f} mΩ")
+                
+                # Calculate scaling factor: default_shunt / user_shunt
+                # Default shunt is 100mΩ (350mV / 3.5A)
+                default_shunt = 100.0
+                scale_factor = default_shunt / shunt_mohm if shunt_mohm > 0 else 1.0
+                
+                if enabled:
+                    self.scale_factor_display.setText(f"{scale_factor:.2f}x")
+                    # Example: show what 100mA raw becomes
+                    scaled_example = 100 * scale_factor
+                    if scaled_example >= 1000:
+                        self.example_display.setText(f"Example: 100mA raw → {scaled_example/1000:.2f}A scaled")
+                    else:
+                        self.example_display.setText(f"Example: 100mA raw → {scaled_example:.0f}mA scaled")
+                else:
+                    self.scale_factor_display.setText("1.00x (disabled)")
+                    self.example_display.setText("Example: 100mA raw → 100mA scaled (no scaling)")
+            else:
+                self.shunt_resistance_display.setText("-- mΩ")
+                self.scale_factor_display.setText("--")
+                self.example_display.setText("Enter valid values above")
+        except ValueError:
+            self.shunt_resistance_display.setText("-- mΩ")
+            self.scale_factor_display.setText("--")
+            self.example_display.setText("Enter valid numeric values")
+    
+    def _on_hardware_node_changed(self, index):
+        """Handle hardware node selector change - save current and load new"""
+        # Save current node's settings before switching
+        self._save_hardware_settings_for_node(self._current_hardware_node)
+        
+        # Switch to new node
+        self._current_hardware_node = self.hardware_node_selector.currentData()
+        
+        # Load new node's settings
+        self._load_hardware_settings_for_node(self._current_hardware_node)
+    
+    def _get_hardware_config_path(self, node_id: str) -> str:
+        """Get the config path prefix for a node's hardware settings"""
+        if node_id == "default":
+            return "hardware.current_sensor.default"
+        else:
+            return f"hardware.current_sensor.nodes.{node_id}"
+    
+    def _load_hardware_settings_for_node(self, node_id: str):
+        """Load hardware settings for a specific node"""
+        path = self._get_hardware_config_path(node_id)
+        
+        # If this is a specific node, check if it has settings, otherwise use default
+        if node_id != "default":
+            node_settings = self.config_manager.get(path)
+            if not node_settings:
+                # No specific settings, show defaults but don't enable
+                path = "hardware.current_sensor.default"
+        
+        self.current_sensor_enabled.setChecked(
+            self.config_manager.get(f'{path}.enabled', False))
+        self.full_scale_voltage_mv.setText(
+            str(self.config_manager.get(f'{path}.full_scale_voltage_mv', 350)))
+        self.full_scale_current_a.setText(
+            str(self.config_manager.get(f'{path}.full_scale_current_a', 3.5)))
+        
+        self._update_current_calculations()
+    
+    def _save_hardware_settings_for_node(self, node_id: str):
+        """Save hardware settings for a specific node"""
+        path = self._get_hardware_config_path(node_id)
+        
+        try:
+            enabled = self.current_sensor_enabled.isChecked()
+            voltage = float(self.full_scale_voltage_mv.text() or 350)
+            current = float(self.full_scale_current_a.text() or 3.5)
+            
+            # For specific nodes, only save if settings differ from default
+            if node_id != "default":
+                default_enabled = self.config_manager.get('hardware.current_sensor.default.enabled', False)
+                default_voltage = self.config_manager.get('hardware.current_sensor.default.full_scale_voltage_mv', 350)
+                default_current = self.config_manager.get('hardware.current_sensor.default.full_scale_current_a', 3.5)
+                
+                # If same as default, remove node-specific settings
+                if enabled == default_enabled and voltage == default_voltage and current == default_current:
+                    nodes = self.config_manager.get('hardware.current_sensor.nodes', {})
+                    if node_id in nodes:
+                        del nodes[node_id]
+                        self.config_manager.set('hardware.current_sensor.nodes', nodes)
+                    return
+            
+            self.config_manager.set(f'{path}.enabled', enabled)
+            self.config_manager.set(f'{path}.full_scale_voltage_mv', voltage)
+            self.config_manager.set(f'{path}.full_scale_current_a', current)
+        except ValueError:
+            pass  # Invalid values, don't save
+
     def create_logging_tab(self, parent):
         """Create logging settings tab"""
         layout = QVBoxLayout(parent)
@@ -662,6 +894,12 @@ class SettingsDialogQt(QDialog):
             self.log_retention_days.setCurrentText('Forever')
         else:
             self.log_retention_days.setCurrentText(f'{retention_days} days')
+        
+        # Hardware settings - load for the currently selected node (default)
+        self._current_hardware_node = "default"
+        if self.hardware_node_selector:
+            self.hardware_node_selector.setCurrentIndex(0)  # Select "Default (all nodes)"
+        self._load_hardware_settings_for_node(self._current_hardware_node)
     
     def test_email(self):
         """Test email configuration"""
@@ -751,6 +989,9 @@ class SettingsDialogQt(QDialog):
             else:
                 days = int(retention_value.split()[0])
                 self.config_manager.set('logging.retention_days', days)
+            
+            # Hardware settings - save currently displayed node's settings
+            self._save_hardware_settings_for_node(self._current_hardware_node)
             
             # Save to file
             self.config_manager.save_config()

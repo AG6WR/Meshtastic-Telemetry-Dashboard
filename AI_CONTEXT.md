@@ -34,9 +34,9 @@ This applies especially to:
 
 ## Current Session Context
 **Date Started:** 2025-11-17
-**Current Version:** v1.2.2b
-**Active Branch:** main (feature/messaging merged)
-**Last Updated:** 2025-12-17
+**Current Version:** v2.0.3a
+**Active Branch:** main
+**Last Updated:** 2025-12-30
 
 ---
 
