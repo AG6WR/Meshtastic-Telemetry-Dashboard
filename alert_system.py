@@ -89,15 +89,18 @@ Details:
             
             # Add node details if provided
             if node_data:
+                # Get voltage - prefer Ch3 Voltage (external sensor) over internal Voltage
+                voltage = node_data.get('Ch3 Voltage') or node_data.get('Voltage', 'Unknown')
+                
                 body += f"""
 
 Node Information:
-- ID: {node_data.get('id', 'Unknown')}
+- ID: {node_data.get('node_id', 'Unknown')}
 - Name: {node_data.get('Node LongName', 'Unknown')}
 - Last Heard: {datetime.fromtimestamp(node_data.get('Last Heard', 0)).strftime('%Y-%m-%d %H:%M:%S')}
 - Battery: {node_data.get('Battery Level', 'Unknown')}%
 - Temperature: {node_data.get('Temperature', 'Unknown')}°C
-- Voltage: {node_data.get('Voltage', 'Unknown')}V
+- Voltage: {voltage}V
 """
             
             body += """
@@ -345,13 +348,14 @@ class AlertManager:
         except Exception as e:
             return False, f"Send error: {e}"
     
-    def send_test_alert(self, rule_name: str, node_id: str, node_data: Dict) -> bool:
+    def send_test_alert(self, rule_name: str, node_id: str, node_data: Dict, thresholds: Dict = None) -> bool:
         """Send a test alert for a specific rule and node (user-initiated)
         
         Args:
             rule_name: Alert rule type (e.g., 'low_battery', 'node_offline')
             node_id: Node ID string
             node_data: Dict containing node information
+            thresholds: Optional dict of threshold values to include in message
             
         Returns:
             True if email sent successfully, False otherwise
@@ -362,32 +366,48 @@ class AlertManager:
         
         node_name = node_data.get('Node LongName', node_id)
         
+        # Add node_id to the data dict for email template
+        email_data = dict(node_data)
+        email_data['node_id'] = node_id
+        
+        # Get threshold from passed thresholds dict or from rules
+        threshold = None
+        if thresholds and rule_name in thresholds:
+            threshold = thresholds[rule_name]
+        
         # Build test message based on rule type
-        if rule_name == 'node_offline':
-            message = f"TEST: Node {node_id} ({node_name}) offline alert"
+        if rule_name == 'node_offline' or rule_name == 'offline':
+            threshold_min = threshold if threshold else "N/A"
+            message = f"TEST: Node {node_id} ({node_name}) offline alert\n\nTrigger: Node not heard for > {threshold_min} minutes"
         elif rule_name == 'low_battery':
             battery = node_data.get('Battery Level', 'N/A')
-            message = f"TEST: Node {node_id} ({node_name}) low battery alert (current: {battery}%)"
+            threshold_pct = threshold if threshold else "N/A"
+            message = f"TEST: Node {node_id} ({node_name}) low battery alert\n\nCurrent Value: {battery}%\nThreshold: < {threshold_pct}%"
         elif rule_name == 'high_temperature' or rule_name == 'high_temp':
             temp = node_data.get('Temperature', 'N/A')
-            message = f"TEST: Node {node_id} ({node_name}) high temperature alert (current: {temp}°C)"
+            threshold_val = threshold if threshold else "N/A"
+            message = f"TEST: Node {node_id} ({node_name}) high temperature alert\n\nCurrent Value: {temp}°C\nThreshold: > {threshold_val}°C"
         elif rule_name == 'low_temperature' or rule_name == 'low_temp':
             temp = node_data.get('Temperature', 'N/A')
-            message = f"TEST: Node {node_id} ({node_name}) low temperature alert (current: {temp}°C)"
+            threshold_val = threshold if threshold else "N/A"
+            message = f"TEST: Node {node_id} ({node_name}) low temperature alert\n\nCurrent Value: {temp}°C\nThreshold: < {threshold_val}°C"
         elif rule_name == 'low_voltage':
-            voltage = node_data.get('Voltage') or node_data.get('Ch3 Voltage', 'N/A')
-            message = f"TEST: Node {node_id} ({node_name}) low voltage alert (current: {voltage}V)"
+            voltage = node_data.get('Ch3 Voltage') or node_data.get('Voltage', 'N/A')
+            threshold_val = threshold if threshold else "N/A"
+            message = f"TEST: Node {node_id} ({node_name}) low voltage alert\n\nCurrent Value: {voltage}V\nThreshold: < {threshold_val}V"
         elif rule_name == 'high_voltage':
-            voltage = node_data.get('Voltage') or node_data.get('Ch3 Voltage', 'N/A')
-            message = f"TEST: Node {node_id} ({node_name}) high voltage alert (current: {voltage}V)"
+            voltage = node_data.get('Ch3 Voltage') or node_data.get('Voltage', 'N/A')
+            threshold_val = threshold if threshold else "N/A"
+            message = f"TEST: Node {node_id} ({node_name}) high voltage alert\n\nCurrent Value: {voltage}V\nThreshold: > {threshold_val}V"
         elif rule_name == 'motion':
-            message = f"TEST: Node {node_id} ({node_name}) motion detected alert"
+            motion = "Yes" if node_data.get('Motion Detected') else "No"
+            message = f"TEST: Node {node_id} ({node_name}) motion detected alert\n\nCurrent Motion Status: {motion}\nTrigger: Motion sensor activated"
         else:
             message = f"TEST: Node {node_id} ({node_name}) {rule_name} alert"
         
         subject = f"TEST - {rule_name.replace('_', ' ').title()} - {node_name}"
         
-        return self.email_notifier.send_alert(subject, message, node_data, is_test=True)
+        return self.email_notifier.send_alert(subject, message, email_data, is_test=True)
     
     def get_recipient_addresses(self) -> List[str]:
         """Get the list of email recipient addresses"""

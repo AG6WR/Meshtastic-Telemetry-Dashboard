@@ -395,7 +395,7 @@ class NodeAlertConfigDialogQt(QDialog):
         cancel_btn = dialog.addButton("Cancel", QMessageBox.RejectRole)
         cancel_btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {COLORS['btn_cancel']};
+                background-color: {COLORS['btn_neutral']};
                 color: white;
                 border: none;
                 border-radius: 4px;
@@ -404,7 +404,7 @@ class NodeAlertConfigDialogQt(QDialog):
                 min-width: 80px;
             }}
             QPushButton:hover {{
-                background-color: {COLORS['btn_cancel_hover']};
+                background-color: {COLORS['btn_neutral_hover']};
             }}
         """)
         
@@ -429,6 +429,15 @@ class NodeAlertConfigDialogQt(QDialog):
             alert_config = self.config_manager.get_section('alerts')
             alert_manager = AlertManager(alert_config)
             
+            # Build thresholds dict from config
+            thresholds = {
+                'low_voltage': self.config_manager.get('alerts.voltage_threshold', 11.5),
+                'high_voltage': self.config_manager.get('alerts.voltage_high_threshold', 15.0),
+                'low_temp': self.config_manager.get('alerts.temp_low_threshold', 0),
+                'high_temp': self.config_manager.get('alerts.temp_threshold', 40),
+                'offline': self.config_manager.get('alerts.offline_threshold', 30),
+            }
+            
             success_count = 0
             fail_count = 0
             
@@ -436,7 +445,7 @@ class NodeAlertConfigDialogQt(QDialog):
                 node_data = self.nodes_data[node_id]
                 for alert_type, checkbox in node_checkboxes.items():
                     if checkbox.isChecked() and checkbox.isEnabled():
-                        if alert_manager.send_test_alert(alert_type, node_id, node_data):
+                        if alert_manager.send_test_alert(alert_type, node_id, node_data, thresholds):
                             success_count += 1
                         else:
                             fail_count += 1
