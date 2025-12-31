@@ -56,8 +56,15 @@ class EmailNotifier:
         """Check if email is properly configured"""
         return bool(self.username and self.password and self.from_address and self.to_addresses)
     
-    def send_alert(self, subject: str, message: str, node_data: Optional[Dict] = None) -> bool:
-        """Send an email alert"""
+    def send_alert(self, subject: str, message: str, node_data: Optional[Dict] = None, is_test: bool = False) -> bool:
+        """Send an email alert
+        
+        Args:
+            subject: Alert subject line
+            message: Alert message body
+            node_data: Optional dict with node information to include
+            is_test: If True, adds a footer indicating this is a user-initiated test
+        """
         if not self.is_configured():
             logger.warning("Email not configured, cannot send alert")
             return False
@@ -96,6 +103,12 @@ Node Information:
             body += """
 
 This is an automated alert from your Meshtastic monitoring system.
+"""
+            
+            # Add test footer if this is a user-initiated test
+            if is_test:
+                body += """
+*** This email was sent as a user-initiated test of the alert system ***
 """
             
             msg.attach(MIMEText(body, 'plain'))
@@ -292,19 +305,92 @@ class AlertManager:
     
     def test_email(self) -> bool:
         """Test email configuration"""
+        success, _ = self.test_email_with_error()
+        return success
+    
+    def test_email_with_error(self) -> tuple:
+        """Test email configuration, returning (success, error_message)"""
         if not self.email_notifier:
-            return False
+            return False, "Email notifier not initialized (email_enabled is False)"
         
         if not self.email_notifier.is_configured():
-            logger.error("Email not properly configured")
-            return False
+            missing = []
+            if not self.email_notifier.username:
+                missing.append("username")
+            if not self.email_notifier.password:
+                missing.append("password")
+            if not self.email_notifier.from_address:
+                missing.append("from_address")
+            if not self.email_notifier.to_addresses:
+                missing.append("to_addresses")
+            return False, f"Email not properly configured. Missing: {', '.join(missing)}"
         
         # Test connection
-        if not self.email_notifier.test_connection():
-            return False
+        try:
+            if not self.email_notifier.test_connection():
+                return False, "SMTP connection test failed - check server/port/credentials"
+        except Exception as e:
+            return False, f"SMTP connection error: {e}"
         
         # Send test email
-        return self.email_notifier.send_alert(
-            "Test Alert", 
-            "This is a test alert from your Meshtastic monitoring system. If you receive this, email alerts are working correctly."
-        )
+        try:
+            success = self.email_notifier.send_alert(
+                "Test Alert", 
+                "This is a test alert from your Meshtastic monitoring system. If you receive this, email alerts are working correctly."
+            )
+            if success:
+                return True, None
+            else:
+                return False, "Failed to send email (unknown error)"
+        except Exception as e:
+            return False, f"Send error: {e}"
+    
+    def send_test_alert(self, rule_name: str, node_id: str, node_data: Dict) -> bool:
+        """Send a test alert for a specific rule and node (user-initiated)
+        
+        Args:
+            rule_name: Alert rule type (e.g., 'low_battery', 'node_offline')
+            node_id: Node ID string
+            node_data: Dict containing node information
+            
+        Returns:
+            True if email sent successfully, False otherwise
+        """
+        if not self.email_notifier or not self.email_notifier.is_configured():
+            logger.error("Email not configured for test alert")
+            return False
+        
+        node_name = node_data.get('Node LongName', node_id)
+        
+        # Build test message based on rule type
+        if rule_name == 'node_offline':
+            message = f"TEST: Node {node_id} ({node_name}) offline alert"
+        elif rule_name == 'low_battery':
+            battery = node_data.get('Battery Level', 'N/A')
+            message = f"TEST: Node {node_id} ({node_name}) low battery alert (current: {battery}%)"
+        elif rule_name == 'high_temperature' or rule_name == 'high_temp':
+            temp = node_data.get('Temperature', 'N/A')
+            message = f"TEST: Node {node_id} ({node_name}) high temperature alert (current: {temp}°C)"
+        elif rule_name == 'low_temperature' or rule_name == 'low_temp':
+            temp = node_data.get('Temperature', 'N/A')
+            message = f"TEST: Node {node_id} ({node_name}) low temperature alert (current: {temp}°C)"
+        elif rule_name == 'low_voltage':
+            voltage = node_data.get('Voltage') or node_data.get('Ch3 Voltage', 'N/A')
+            message = f"TEST: Node {node_id} ({node_name}) low voltage alert (current: {voltage}V)"
+        elif rule_name == 'high_voltage':
+            voltage = node_data.get('Voltage') or node_data.get('Ch3 Voltage', 'N/A')
+            message = f"TEST: Node {node_id} ({node_name}) high voltage alert (current: {voltage}V)"
+        elif rule_name == 'motion':
+            message = f"TEST: Node {node_id} ({node_name}) motion detected alert"
+        else:
+            message = f"TEST: Node {node_id} ({node_name}) {rule_name} alert"
+        
+        subject = f"TEST - {rule_name.replace('_', ' ').title()} - {node_name}"
+        
+        return self.email_notifier.send_alert(subject, message, node_data, is_test=True)
+    
+    def get_recipient_addresses(self) -> List[str]:
+        """Get the list of email recipient addresses"""
+        if self.email_notifier:
+            return self.email_notifier.to_addresses
+        return []

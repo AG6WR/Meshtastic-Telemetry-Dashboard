@@ -268,6 +268,11 @@ class NodeAlertConfigDialogQt(QDialog):
         btn_disable_all.clicked.connect(self._disable_all_alerts)
         button_layout.addWidget(btn_disable_all)
         
+        # Test Alerts button
+        btn_test = create_button("Test Alerts", "info")
+        btn_test.clicked.connect(self._test_alerts)
+        button_layout.addWidget(btn_test)
+        
         button_layout.addStretch()
         
         # Right side - Save then Cancel (Cancel on far right per UI standard)
@@ -312,6 +317,151 @@ class NodeAlertConfigDialogQt(QDialog):
             for checkbox in node_vars.values():
                 if checkbox.isEnabled():
                     checkbox.setChecked(False)
+    
+    def _test_alerts(self):
+        """Test alerts by sending one email per checked alert type per node"""
+        # Count how many test emails will be sent
+        test_count = 0
+        checked_items = []
+        
+        for node_id, node_checkboxes in self.checkbox_vars.items():
+            node_name = self.nodes_data[node_id].get('Node LongName', node_id)
+            for alert_type, checkbox in node_checkboxes.items():
+                if checkbox.isChecked() and checkbox.isEnabled():
+                    test_count += 1
+                    alert_label = alert_type.replace('_', ' ').title()
+                    checked_items.append(f"  • {node_name}: {alert_label}")
+        
+        if test_count == 0:
+            QMessageBox.information(
+                self,
+                "No Alerts Selected",
+                "No alerts are currently enabled. Enable at least one alert checkbox to test."
+            )
+            return
+        
+        # Get email recipients from config
+        recipients = []
+        if self.config_manager:
+            recipients = self.config_manager.get('alerts.email_config.to_addresses', [])
+        
+        if not recipients:
+            QMessageBox.warning(
+                self,
+                "Email Not Configured",
+                "No email recipients configured. Please configure email settings first."
+            )
+            return
+        
+        recipient_str = ', '.join(recipients)
+        
+        # Build confirmation dialog
+        items_preview = '\n'.join(checked_items[:10])  # Show first 10
+        if len(checked_items) > 10:
+            items_preview += f"\n  ... and {len(checked_items) - 10} more"
+        
+        confirm_msg = (
+            f"This will send {test_count} test email(s):\n\n"
+            f"One email per checked alert type per node:\n"
+            f"{items_preview}\n\n"
+            f"Emails will be sent to:\n  {recipient_str}\n\n"
+            f"Each email will include a footer indicating it is a test.\n\n"
+            f"Continue?"
+        )
+        
+        # Create custom dialog with styled buttons
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle("Test Alerts")
+        dialog.setText(confirm_msg)
+        dialog.setIcon(QMessageBox.Question)
+        
+        # Add styled buttons
+        ok_btn = dialog.addButton("OK", QMessageBox.AcceptRole)
+        ok_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS['btn_success']};
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-size: 13px;
+                min-width: 80px;
+            }}
+            QPushButton:hover {{
+                background-color: {COLORS['btn_success_hover']};
+            }}
+        """)
+        
+        cancel_btn = dialog.addButton("Cancel", QMessageBox.RejectRole)
+        cancel_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS['btn_cancel']};
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-size: 13px;
+                min-width: 80px;
+            }}
+            QPushButton:hover {{
+                background-color: {COLORS['btn_cancel_hover']};
+            }}
+        """)
+        
+        dialog.setStyleSheet(f"""
+            QMessageBox {{
+                background-color: {COLORS['bg_main']};
+            }}
+            QMessageBox QLabel {{
+                color: {COLORS['fg_normal']};
+                font-size: 12px;
+            }}
+        """)
+        
+        dialog.exec()
+        
+        if dialog.clickedButton() != ok_btn:
+            return
+        
+        # Send test alerts
+        try:
+            from alert_system import AlertManager
+            alert_config = self.config_manager.get_section('alerts')
+            alert_manager = AlertManager(alert_config)
+            
+            success_count = 0
+            fail_count = 0
+            
+            for node_id, node_checkboxes in self.checkbox_vars.items():
+                node_data = self.nodes_data[node_id]
+                for alert_type, checkbox in node_checkboxes.items():
+                    if checkbox.isChecked() and checkbox.isEnabled():
+                        if alert_manager.send_test_alert(alert_type, node_id, node_data):
+                            success_count += 1
+                        else:
+                            fail_count += 1
+            
+            # Report results
+            if fail_count == 0:
+                QMessageBox.information(
+                    self,
+                    "Test Complete",
+                    f"Successfully sent {success_count} test email(s).\n\nCheck your inbox."
+                )
+            else:
+                QMessageBox.warning(
+                    self,
+                    "Test Complete",
+                    f"Sent {success_count} email(s), {fail_count} failed.\n\nCheck logs for details."
+                )
+                
+        except Exception as e:
+            logger.error(f"Test alerts failed: {e}")
+            QMessageBox.critical(
+                self,
+                "Test Failed",
+                f"Failed to send test alerts: {e}"
+            )
     
     def eventFilter(self, obj, event):
         """Handle clicks on disabled checkboxes to show info dialog"""

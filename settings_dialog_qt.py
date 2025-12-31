@@ -674,10 +674,11 @@ class SettingsDialogQt(QDialog):
             alert_config = self.config_manager.get_section('alerts')
             alert_manager = AlertManager(alert_config)
             
-            if alert_manager.test_email():
+            success, error_msg = alert_manager.test_email_with_error()
+            if success:
                 QMessageBox.information(self, "Email Test", "Test email sent successfully! Check your inbox.")
             else:
-                QMessageBox.critical(self, "Email Test", "Failed to send test email. Check your configuration and logs.")
+                QMessageBox.critical(self, "Email Test", f"Failed to send test email:\n\n{error_msg}")
                 
         except Exception as e:
             QMessageBox.critical(self, "Email Test", f"Email test failed: {e}")
