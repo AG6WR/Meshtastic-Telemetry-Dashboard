@@ -522,7 +522,6 @@ class SettingsDialogQt(QDialog):
         # External Current Sensor Group
         sensor_group = QGroupBox("External Current Sensor")
         sensor_layout = QGridLayout(sensor_group)
-        sensor_layout.setSpacing(8)
         
         # Enable checkbox
         self.current_sensor_enabled = QCheckBox("Enable current scaling")
@@ -560,7 +559,7 @@ class SettingsDialogQt(QDialog):
         
         # Calculated Values (read-only display)
         calc_label = QLabel("Calculated Values:")
-        calc_label.setStyleSheet("font-weight: bold; margin-top: 8px;")
+        calc_label.setStyleSheet("font-weight: bold;")
         sensor_layout.addWidget(calc_label, 6, 0, 1, 3)
         
         # Shunt Resistance
