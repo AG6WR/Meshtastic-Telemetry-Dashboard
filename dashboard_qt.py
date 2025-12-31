@@ -721,7 +721,7 @@ class DashboardQt(QMainWindow):
                 self.message_manager.save_message(message_dict)
             
             # Show notification banner
-            self._show_message_notification(from_node, from_name, text)
+            self._show_message_notification(from_node, from_name, to_node, text)
             
             # Update Messages button with unread count
             self._update_messages_button()
@@ -738,18 +738,21 @@ class DashboardQt(QMainWindow):
             return self.data_collector.nodes_data[node_id].get('Node LongName', node_id)
         return node_id
     
-    def _show_message_notification(self, from_node: str, from_name: str, text: str):
+    def _show_message_notification(self, from_node: str, from_name: str, to_node: str, text: str):
         """Add message to notification rotation and show banner for 10 minutes"""
         import time as time_module
         
-        # Get local node name
-        local_node_id = self._get_local_node_id()
-        local_name = self._get_node_name(local_node_id) if local_node_id else "Local"
+        # Determine destination name
+        if to_node == '^all':
+            to_name = "Channel"
+        else:
+            # Direct message to a specific node
+            to_name = self._get_node_name(to_node) if to_node else "Unknown"
         
         # Add to recent notifications
         notification = {
             'from_name': from_name,
-            'to_name': local_name,
+            'to_name': to_name,
             'text': text,
             'timestamp': time_module.time()
         }
@@ -758,6 +761,9 @@ class DashboardQt(QMainWindow):
         # Remove notifications older than 10 minutes
         cutoff = time_module.time() - 600  # 10 minutes
         self.recent_notifications = [n for n in self.recent_notifications if n['timestamp'] > cutoff]
+        
+        # Point to the newest message (last in list) so it displays immediately
+        self.current_notification_index = len(self.recent_notifications) - 1
         
         # Update the banner display
         self._update_notification_display()
