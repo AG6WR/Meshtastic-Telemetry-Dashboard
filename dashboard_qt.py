@@ -1050,10 +1050,11 @@ class DashboardQt(QMainWindow):
             )
             
             if reply == QMessageBox.Yes:
+                from qt_styles import BUTTON_STYLES
                 success = self.data_collector.clear_help()
                 if success:
                     self.btn_send_help.setText("Send Help")
-                    self.btn_send_help.setStyleSheet("")  # Reset to default danger style
+                    self.btn_send_help.setStyleSheet(BUTTON_STYLES['danger'])
                     logger.info("Help request cleared")
                 else:
                     QMessageBox.warning(self, "Error", "Failed to clear help request")
@@ -1090,6 +1091,7 @@ class DashboardQt(QMainWindow):
             return
         
         try:
+            from qt_styles import BUTTON_STYLES
             is_help_active = self.data_collector.is_help_requested()
             if is_help_active:
                 self.btn_send_help.setText("Clear Help")
@@ -1102,7 +1104,7 @@ class DashboardQt(QMainWindow):
                 """)
             else:
                 self.btn_send_help.setText("Send Help")
-                self.btn_send_help.setStyleSheet("")  # Reset to default
+                self.btn_send_help.setStyleSheet(BUTTON_STYLES['danger'])
         except Exception as e:
             logger.error(f"Error syncing help button state: {e}")
     
