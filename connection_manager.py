@@ -210,6 +210,34 @@ class ConnectionManager:
             logger.error(f"Error sending message to {destination_id}: {e}")
             return False
     
+    def send_broadcast(self, text: str) -> bool:
+        """
+        Send a broadcast text message to all nodes.
+        
+        Args:
+            text: Message text to broadcast
+            
+        Returns:
+            bool: True if sent successfully, False otherwise
+        """
+        if not self.interface or not self.is_connected:
+            logger.error("Cannot broadcast: not connected")
+            return False
+        
+        try:
+            logger.info(f"Broadcasting message: {repr(text)}")
+            self.interface.sendText(
+                text=text,
+                destinationId="^all",  # Broadcast to all nodes
+                wantAck=False,  # No ACK for broadcasts
+                channelIndex=0  # Use primary channel
+            )
+            logger.info("Broadcast sent successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error broadcasting message: {e}")
+            return False
+    
     def _verify_connection(self) -> bool:
         """Verify that the connection is working"""
         try:

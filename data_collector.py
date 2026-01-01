@@ -17,6 +17,7 @@ from config_manager import ConfigManager
 from connection_manager import ConnectionManager
 from alert_system import AlertManager
 from formatters import get_current_scale_factor, scale_current
+from icp_status import ICPStatusBroadcaster, ICPStatusReceiver, ICP_STATUS_PREFIX
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,16 @@ class DataCollector:
         
         # Subscribe to local node detection
         pub.subscribe(self._on_local_node_detected, "meshtastic.local_node.detected")
+        
+        # ICP Status broadcasting/receiving
+        self.icp_broadcaster = ICPStatusBroadcaster(
+            get_local_node_data=self._get_local_node_data,
+            send_broadcast=self._send_icp_broadcast,
+            version="2.1.0"
+        )
+        self.icp_receiver = ICPStatusReceiver(
+            update_node_status=self._update_node_icp_status
+        )
         
         # Processing thread
         self.processing_thread = None
@@ -133,6 +144,9 @@ class DataCollector:
         self.processing_thread = Thread(target=self._processing_loop, daemon=True)
         self.processing_thread.start()
         
+        # Start ICP status broadcaster
+        self.icp_broadcaster.start()
+        
         logger.info("Data collection system started")
     
     def _on_local_node_detected(self, node_id, node_name):
@@ -156,6 +170,9 @@ class DataCollector:
     def stop(self):
         """Stop the data collection system"""
         logger.info("Stopping data collection system...")
+        
+        # Stop ICP status broadcaster
+        self.icp_broadcaster.stop()
         
         # Unsubscribe from events
         try:
@@ -799,6 +816,12 @@ class DataCollector:
             
             logger.info(f"TEXT MESSAGE | From: {from_node} | To: {to_node} | Text: {repr(text)}")
             
+            # Check if this is an ICP status message - process separately
+            if self.icp_receiver.is_status_message(text):
+                self.icp_receiver.parse_and_update(from_node, text)
+                # Don't store in regular messages or notify dashboard
+                return
+            
             # Store message (keyed by sender)
             with self.data_lock:
                 if from_node not in self.messages_by_node:
@@ -852,3 +875,45 @@ class DataCollector:
             'offline_nodes': total_nodes - online_nodes,
             'connection_status': self.get_connection_status()
         }
+    
+    # =========================================================================
+    # ICP Status Methods
+    # =========================================================================
+    
+    def _get_local_node_data(self) -> Optional[Dict[str, Any]]:
+        """Get local node's telemetry data for ICP status calculation."""
+        local_node_id = self.config_manager.get('meshtastic.local_node_id')
+        if not local_node_id:
+            return None
+            
+        with self.data_lock:
+            return self.nodes_data.get(local_node_id, {}).copy()
+    
+    def _send_icp_broadcast(self, message: str) -> bool:
+        """Send an ICP status broadcast message."""
+        return self.connection_manager.send_broadcast(message)
+    
+    def _update_node_icp_status(self, node_id: str, status_data: Dict[str, Any]):
+        """Update a node's data with received ICP status information."""
+        with self.data_lock:
+            if node_id not in self.nodes_data:
+                # Create minimal record for unknown node
+                self.nodes_data[node_id] = self._default_node_record('Unknown', node_id[-4:])
+                
+            # Merge ICP status data into node record
+            self.nodes_data[node_id].update(status_data)
+            
+        # Notify dashboard to update display
+        self._notify_data_changed()
+    
+    def request_help(self) -> bool:
+        """Request help via ICP status broadcast."""
+        return self.icp_broadcaster.request_help()
+    
+    def clear_help(self) -> bool:
+        """Clear help request."""
+        return self.icp_broadcaster.clear_help()
+    
+    def is_help_requested(self) -> bool:
+        """Check if SEND HELP is currently active."""
+        return self.icp_broadcaster.is_help_requested()

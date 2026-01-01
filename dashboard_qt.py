@@ -264,6 +264,11 @@ class DashboardQt(QMainWindow):
         self.btn_alerts.clicked.connect(self._open_alerts)
         controls_layout.addWidget(self.btn_alerts)
         
+        # Send Help button (danger style for visibility)
+        self.btn_send_help = create_button("Send Help", "danger")
+        self.btn_send_help.clicked.connect(self._toggle_send_help)
+        controls_layout.addWidget(self.btn_send_help)
+        
         controls_layout.addStretch()
         
         # Fullscreen toggle
@@ -352,6 +357,9 @@ class DashboardQt(QMainWindow):
             
             # Update cards
             self._update_cards(nodes_data)
+            
+            # Update help button state
+            self._sync_help_button_state()
             
             # Update status line
             now = datetime.now()
@@ -1020,6 +1028,83 @@ class DashboardQt(QMainWindow):
             dialog.exec()
         except Exception as e:
             logger.error(f"Failed to open alerts dialog: {e}")
+    
+    def _toggle_send_help(self):
+        """Toggle Send Help status with confirmation dialogs"""
+        from PySide6.QtWidgets import QMessageBox
+        
+        if not self.data_collector:
+            QMessageBox.warning(self, "Not Connected", "Cannot send help request: not connected")
+            return
+        
+        is_help_active = self.data_collector.is_help_requested()
+        
+        if is_help_active:
+            # Confirm clearing help request
+            reply = QMessageBox.question(
+                self, "Clear Help Request",
+                "Clear the SEND HELP request?\n\n"
+                "Other ICPs/EOC will be notified that help is no longer needed.",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                success = self.data_collector.clear_help()
+                if success:
+                    self.btn_send_help.setText("Send Help")
+                    self.btn_send_help.setStyleSheet("")  # Reset to default danger style
+                    logger.info("Help request cleared")
+                else:
+                    QMessageBox.warning(self, "Error", "Failed to clear help request")
+        else:
+            # Confirm sending help request
+            reply = QMessageBox.question(
+                self, "Send Help Request",
+                "Request assistance from other ICPs/EOC?\n\n"
+                "This will broadcast a HELP status to all nodes on the mesh.\n"
+                "The request will auto-clear after 1 hour if not manually cleared.",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                success = self.data_collector.request_help()
+                if success:
+                    self.btn_send_help.setText("Clear Help")
+                    # Make button flash/pulse to indicate active help request
+                    self.btn_send_help.setStyleSheet("""
+                        QPushButton {
+                            background-color: #ff0000;
+                            color: white;
+                            font-weight: bold;
+                        }
+                    """)
+                    logger.info("Help request sent")
+                else:
+                    QMessageBox.warning(self, "Error", "Failed to send help request")
+    
+    def _sync_help_button_state(self):
+        """Sync Send Help button state with data collector"""
+        if not self.data_collector:
+            return
+        
+        try:
+            is_help_active = self.data_collector.is_help_requested()
+            if is_help_active:
+                self.btn_send_help.setText("Clear Help")
+                self.btn_send_help.setStyleSheet("""
+                    QPushButton {
+                        background-color: #ff0000;
+                        color: white;
+                        font-weight: bold;
+                    }
+                """)
+            else:
+                self.btn_send_help.setText("Send Help")
+                self.btn_send_help.setStyleSheet("")  # Reset to default
+        except Exception as e:
+            logger.error(f"Error syncing help button state: {e}")
     
     def _toggle_fullscreen(self):
         """Toggle fullscreen mode"""

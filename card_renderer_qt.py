@@ -329,7 +329,13 @@ class NodeCardQt(QFrame):
         # Status indicator (right) - uses StatusIndicator for ICP status support
         self._widgets['status_indicator'] = StatusIndicator()
         status_text, color_key, reasons, is_online = self._calculate_icp_status()
-        self._widgets['status_indicator'].set_status(status_text, color_key, reasons)
+        help_active = self.node_data.get('icp_help_requested', False)
+        blink = (status_text == "HELP")
+        self._widgets['status_indicator'].set_status(
+            status_text, color_key, reasons,
+            help_active=help_active, blink=blink
+        )
+        self._widgets['status_indicator'].clicked.connect(self._show_status_details)
         header_layout.addWidget(self._widgets['status_indicator'])
         
         parent_layout.addWidget(header)
@@ -565,16 +571,19 @@ class NodeCardQt(QFrame):
     
     def _calculate_icp_status(self) -> Tuple[str, str, List[str], bool]:
         """
-        Calculate ICP status from telemetry data.
+        Calculate ICP status from telemetry data or use received ICP status.
         
-        Uses thresholds:
+        For remote nodes: Uses received icp_status data if available
+        For local node: Calculates from local telemetry data
+        
+        Thresholds (when calculating locally):
         - Battery: >50% green, 25-50% yellow, <25% red
         - Voltage: ≥4.0V green, 3.5-4.0V yellow, <3.5V red
         - Temperature: 0-35°C green, 35-45°C or <0°C yellow, >45°C red
         
         Returns:
             Tuple of (status_text, color_key, reasons_list, is_online)
-            - status_text: "Online", "Battery", "Temp", "Battery, Temp", "Offline", etc.
+            - status_text: "Online", "Battery", "Temp", "Battery, Temp", "Offline", "HELP", etc.
             - color_key: 'green', 'yellow', 'red', 'grey'
             - reasons_list: List of reasons for non-green status
             - is_online: Whether node is online
@@ -582,8 +591,37 @@ class NodeCardQt(QFrame):
         is_online = self._is_node_online()
         
         if not is_online:
+            # Check if node was requesting help before going offline
+            if self.node_data.get('icp_help_requested'):
+                return "HELP", 'red', ['Offline', 'Help requested'], False
             return "Offline", 'grey', [], False
         
+        # For remote nodes, use received ICP status if available and recent
+        if not self.is_local:
+            received_status = self.node_data.get('icp_status')
+            received_at = self.node_data.get('icp_status_received_at', 0)
+            
+            # Use received status if it's less than 20 minutes old
+            if received_status and (time.time() - received_at) < 1200:
+                help_requested = self.node_data.get('icp_help_requested', False)
+                reasons = self.node_data.get('icp_reasons', [])
+                
+                # Map received status to color
+                color_map = {'GREEN': 'green', 'YELLOW': 'yellow', 'RED': 'red'}
+                color_key = color_map.get(received_status, 'green')
+                
+                # HELP takes priority in display
+                if help_requested:
+                    return "HELP", 'red', reasons + ['Help requested'], True
+                
+                # Show status with reasons
+                if reasons:
+                    status_text = ", ".join(reasons[:2])
+                    return status_text, color_key, reasons, True
+                else:
+                    return "Online", color_key, [], True
+        
+        # Local node or no received status - calculate from telemetry
         # Check if telemetry is stale
         if self._is_telemetry_stale():
             return "Online", 'green', [], True  # Online but no telemetry to evaluate
@@ -591,29 +629,29 @@ class NodeCardQt(QFrame):
         warnings = []  # Yellow-level issues
         criticals = []  # Red-level issues
         
-        # Check Battery %
+        # Check Battery % (internal node battery)
         battery = self.node_data.get('Battery')
         if battery is not None:
             if battery < 25:
-                criticals.append("Battery")
+                criticals.append("Node Battery")
             elif battery <= 50:
-                warnings.append("Battery")
+                warnings.append("Node Battery")
         
-        # Check Voltage (Ch3 Voltage for ICP battery)
+        # Check Voltage (Ch3 Voltage for external ICP battery)
         voltage = self.node_data.get('Ch3 Voltage')
         if voltage is not None:
             if voltage < 3.5:
-                criticals.append("Voltage")
+                criticals.append("ICP Battery")
             elif voltage < 4.0:
-                warnings.append("Voltage")
+                warnings.append("ICP Battery")
         
         # Check Temperature
         temp = self.node_data.get('Temperature')
         if temp is not None:
             if temp > 45:
-                criticals.append("Temp")
+                criticals.append("Temperature")
             elif temp > 35 or temp < 0:
-                warnings.append("Temp")
+                warnings.append("Temperature")
         
         # Determine overall status (worst wins)
         if criticals:
@@ -876,7 +914,13 @@ class NodeCardQt(QFrame):
         
         # Update status indicator with ICP status
         status_text, color_key, reasons, is_online = self._calculate_icp_status()
-        self._widgets['status_indicator'].set_status(status_text, color_key, reasons)
+        help_active = self.node_data.get('icp_help_requested', False)
+        # Blink only for HELP status
+        blink = (status_text == "HELP")
+        self._widgets['status_indicator'].set_status(
+            status_text, color_key, reasons, 
+            help_active=help_active, blink=blink
+        )
         
         # Update name in case it changed
         long_name = self.node_data.get('Node LongName', 'Unknown')
@@ -943,6 +987,41 @@ class NodeCardQt(QFrame):
     # =========================================================================
     # Event Handlers
     # =========================================================================
+    
+    def _show_status_details(self):
+        """Show status details popup when status indicator is clicked"""
+        from PySide6.QtWidgets import QMessageBox
+        
+        status_text, color_key, reasons, is_online = self._calculate_icp_status()
+        help_active = self.node_data.get('icp_help_requested', False)
+        
+        # Build message
+        node_name = self.node_data.get('Node LongName', 'Unknown')
+        lines = [f"Node: {node_name}"]
+        lines.append(f"Status: {status_text}")
+        
+        if not is_online:
+            lines.append("\nNode is currently offline.")
+        
+        if reasons:
+            lines.append("\nReasons:")
+            for reason in reasons:
+                lines.append(f"  • {reason}")
+        
+        if help_active:
+            lines.append("\n⚠ SEND HELP is active!")
+        
+        # Show ICP status info if received from remote
+        if not self.is_local and self.node_data.get('icp_status'):
+            icp_version = self.node_data.get('icp_version', 'Unknown')
+            received_at = self.node_data.get('icp_status_received_at', 0)
+            if received_at:
+                from datetime import datetime
+                received_str = datetime.fromtimestamp(received_at).strftime('%H:%M:%S')
+                lines.append(f"\nICP Status v{icp_version}")
+                lines.append(f"Last received: {received_str}")
+        
+        QMessageBox.information(self, "ICP Status Details", "\n".join(lines))
     
     def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse press - emit clicked or context menu signal"""
