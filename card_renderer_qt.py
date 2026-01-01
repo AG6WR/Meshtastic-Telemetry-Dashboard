@@ -325,8 +325,8 @@ class NodeCardQt(QFrame):
         
         # Status indicator (right) - uses StatusIndicator for ICP status support
         self._widgets['status_indicator'] = StatusIndicator()
-        is_online = self._is_node_online()
-        self._widgets['status_indicator'].set_online_offline(is_online)
+        status_text, color_key, reasons, is_online = self._calculate_icp_status()
+        self._widgets['status_indicator'].set_status(status_text, color_key, reasons)
         header_layout.addWidget(self._widgets['status_indicator'])
         
         parent_layout.addWidget(header)
@@ -560,6 +560,69 @@ class NodeCardQt(QFrame):
         else:
             return "Offline", self.colors['fg_bad']
     
+    def _calculate_icp_status(self) -> Tuple[str, str, List[str], bool]:
+        """
+        Calculate ICP status from telemetry data.
+        
+        Uses thresholds:
+        - Battery: >50% green, 25-50% yellow, <25% red
+        - Voltage: ≥4.0V green, 3.5-4.0V yellow, <3.5V red
+        - Temperature: 0-35°C green, 35-45°C or <0°C yellow, >45°C red
+        
+        Returns:
+            Tuple of (status_text, color_key, reasons_list, is_online)
+            - status_text: "Online", "Battery", "Temp", "Battery, Temp", "Offline", etc.
+            - color_key: 'green', 'yellow', 'red', 'grey'
+            - reasons_list: List of reasons for non-green status
+            - is_online: Whether node is online
+        """
+        is_online = self._is_node_online()
+        
+        if not is_online:
+            return "Offline", 'grey', [], False
+        
+        # Check if telemetry is stale
+        if self._is_telemetry_stale():
+            return "Online", 'green', [], True  # Online but no telemetry to evaluate
+        
+        warnings = []  # Yellow-level issues
+        criticals = []  # Red-level issues
+        
+        # Check Battery %
+        battery = self.node_data.get('Battery')
+        if battery is not None:
+            if battery < 25:
+                criticals.append("Battery")
+            elif battery <= 50:
+                warnings.append("Battery")
+        
+        # Check Voltage (Ch3 Voltage for ICP battery)
+        voltage = self.node_data.get('Ch3 Voltage')
+        if voltage is not None:
+            if voltage < 3.5:
+                criticals.append("Voltage")
+            elif voltage < 4.0:
+                warnings.append("Voltage")
+        
+        # Check Temperature
+        temp = self.node_data.get('Temperature')
+        if temp is not None:
+            if temp > 45:
+                criticals.append("Temp")
+            elif temp > 35 or temp < 0:
+                warnings.append("Temp")
+        
+        # Determine overall status (worst wins)
+        if criticals:
+            reasons = criticals + warnings  # Show all issues
+            status_text = ", ".join(criticals[:2])  # Show up to 2 critical reasons
+            return status_text, 'red', reasons, True
+        elif warnings:
+            status_text = ", ".join(warnings[:2])  # Show up to 2 warning reasons
+            return status_text, 'yellow', warnings, True
+        else:
+            return "Online", 'green', [], True
+
     def _is_telemetry_stale(self) -> bool:
         """Check if telemetry data is stale (>16 min old)"""
         current_time = time.time()
@@ -808,9 +871,9 @@ class NodeCardQt(QFrame):
         if unread_messages is not None:
             self.unread_messages = unread_messages
         
-        # Update status indicator
-        is_online = self._is_node_online()
-        self._widgets['status_indicator'].set_online_offline(is_online)
+        # Update status indicator with ICP status
+        status_text, color_key, reasons, is_online = self._calculate_icp_status()
+        self._widgets['status_indicator'].set_status(status_text, color_key, reasons)
         
         # Update name in case it changed
         long_name = self.node_data.get('Node LongName', 'Unknown')
