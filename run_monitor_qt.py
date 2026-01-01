@@ -51,6 +51,10 @@ def main():
     # Create Qt application
     app = QApplication(sys.argv)
     
+    # Use Fusion style for consistent cross-platform rendering
+    # This avoids native widget variations that cause sizing issues on some Linux systems
+    app.setStyle('Fusion')
+    
     try:
         # Initialize configuration
         logger.info("Initializing configuration manager...")
