@@ -103,6 +103,8 @@ class StatusIndicator(QLabel):
         
         # Configure appearance
         self.setFont(get_font('card_header'))
+        self.setFixedHeight(30)  # Fixed height to fit text properly
+        self.setAlignment(Qt.AlignCenter)  # Center text vertically and horizontally
         self.setCursor(Qt.PointingHandCursor)
         self._update_style()
         
@@ -182,7 +184,8 @@ class StatusIndicator(QLabel):
             QLabel {{
                 color: {self.TEXT_COLOR};
                 background-color: {bg_color};
-                padding: 2px 6px;
+                padding-left: 6px;
+                padding-right: 6px;
                 border-radius: 3px;
             }}
         """)
@@ -305,7 +308,7 @@ class NodeCardQt(QFrame):
     def _create_header(self, parent_layout: QVBoxLayout):
         """Create header with node name and status"""
         header = QWidget()
-        header.setFixedHeight(22)  # Compact header height
+        header.setFixedHeight(30)  # Height to fit StatusIndicator button (30px)
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(4)

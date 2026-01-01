@@ -169,7 +169,8 @@ class PlotConfigDialog(QDialog):
             ("Humidity (%)", "humidity"),
             ("Internal Battery Voltage (V)", "internal_voltage"),
             ("External Battery Voltage (V)", "external_voltage"),
-            ("Current (mA)", "current"),
+            ("Internal Current (mA)", "internal_current"),
+            ("External Current (scaled)", "external_current"),
             ("Channel Utilization (%)", "channel_utilization"),
         ]
         
@@ -546,7 +547,8 @@ class TelemetryPlotterQt:
         'humidity': {'name': 'Humidity', 'unit': '%', 'min_val': 0, 'max_val': 100},
         'internal_voltage': {'name': 'Internal Battery Voltage', 'unit': 'V', 'min_val': 3.0, 'max_val': 4.5},
         'external_voltage': {'name': 'External Battery Voltage', 'unit': 'V', 'min_val': 10, 'max_val': 15},
-        'current': {'name': 'Current', 'unit': 'mA', 'min_val': 0, 'max_val': 200},
+        'internal_current': {'name': 'Internal Current', 'unit': 'mA', 'min_val': 0, 'max_val': 200},
+        'external_current': {'name': 'External Current (Scaled)', 'unit': 'mA', 'min_val': -5000, 'max_val': 5000},
         'channel_utilization': {'name': 'Channel Utilization', 'unit': '%', 'min_val': 0, 'max_val': 50}
     }
     
@@ -683,7 +685,8 @@ class TelemetryPlotterQt:
             'humidity': 'humidity',
             'internal_voltage': 'voltage',
             'external_voltage': 'ch3_voltage',
-            'current': 'current',
+            'internal_current': 'current',
+            'external_current': 'ch3_current_scaled_ma',
             'channel_utilization': 'channel_utilization'
         }
         
