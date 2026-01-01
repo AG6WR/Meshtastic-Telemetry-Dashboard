@@ -530,7 +530,7 @@ class SettingsDialogQt(QDialog):
         # Full Scale Voltage
         sensor_layout.addWidget(QLabel("Full Scale Voltage:"), 1, 0)
         self.full_scale_voltage_mv = QLineEdit()
-        self.full_scale_voltage_mv.setMaximumWidth(80)
+        self.full_scale_voltage_mv.setFixedWidth(80)
         self.full_scale_voltage_mv.setAlignment(Qt.AlignRight)
         sensor_layout.addWidget(self.full_scale_voltage_mv, 1, 1)
         sensor_layout.addWidget(QLabel("mV"), 1, 2)
@@ -542,7 +542,7 @@ class SettingsDialogQt(QDialog):
         # Full Scale Current
         sensor_layout.addWidget(QLabel("Full Scale Current:"), 3, 0)
         self.full_scale_current_a = QLineEdit()
-        self.full_scale_current_a.setMaximumWidth(80)
+        self.full_scale_current_a.setFixedWidth(80)
         self.full_scale_current_a.setAlignment(Qt.AlignRight)
         sensor_layout.addWidget(self.full_scale_current_a, 3, 1)
         sensor_layout.addWidget(QLabel("A"), 3, 2)
