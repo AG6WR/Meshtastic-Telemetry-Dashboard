@@ -12,6 +12,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import QTimer
+from PySide6.QtGui import QFont
 
 # Add project directory to Python path
 project_dir = Path(__file__).parent.absolute()
@@ -54,6 +55,12 @@ def main():
     # Use Fusion style for consistent cross-platform rendering
     # This avoids native widget variations that cause sizing issues on some Linux systems
     app.setStyle('Fusion')
+    
+    # Normalize font to ensure consistent metrics across different Linux systems
+    # Different Pis resolve "Sans Serif" to different fonts with different line heights
+    # DejaVu Sans provides consistent 14px line height across systems
+    font = QFont('DejaVu Sans', 9)
+    app.setFont(font)
     
     try:
         # Initialize configuration
