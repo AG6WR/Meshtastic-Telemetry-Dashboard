@@ -322,8 +322,31 @@ def get_current_scale_factor(config_manager=None, node_id: str = None) -> float:
     return DEFAULT_SHUNT_RESISTANCE_MOHM / user_shunt_mohm
 
 
+def get_current_invert(config_manager=None, node_id: str = None) -> bool:
+    """Get current inversion setting for a node
+    
+    Args:
+        config_manager: ConfigManager instance
+        node_id: Optional node ID for per-node settings (falls back to default)
+        
+    Returns:
+        True if current direction should be inverted
+    """
+    if not config_manager:
+        return False
+    
+    # Try node-specific settings first, then fall back to default
+    if node_id:
+        node_settings = config_manager.get(f'hardware.current_sensor.nodes.{node_id}')
+        if node_settings:
+            return node_settings.get('invert', False)
+    
+    # Fall back to default
+    return config_manager.get('hardware.current_sensor.default.invert', False)
+
+
 def scale_current(current_ma: float, config_manager=None, node_id: str = None) -> float:
-    """Apply current scaling factor to raw current value
+    """Apply current scaling factor and inversion to raw current value
     
     Args:
         current_ma: Raw current in milliamps from telemetry
@@ -331,13 +354,19 @@ def scale_current(current_ma: float, config_manager=None, node_id: str = None) -
         node_id: Optional node ID for per-node settings
         
     Returns:
-        Scaled current in milliamps
+        Scaled (and possibly inverted) current in milliamps
     """
     if current_ma is None:
         return None
     
     scale_factor = get_current_scale_factor(config_manager, node_id)
-    return current_ma * scale_factor
+    scaled = current_ma * scale_factor
+    
+    # Apply inversion if configured
+    if get_current_invert(config_manager, node_id):
+        scaled = -scaled
+    
+    return scaled
 
 
 def format_current(current_ma: float, config_manager=None, node_id: str = None, include_direction: bool = False) -> str:

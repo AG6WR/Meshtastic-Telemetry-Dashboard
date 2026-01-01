@@ -519,6 +519,10 @@ class SettingsDialogQt(QDialog):
         node_select_layout.addStretch()
         layout.addLayout(node_select_layout)
         
+        # Invert checkbox - outside the group box like Email tab
+        self.current_sensor_invert = QCheckBox("Invert current sense direction")
+        layout.addWidget(self.current_sensor_invert)
+        
         # Enable checkbox - outside the group box like Email tab
         self.current_sensor_enabled = QCheckBox("Enable current scaling")
         layout.addWidget(self.current_sensor_enabled)
@@ -655,6 +659,8 @@ class SettingsDialogQt(QDialog):
                 # No specific settings, show defaults but don't enable
                 path = "hardware.current_sensor.default"
         
+        self.current_sensor_invert.setChecked(
+            self.config_manager.get(f'{path}.invert', False))
         self.current_sensor_enabled.setChecked(
             self.config_manager.get(f'{path}.enabled', False))
         self.full_scale_voltage_mv.setText(
@@ -669,24 +675,27 @@ class SettingsDialogQt(QDialog):
         path = self._get_hardware_config_path(node_id)
         
         try:
+            invert = self.current_sensor_invert.isChecked()
             enabled = self.current_sensor_enabled.isChecked()
             voltage = float(self.full_scale_voltage_mv.text() or 350)
             current = float(self.full_scale_current_a.text() or 3.5)
             
             # For specific nodes, only save if settings differ from default
             if node_id != "default":
+                default_invert = self.config_manager.get('hardware.current_sensor.default.invert', False)
                 default_enabled = self.config_manager.get('hardware.current_sensor.default.enabled', False)
                 default_voltage = self.config_manager.get('hardware.current_sensor.default.full_scale_voltage_mv', 350)
                 default_current = self.config_manager.get('hardware.current_sensor.default.full_scale_current_a', 3.5)
                 
                 # If same as default, remove node-specific settings
-                if enabled == default_enabled and voltage == default_voltage and current == default_current:
+                if invert == default_invert and enabled == default_enabled and voltage == default_voltage and current == default_current:
                     nodes = self.config_manager.get('hardware.current_sensor.nodes', {})
                     if node_id in nodes:
                         del nodes[node_id]
                         self.config_manager.set('hardware.current_sensor.nodes', nodes)
                     return
             
+            self.config_manager.set(f'{path}.invert', invert)
             self.config_manager.set(f'{path}.enabled', enabled)
             self.config_manager.set(f'{path}.full_scale_voltage_mv', voltage)
             self.config_manager.set(f'{path}.full_scale_current_a', current)
