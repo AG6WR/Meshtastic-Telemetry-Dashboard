@@ -72,27 +72,100 @@
 - [x] Test fullscreen exit window state on Pi - DONE (Quit button works)
 - [x] Verify message list click-to-open on Pi - DONE (View button works)
 
-### Status Broadcast System (Future Branch)
-- [ ] **Dashboard Status Broadcasts** - Enable dashboards to share status with each other
-  - **Purpose**: Allow nodes to display `[MSG]` indicator showing which other nodes have unread messages
-  - **Implementation Notes**:
-    1. **Interval**: Configurable via settings/telemetry (like other Meshtastic telemetry rates)
-    2. **Message Format**: Dedicated message type with backward-compatible tuple structure:
-       - `<nodeid><d-status><tupletype1><tupledata1><tupletype2><tupledata2>...`
-       - Need to define delimiter strategy for variable-length fields
-       - Consider standard approaches for extensibility (TLV encoding?)
-    3. **Status Fields to Include**:
-       - Dashboard version
-       - Operational state (red/yellow/green)
-       - Send help now flag
-       - GMRS channel currently operating
-       - Ham voice freq currently operating
-       - Unread message count
-    4. **Behavior**: 
-       - Broadcast to all (not direct messages)
-       - Treated like telemetry (not shown in Message Center)
-       - Stored in node_data for display on cards
-  - **Branch**: Create dedicated feature branch when ready to implement
+### ICP Status Broadcast System (Future Branch)
+
+**Purpose**: Give EOC management a view of operational state of each ICP with minimal staff interaction. Each ICP/EOC dashboard broadcasts its own determined status; other dashboards display what each node reports about itself.
+
+#### Design Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Status determination | Local ICP calculates own status | Prevents inconsistent status shown by different dashboards |
+| Manual data (frequencies, etc.) | Excluded | Stale data worse than no data; staff won't maintain |
+| Motion sensor | Informational only, not used for status | Staffed/unstaffed is contextual, not good/bad |
+| Send Help flag | Only manual input included | Event-driven, high-value, self-clearing |
+
+#### Status Calculation
+
+Uses existing color thresholds from `node_detail_window_qt.py`:
+
+| Parameter | Green | Yellow | Red |
+|-----------|-------|--------|-----|
+| Battery % | >50% | 25-50% | <25% |
+| Voltage | ≥4.0V | 3.5-4.0V | <3.5V |
+| Temperature | 0-35°C | 35-45°C or <0°C | >45°C |
+
+**Aggregation**: Overall status = worst component status ("weakest link")
+
+#### Message Format
+
+New structured message type (same channel as regular messages, filtered by receiver):
+
+```
+Prefix: [ICP-STATUS]
+Format: [ICP-STATUS]<status>|<reasons>|<help>|<version>|<timestamp>
+
+Examples:
+[ICP-STATUS]GREEN||NO|1.3.0|1735689600
+[ICP-STATUS]YELLOW|Battery|NO|1.3.0|1735689600
+[ICP-STATUS]RED|Battery,Temperature|NO|1.3.0|1735689600
+[ICP-STATUS]RED||YES|1.3.0|1735689600  (help requested)
+```
+
+**Fields**:
+- `status`: GREEN | YELLOW | RED
+- `reasons`: Comma-separated (empty if GREEN): Battery, Voltage, Temperature
+- `help`: YES | NO
+- `version`: Dashboard version string
+- `timestamp`: Unix epoch
+
+**Message routing**: `[ICP-STATUS]` messages parsed and processed, NOT shown in Message Center.
+
+#### Broadcast Timing
+
+- **Heartbeat**: Every 15 minutes
+- **On change**: Immediately when status changes
+
+#### Card Display - Status Indicator
+
+Replaces "Online/Offline" with button-style indicator:
+
+| Condition | Background | Text | Animation |
+|-----------|------------|------|-----------|
+| Status GREEN | Green | "Online" | None |
+| Status YELLOW | Yellow | Reason: "Battery" | None |
+| Status RED | Red | Reason: "Temp" | None |
+| Help Requested | Red | "Send Help" | Blink 1Hz |
+| Node offline | Last status color | "Offline" | None |
+| Offline + was Help | Red | "Offline" | Blink continues |
+
+**Multiple reasons**: Show comma-separated: "Battery, Temp"
+
+#### Send Help Button
+
+**UI Flow**:
+1. User clicks "Send Help" button
+2. Confirmation dialog: "Request assistance from other ICPs/EOC?"
+3. If confirmed: Set flag, broadcast immediately, button blinks
+4. Local-only "Clear Help" button appears
+5. Clear requires confirmation: "Clear help request?"
+
+**Auto-clear**: After 1 hour with no action
+
+**Remote dashboards**: Cannot clear another ICP's help flag
+
+#### Implementation Components
+
+- [ ] **Status calculator** - Evaluate local telemetry → status + reasons
+- [ ] **Status broadcaster** - Send `[ICP-STATUS]` on interval/change
+- [ ] **Status receiver** - Parse incoming `[ICP-STATUS]`, update node data
+- [ ] **Card renderer update** - Status indicator widget with blink animation
+- [ ] **Help button UI** - Button + confirmation dialogs
+- [ ] **Message filter** - Route `[ICP-STATUS]` away from Message Center
+
+**Branch**: Create dedicated feature branch when ready to implement
+
+---
 
 ### Hardware Integration Features
 - [x] **Current Sense Scaling** (v2.0.2b - DONE)
