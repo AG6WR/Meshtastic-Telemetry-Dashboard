@@ -34,7 +34,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QHBoxLayout, QLabel, QWidget, QSizePolicy
+    QFrame, QVBoxLayout, QHBoxLayout, QLabel, QWidget, QSizePolicy, QPushButton
 )
 from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QFont, QMouseEvent
@@ -49,6 +49,156 @@ from formatters import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class StatusIndicator(QLabel):
+    """
+    A status indicator widget that can display ICP status with optional blinking.
+    
+    States:
+        - Online (green): Normal operation, no blink
+        - Warning (yellow): Degraded status, slow blink
+        - Critical (red): Problem detected, fast blink
+        - Help (red): SEND HELP active, fast blink
+        - Offline (grey): Node offline, no blink
+    
+    The indicator is clickable and emits a signal when clicked to show status details.
+    """
+    
+    clicked = Signal()  # Emitted when indicator is clicked
+    
+    # Status colors
+    STATUS_COLORS = {
+        'green': '#00ff00',     # Good/Online
+        'yellow': '#ffff00',    # Warning/Degraded  
+        'red': '#ff4444',       # Critical/Help
+        'grey': '#808080',      # Offline/Unknown
+    }
+    
+    # Blink intervals (ms)
+    BLINK_FAST = 300    # Critical/Help status
+    BLINK_SLOW = 800    # Warning status
+    
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        
+        self._status = "Offline"
+        self._color = self.STATUS_COLORS['grey']
+        self._reasons: List[str] = []
+        self._help_active = False
+        self._blink_enabled = False
+        self._blink_visible = True
+        self._blink_timer: Optional[QTimer] = None
+        
+        # Configure appearance
+        self.setFont(get_font('card_header'))
+        self.setCursor(Qt.PointingHandCursor)
+        self._update_style()
+        
+    def set_status(self, status: str, color: str = 'grey', 
+                   reasons: Optional[List[str]] = None,
+                   help_active: bool = False,
+                   blink: bool = False,
+                   blink_fast: bool = False):
+        """
+        Update the status indicator.
+        
+        Args:
+            status: Status text to display (e.g., "Online", "Warning", "HELP")
+            color: Color key ('green', 'yellow', 'red', 'grey')
+            reasons: List of reasons for current status
+            help_active: Whether SEND HELP is active
+            blink: Whether to enable blinking
+            blink_fast: Use fast blink (True) or slow blink (False)
+        """
+        self._status = status
+        self._color = self.STATUS_COLORS.get(color, self.STATUS_COLORS['grey'])
+        self._reasons = reasons or []
+        self._help_active = help_active
+        
+        # Update text
+        self.setText(status)
+        
+        # Handle blinking
+        if blink and not self._blink_enabled:
+            self._start_blink(fast=blink_fast)
+        elif not blink and self._blink_enabled:
+            self._stop_blink()
+        elif blink and self._blink_enabled:
+            # Update blink speed if needed
+            interval = self.BLINK_FAST if blink_fast else self.BLINK_SLOW
+            if self._blink_timer and self._blink_timer.interval() != interval:
+                self._blink_timer.setInterval(interval)
+        
+        self._update_style()
+        
+    def set_online_offline(self, is_online: bool):
+        """Simple online/offline status (legacy compatibility)"""
+        if is_online:
+            self.set_status("Online", color='green', blink=False)
+        else:
+            self.set_status("Offline", color='grey', blink=False)
+            
+    def _start_blink(self, fast: bool = False):
+        """Start blinking animation"""
+        self._blink_enabled = True
+        self._blink_visible = True
+        
+        if self._blink_timer is None:
+            self._blink_timer = QTimer(self)
+            self._blink_timer.timeout.connect(self._on_blink)
+        
+        interval = self.BLINK_FAST if fast else self.BLINK_SLOW
+        self._blink_timer.start(interval)
+        
+    def _stop_blink(self):
+        """Stop blinking animation"""
+        self._blink_enabled = False
+        self._blink_visible = True
+        
+        if self._blink_timer:
+            self._blink_timer.stop()
+            
+        self._update_style()
+        
+    def _on_blink(self):
+        """Toggle blink visibility"""
+        self._blink_visible = not self._blink_visible
+        self._update_style()
+        
+    def _update_style(self):
+        """Update the label styling"""
+        if self._blink_enabled and not self._blink_visible:
+            # Blink "off" state - dim the color
+            color = '#404040'  # Dark grey when "off"
+        else:
+            color = self._color
+            
+        self.setStyleSheet(f"""
+            QLabel {{
+                color: {color};
+                background: transparent;
+                padding: 0px 4px;
+            }}
+        """)
+        
+    def mousePressEvent(self, event: QMouseEvent):
+        """Handle click to show status details"""
+        if event.button() == Qt.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
+        
+    def get_tooltip_text(self) -> str:
+        """Get tooltip text with status details"""
+        lines = [f"Status: {self._status}"]
+        if self._reasons:
+            lines.append("Reasons:")
+            for reason in self._reasons:
+                lines.append(f"  • {reason}")
+        if self._help_active:
+            lines.append("")
+            lines.append("⚠ SEND HELP is active!")
+        return "\n".join(lines)
 
 
 class NodeCardQt(QFrame):
@@ -168,12 +318,11 @@ class NodeCardQt(QFrame):
         
         header_layout.addStretch()
         
-        # Status (right)
-        status, status_color = self._get_status()
-        self._widgets['status_label'] = QLabel(status)
-        self._widgets['status_label'].setFont(get_font('card_header'))
-        self._widgets['status_label'].setStyleSheet(f"color: {status_color}; background: transparent;")
-        header_layout.addWidget(self._widgets['status_label'])
+        # Status indicator (right) - uses StatusIndicator for ICP status support
+        self._widgets['status_indicator'] = StatusIndicator()
+        is_online = self._is_node_online()
+        self._widgets['status_indicator'].set_online_offline(is_online)
+        header_layout.addWidget(self._widgets['status_indicator'])
         
         parent_layout.addWidget(header)
         
@@ -392,13 +541,16 @@ class NodeCardQt(QFrame):
         # return self._telemetry_fields.get(field_key, True)
         return True  # Always show all fields for now
     
-    def _get_status(self) -> Tuple[str, str]:
-        """Get node status and color based on last heard time"""
+    def _is_node_online(self) -> bool:
+        """Check if node is online based on last heard time"""
         current_time = time.time()
         last_heard = self.node_data.get('Last Heard', 0)
         time_diff = current_time - last_heard if last_heard else float('inf')
-        
-        if time_diff <= self.ONLINE_THRESHOLD_SECONDS:
+        return time_diff <= self.ONLINE_THRESHOLD_SECONDS
+    
+    def _get_status(self) -> Tuple[str, str]:
+        """Get node status and color based on last heard time (legacy method)"""
+        if self._is_node_online():
             return "Online", self.colors['fg_good']
         else:
             return "Offline", self.colors['fg_bad']
@@ -651,10 +803,9 @@ class NodeCardQt(QFrame):
         if unread_messages is not None:
             self.unread_messages = unread_messages
         
-        # Update all sections
-        status, status_color = self._get_status()
-        self._widgets['status_label'].setText(status)
-        self._widgets['status_label'].setStyleSheet(f"color: {status_color}; background: transparent;")
+        # Update status indicator
+        is_online = self._is_node_online()
+        self._widgets['status_indicator'].set_online_offline(is_online)
         
         # Update name in case it changed
         long_name = self.node_data.get('Node LongName', 'Unknown')
