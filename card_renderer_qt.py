@@ -67,23 +67,34 @@ class StatusIndicator(QLabel):
     
     clicked = Signal()  # Emitted when indicator is clicked
     
-    # Status colors
+    # Status colors - background colors matching qt_styles.py palette
+    # Green matches fg_good, Warning matches btn_warning, Critical matches btn_danger
     STATUS_COLORS = {
-        'green': '#00ff00',     # Good/Online
-        'yellow': '#ffff00',    # Warning/Degraded  
-        'red': '#ff4444',       # Critical/Help
-        'grey': '#808080',      # Offline/Unknown
+        'green': '#228B22',     # Forest green - Good/Online (matches fg_good)
+        'yellow': '#f57c00',    # Orange - Warning/Degraded (matches btn_warning)
+        'red': '#c62828',       # Red - Critical/Help (matches btn_danger)
+        'grey': '#505050',      # Dark grey - Offline/Unknown
     }
     
-    # Blink intervals (ms)
-    BLINK_FAST = 300    # Critical/Help status
-    BLINK_SLOW = 800    # Warning status
+    # Dimmed colors for blink "off" state (Help only - Critical is solid)
+    STATUS_COLORS_DIM = {
+        'green': '#1a5c1a',     # Darker green
+        'yellow': '#b35900',    # Darker orange
+        'red': '#8b1c1c',       # Darker red
+        'grey': '#353535',      # Darker grey
+    }
+    
+    # Text color - consistent light color for readability
+    TEXT_COLOR = '#e0e0e0'
+    
+    # Blink interval (ms) - only used for HELP status
+    BLINK_RATE = 1000   # ~1 second blink rate for HELP
     
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         
         self._status = "Offline"
-        self._color = self.STATUS_COLORS['grey']
+        self._color_key = 'grey'  # Store color key for dim lookup
         self._reasons: List[str] = []
         self._help_active = False
         self._blink_enabled = False
@@ -98,8 +109,7 @@ class StatusIndicator(QLabel):
     def set_status(self, status: str, color: str = 'grey', 
                    reasons: Optional[List[str]] = None,
                    help_active: bool = False,
-                   blink: bool = False,
-                   blink_fast: bool = False):
+                   blink: bool = False):
         """
         Update the status indicator.
         
@@ -108,27 +118,21 @@ class StatusIndicator(QLabel):
             color: Color key ('green', 'yellow', 'red', 'grey')
             reasons: List of reasons for current status
             help_active: Whether SEND HELP is active
-            blink: Whether to enable blinking
-            blink_fast: Use fast blink (True) or slow blink (False)
+            blink: Whether to enable blinking (only for HELP status)
         """
         self._status = status
-        self._color = self.STATUS_COLORS.get(color, self.STATUS_COLORS['grey'])
+        self._color_key = color if color in self.STATUS_COLORS else 'grey'
         self._reasons = reasons or []
         self._help_active = help_active
         
         # Update text
         self.setText(status)
         
-        # Handle blinking
+        # Handle blinking - only HELP should blink
         if blink and not self._blink_enabled:
-            self._start_blink(fast=blink_fast)
+            self._start_blink()
         elif not blink and self._blink_enabled:
             self._stop_blink()
-        elif blink and self._blink_enabled:
-            # Update blink speed if needed
-            interval = self.BLINK_FAST if blink_fast else self.BLINK_SLOW
-            if self._blink_timer and self._blink_timer.interval() != interval:
-                self._blink_timer.setInterval(interval)
         
         self._update_style()
         
@@ -139,8 +143,8 @@ class StatusIndicator(QLabel):
         else:
             self.set_status("Offline", color='grey', blink=False)
             
-    def _start_blink(self, fast: bool = False):
-        """Start blinking animation"""
+    def _start_blink(self):
+        """Start blinking animation at ~1sec rate"""
         self._blink_enabled = True
         self._blink_visible = True
         
@@ -148,8 +152,7 @@ class StatusIndicator(QLabel):
             self._blink_timer = QTimer(self)
             self._blink_timer.timeout.connect(self._on_blink)
         
-        interval = self.BLINK_FAST if fast else self.BLINK_SLOW
-        self._blink_timer.start(interval)
+        self._blink_timer.start(self.BLINK_RATE)
         
     def _stop_blink(self):
         """Stop blinking animation"""
@@ -167,18 +170,20 @@ class StatusIndicator(QLabel):
         self._update_style()
         
     def _update_style(self):
-        """Update the label styling"""
+        """Update the label styling - colored background with light text"""
         if self._blink_enabled and not self._blink_visible:
-            # Blink "off" state - dim the color
-            color = '#404040'  # Dark grey when "off"
+            # Blink "off" state - use dimmed background color
+            bg_color = self.STATUS_COLORS_DIM.get(self._color_key, self.STATUS_COLORS_DIM['grey'])
         else:
-            color = self._color
+            # Normal state - use full background color
+            bg_color = self.STATUS_COLORS.get(self._color_key, self.STATUS_COLORS['grey'])
             
         self.setStyleSheet(f"""
             QLabel {{
-                color: {color};
-                background: transparent;
-                padding: 0px 4px;
+                color: {self.TEXT_COLOR};
+                background-color: {bg_color};
+                padding: 2px 6px;
+                border-radius: 3px;
             }}
         """)
         
