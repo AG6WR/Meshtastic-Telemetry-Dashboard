@@ -386,6 +386,70 @@ theme.py            █                                           80 lines (extr
 
 ---
 
+## Platform Compatibility
+
+### Font Handling
+
+The application explicitly sets **DejaVu Sans 9pt** as the application font to ensure consistent rendering across different Linux systems.
+
+**Problem Discovered (December 2024):**
+
+Qt's generic font name "Sans Serif" is resolved by the system's `fontconfig` to an actual font. This resolution varies between systems:
+
+| System | `fc-match "Sans Serif"` | Font Height | Line Spacing |
+|--------|------------------------|-------------|--------------|
+| Raspberry Pi 4 | DejaVu Sans | 14px | 14px |
+| Raspberry Pi 5 | Noto Sans | 17px | 17px |
+
+This 3-pixel difference caused QLineEdit fields (which require more vertical space than QLabel) to appear clipped/squished on Pi5, while rendering correctly on Pi4.
+
+**Root Cause:**
+
+Different Raspberry Pi OS images ship with different `fontconfig` priority configurations in `/etc/fonts/conf.d/`. The Pi5 image prioritizes Noto Sans (a newer Google font with better Unicode coverage) while older Pi4 images default to DejaVu Sans.
+
+**Solution:**
+
+In `run_monitor_qt.py`, we explicitly request DejaVu Sans to bypass fontconfig's generic resolution:
+
+```python
+from PySide6.QtGui import QFont
+
+app = QApplication(sys.argv)
+app.setStyle('Fusion')
+
+# Normalize font to ensure consistent metrics across different Linux systems
+# Different Pis resolve "Sans Serif" to different fonts with different line heights
+# DejaVu Sans provides consistent 14px line height across systems
+font = QFont('DejaVu Sans', 9)
+app.setFont(font)
+```
+
+**Verification Commands:**
+
+To check which font your system uses for "Sans Serif":
+```bash
+fc-match "Sans Serif"
+```
+
+To verify DejaVu Sans is installed:
+```bash
+fc-list | grep -i "dejavu sans"
+```
+
+To install DejaVu Sans if missing:
+```bash
+sudo apt install fonts-dejavu
+```
+
+**Why DejaVu Sans:**
+
+1. Pre-installed on most Linux distributions including Raspberry Pi OS
+2. Provides consistent 14px line height at 9pt across tested systems
+3. Good Unicode coverage for international characters
+4. Well-hinted for low-DPI displays (typical of Raspberry Pi touchscreens)
+
+---
+
 ## Benefits Summary
 
 | Aspect | Before | After |
