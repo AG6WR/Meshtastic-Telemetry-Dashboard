@@ -519,67 +519,48 @@ class SettingsDialogQt(QDialog):
         node_select_layout.addStretch()
         layout.addLayout(node_select_layout)
         
+        # Enable checkbox - outside the group box like Email tab
+        self.current_sensor_enabled = QCheckBox("Enable current scaling")
+        layout.addWidget(self.current_sensor_enabled)
+        
         # External Current Sensor Group
-        sensor_group = QGroupBox("External Current Sensor")
+        sensor_group = QGroupBox("Current Sensor Configuration")
         sensor_layout = QGridLayout(sensor_group)
         
-        # Enable checkbox
-        self.current_sensor_enabled = QCheckBox("Enable current scaling")
-        sensor_layout.addWidget(self.current_sensor_enabled, 0, 0, 1, 3)
-        
         # Full Scale Voltage
-        sensor_layout.addWidget(QLabel("Full Scale Voltage:"), 1, 0)
+        sensor_layout.addWidget(QLabel("Full Scale Voltage:"), 0, 0)
         self.full_scale_voltage_mv = QLineEdit()
-        self.full_scale_voltage_mv.setMinimumHeight(28)
-        self.full_scale_voltage_mv.setFixedWidth(80)
-        self.full_scale_voltage_mv.setAlignment(Qt.AlignRight)
-        sensor_layout.addWidget(self.full_scale_voltage_mv, 1, 1)
-        sensor_layout.addWidget(QLabel("mV"), 1, 2)
-        
-        voltage_note = QLabel("Voltage measured across the shunt at the full scale current")
-        voltage_note.setStyleSheet("font-size: 8pt; color: gray;")
-        sensor_layout.addWidget(voltage_note, 2, 0, 1, 3)
+        self.full_scale_voltage_mv.setMaximumWidth(80)
+        sensor_layout.addWidget(self.full_scale_voltage_mv, 0, 1)
+        sensor_layout.addWidget(QLabel("mV"), 0, 2)
         
         # Full Scale Current
-        sensor_layout.addWidget(QLabel("Full Scale Current:"), 3, 0)
+        sensor_layout.addWidget(QLabel("Full Scale Current:"), 1, 0)
         self.full_scale_current_a = QLineEdit()
-        self.full_scale_current_a.setMinimumHeight(28)
-        self.full_scale_current_a.setFixedWidth(80)
-        self.full_scale_current_a.setAlignment(Qt.AlignRight)
-        sensor_layout.addWidget(self.full_scale_current_a, 3, 1)
-        sensor_layout.addWidget(QLabel("A"), 3, 2)
+        self.full_scale_current_a.setMaximumWidth(80)
+        sensor_layout.addWidget(self.full_scale_current_a, 1, 1)
+        sensor_layout.addWidget(QLabel("A"), 1, 2)
         
-        current_note = QLabel("Maximum rated shunt current")
-        current_note.setStyleSheet("font-size: 8pt; color: gray;")
-        sensor_layout.addWidget(current_note, 4, 0, 1, 3)
+        # Hint text
+        hint_label = QLabel("(voltage across shunt at full scale current)")
+        hint_label.setStyleSheet("color: gray;")
+        sensor_layout.addWidget(hint_label, 2, 1, 1, 2)
         
-        # Separator
-        separator = QFrame()
-        separator.setFrameShape(QFrame.HLine)
-        separator.setStyleSheet("background-color: #555555;")
-        sensor_layout.addWidget(separator, 5, 0, 1, 3)
-        
-        # Calculated Values (read-only display)
-        calc_label = QLabel("Calculated Values:")
-        calc_label.setStyleSheet("font-weight: bold;")
-        sensor_layout.addWidget(calc_label, 6, 0, 1, 3)
-        
-        # Shunt Resistance
-        sensor_layout.addWidget(QLabel("Shunt Resistance:"), 7, 0)
+        # Calculated values section
+        sensor_layout.addWidget(QLabel("Shunt Resistance:"), 3, 0)
         self.shunt_resistance_display = QLabel("100.00 mΩ")
         self.shunt_resistance_display.setStyleSheet("font-weight: bold; color: #4a90d9;")
-        sensor_layout.addWidget(self.shunt_resistance_display, 7, 1, 1, 2)
+        sensor_layout.addWidget(self.shunt_resistance_display, 3, 1, 1, 2)
         
-        # Scaling Factor
-        sensor_layout.addWidget(QLabel("Scaling Factor:"), 8, 0)
+        sensor_layout.addWidget(QLabel("Scaling Factor:"), 4, 0)
         self.scale_factor_display = QLabel("1.00x")
         self.scale_factor_display.setStyleSheet("font-weight: bold; color: #4a90d9;")
-        sensor_layout.addWidget(self.scale_factor_display, 8, 1, 1, 2)
+        sensor_layout.addWidget(self.scale_factor_display, 4, 1, 1, 2)
         
         # Example calculation
         self.example_display = QLabel("Example: 100mA raw → 100mA scaled")
-        self.example_display.setStyleSheet("font-size: 9pt; color: #888888; margin-top: 4px;")
-        sensor_layout.addWidget(self.example_display, 9, 0, 1, 3)
+        self.example_display.setStyleSheet("color: gray;")
+        sensor_layout.addWidget(self.example_display, 5, 1, 1, 2)
         
         sensor_layout.setColumnStretch(2, 1)
         layout.addWidget(sensor_group)
