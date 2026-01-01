@@ -448,6 +448,10 @@ sudo apt install fonts-dejavu
 3. Good Unicode coverage for international characters
 4. Well-hinted for low-DPI displays (typical of Raspberry Pi touchscreens)
 
+**Windows Compatibility:**
+
+On Windows, if DejaVu Sans is not installed, Qt automatically substitutes a similar sans-serif font (typically Segoe UI). This is acceptable because Windows font resolution is more consistent than Linux fontconfig, and the substituted font will have similar metrics. The explicit font request primarily solves the Linux-specific fontconfig variance issue.
+
 ---
 
 ## Benefits Summary
