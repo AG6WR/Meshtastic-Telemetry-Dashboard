@@ -256,6 +256,7 @@ BUTTON_STYLES = {
     'success': _BUTTON_BASE.format(bg=COLORS['btn_success'], bg_hover=COLORS['btn_success_hover']),
     'warning': _BUTTON_BASE.format(bg=COLORS['btn_warning'], bg_hover=COLORS['btn_warning_hover']),
     'danger': _BUTTON_BASE.format(bg=COLORS['btn_danger'], bg_hover=COLORS['btn_danger_hover']),
+    'danger_active': _BUTTON_BASE.format(bg='#ff0000', bg_hover='#ff3333'),  # Bright red for active alerts
     'neutral': _BUTTON_BASE.format(bg=COLORS['btn_neutral'], bg_hover=COLORS['btn_neutral_hover']),
 }
 

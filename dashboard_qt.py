@@ -1070,17 +1070,11 @@ class DashboardQt(QMainWindow):
             )
             
             if reply == QMessageBox.Yes:
+                from qt_styles import BUTTON_STYLES
                 success = self.data_collector.request_help()
                 if success:
                     self.btn_send_help.setText("Clear Help")
-                    # Make button flash/pulse to indicate active help request
-                    self.btn_send_help.setStyleSheet("""
-                        QPushButton {
-                            background-color: #ff0000;
-                            color: white;
-                            font-weight: bold;
-                        }
-                    """)
+                    self.btn_send_help.setStyleSheet(BUTTON_STYLES['danger_active'])
                     logger.info("Help request sent")
                 else:
                     QMessageBox.warning(self, "Error", "Failed to send help request")
@@ -1095,13 +1089,7 @@ class DashboardQt(QMainWindow):
             is_help_active = self.data_collector.is_help_requested()
             if is_help_active:
                 self.btn_send_help.setText("Clear Help")
-                self.btn_send_help.setStyleSheet("""
-                    QPushButton {
-                        background-color: #ff0000;
-                        color: white;
-                        font-weight: bold;
-                    }
-                """)
+                self.btn_send_help.setStyleSheet(BUTTON_STYLES['danger_active'])
             else:
                 self.btn_send_help.setText("Send Help")
                 self.btn_send_help.setStyleSheet(BUTTON_STYLES['danger'])
