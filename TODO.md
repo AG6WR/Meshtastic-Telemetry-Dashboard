@@ -72,7 +72,7 @@
 - [x] Test fullscreen exit window state on Pi - DONE (Quit button works)
 - [x] Verify message list click-to-open on Pi - DONE (View button works)
 
-### ICP Status Broadcast System (Future Branch)
+### ICP Status Broadcast System (v2.1.0a - In Progress)
 
 **Purpose**: Give EOC management a view of operational state of each ICP with minimal staff interaction. Each ICP/EOC dashboard broadcasts its own determined status; other dashboards display what each node reports about itself.
 
@@ -156,14 +156,61 @@ Replaces "Online/Offline" with button-style indicator:
 
 #### Implementation Components
 
-- [ ] **Status calculator** - Evaluate local telemetry → status + reasons
-- [ ] **Status broadcaster** - Send `[ICP-STATUS]` on interval/change
-- [ ] **Status receiver** - Parse incoming `[ICP-STATUS]`, update node data
-- [ ] **Card renderer update** - Status indicator widget with blink animation
-- [ ] **Help button UI** - Button + confirmation dialogs
-- [ ] **Message filter** - Route `[ICP-STATUS]` away from Message Center
+- [x] **Status calculator** - Evaluate local telemetry → status + reasons
+- [x] **Status broadcaster** - Send `[ICP-STATUS]` on interval/change (15-min heartbeat + on-change)
+- [x] **Status receiver** - Parse incoming `[ICP-STATUS]`, update node data
+- [x] **Card renderer update** - StatusIndicator widget with blink animation
+- [x] **Help button UI** - "Send Help" / "Clear Help" button + confirmation dialogs
+- [x] **Message filter** - Route `[ICP-STATUS]` away from Message Center
 
-**Branch**: Create dedicated feature branch when ready to implement
+**Completed**: v2.1.0a (merged to main 2026-01-01)
+
+#### GPIO LED Control (Pending Firmware)
+
+**Purpose**: Physical status indication via external LEDs connected to Meshtastic node GPIO pins. Each dashboard controls LEDs on its locally-connected node.
+
+**Hardware Requirements**:
+- Meshtastic firmware compiled with Remote Hardware module enabled (remove `-DMESHTASTIC_EXCLUDE_REMOTEHARDWARE=1` build flag)
+- LEDs connected via relay board to GPIO pins
+
+**GPIO Pin Mapping (WisMesh Pocket / RAK4631)**:
+
+| Function | WisBlock IO | nRF GPIO | Arduino Pin | Mask |
+|----------|-------------|----------|-------------|------|
+| Red LED | IO3 | P0.21 | 21 | 0x200000 |
+| Yellow LED | IO4 | P0.04 | 4 | 0x10 |
+| Green LED | IO6 | P0.10 | 10 | 0x400 |
+| Buzzer | IO5 | P0.09 | 9 | 0x200 |
+
+**Note**: IO7 (P0.28, Arduino 28) reserved for motion detector input.
+
+**Implementation Plan**:
+
+- [ ] **gpio_led_controller.py** - New module
+  - `GPIOLEDController` class wrapping Meshtastic Python API
+  - `set_status_leds(status)` - Set R/Y/G LEDs based on status
+  - `set_buzzer(on)` - Control buzzer for alerts
+  - `read_led_status()` - Read current GPIO state
+  - Uses `RemoteHardwareClient.writeGPIOs()` for local node control
+  - No `gpio` channel needed for local-only control
+
+- [ ] **Config integration**
+  - Add `led_control.enabled` boolean to app_config.json
+  - Add `led_control.gpio_pins` mapping (hardcoded defaults, configurable later)
+  - Hardware tab note showing current pin mapping
+
+- [ ] **DataCollector integration**
+  - Initialize `GPIOLEDController` when connected
+  - Call `set_status_leds()` when local ICP status changes
+  - Sync LED state with calculated status in `_send_icp_broadcast()`
+
+- [ ] **Status-to-LED logic**
+  - GREEN status: Green LED on, others off
+  - YELLOW status: Yellow LED on, others off
+  - RED status: Red LED on, others off
+  - HELP requested: Red LED blink (or buzzer pulse)
+
+**Testing**: Requires firmware recompilation - cannot test until hardware ready
 
 ---
 

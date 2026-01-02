@@ -34,9 +34,31 @@ This applies especially to:
 
 ## Current Session Context
 **Date Started:** 2025-11-17
-**Current Version:** v2.0.3a
+**Current Version:** v2.1.0a
 **Active Branch:** main
-**Last Updated:** 2025-12-30
+**Last Updated:** 2026-01-01
+
+### ICP Status Feature (v2.1.0a) - COMPLETE
+Dashboard broadcasts operational status (GREEN/YELLOW/RED) to other nodes on mesh.
+- `icp_status.py` - ICPStatusBroadcaster and ICPStatusReceiver classes
+- Status calculated from battery %, voltage, temperature thresholds
+- 15-minute heartbeat broadcast + immediate on status change
+- "Send Help" button with confirmation dialogs, auto-clear after 1 hour
+- StatusIndicator widget on cards with blink animation for HELP state
+- [ICP-STATUS] messages filtered from Message Center
+
+### GPIO LED Control - PENDING FIRMWARE
+Next phase: Control external R/Y/G LEDs via Meshtastic GPIO to show status physically.
+- **Blocked on**: Firmware recompilation with Remote Hardware module enabled
+- GPIO pins: IO3=Red (21), IO4=Yellow (4), IO6=Green (10), IO5=Buzzer (9)
+- IO7 (28) reserved for motion detector input
+- Plan documented in TODO.md under "GPIO LED Control (Pending Firmware)"
+- Will use `RemoteHardwareClient.writeGPIOs()` for local node control (no gpio channel needed)
+
+### Hardware: WisMesh Pocket V2 (RAK4631)
+nRF52840-based, GPIO mapping from variant.h:
+- IO1=P0.17(17), IO2=P1.02(34), IO3=P0.21(21), IO4=P0.04(4)
+- IO5=P0.09(9), IO6=P0.10(10), IO7=P0.28(28)
 
 ---
 
