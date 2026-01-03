@@ -1793,10 +1793,10 @@ def interactive_mode():
         print("-" * 50)
         print("\nConnect your fully-configured reference node via USB.")
         print("This will export all settings and channel keys.")
-        example_port = get_port_example()
-        port = input(f"\nEnter serial port of reference node (e.g., {example_port}): ").strip()
-        if IS_WINDOWS:
-            port = port.upper()
+        
+        print("\nScanning for connected Meshtastic devices...")
+        port = select_meshtastic_device("Select reference node")
+        
         if port:
             export_config(port, "golden_config.yaml")
         
@@ -1807,10 +1807,13 @@ def interactive_mode():
         show_inventory()
         
     elif choice == "4":
-        example_port = get_port_example()
-        port = input(f"Enter serial port (e.g., {example_port}): ").strip()
-        if IS_WINDOWS:
-            port = port.upper()
+        print("\n" + "-" * 50)
+        print("CHECK NODE STATUS")
+        print("-" * 50)
+        
+        print("\nScanning for connected Meshtastic devices...")
+        port = select_meshtastic_device("Select device to check")
+        
         if port:
             info = get_node_info(port)
             print("\nNode Information:")
