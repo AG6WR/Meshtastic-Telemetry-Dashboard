@@ -3,6 +3,7 @@
 Node Provisioning Tool for Meshtastic Telemetry Dashboard
 
 Clones configuration from a "golden" reference node to new nodes.
+Cross-platform: Windows, Linux (including Raspberry Pi), macOS.
 
 Handles:
 - Channel configuration (including gpio channel for remote hardware)
@@ -19,13 +20,15 @@ Key Types:
 - Admin keys: List of public keys authorized to admin this node - CONFIGURED
 
 Usage:
-    # Export golden config from reference node
-    python node_provisioner.py --export --port COM10 --output golden_config.yaml
+    # Export golden config from reference node (Windows/Linux)
+    python node_provisioner.py --export --port COM10 --output golden_config.yaml  # Windows
+    python node_provisioner.py --export --port /dev/ttyUSB0 --output golden_config.yaml  # Linux
     
     # Provision a new node
     python node_provisioner.py --provision --port COM5 --config golden_config.yaml --name "ICP North"
+    python node_provisioner.py --provision --port /dev/ttyACM0 --config golden_config.yaml --name "ICP North"
     
-    # List available COM ports
+    # List available serial ports
     python node_provisioner.py --list-ports
     
     # Show node inventory
@@ -41,6 +44,12 @@ Requirements:
     - meshtastic Python package (pip install meshtastic)
     - PyYAML (pip install pyyaml)
     - pyserial (pip install pyserial)
+
+Linux Notes:
+    - Serial port access requires membership in 'dialout' group:
+      sudo usermod -aG dialout $USER
+      (then log out and back in)
+    - UF2 bootloader drives auto-mount to /media/$USER/RAK4631 or similar
 """
 
 import argparse
@@ -60,6 +69,72 @@ try:
     HAS_SERIAL = True
 except ImportError:
     HAS_SERIAL = False
+
+# Platform detection
+IS_WINDOWS = sys.platform == "win32"
+IS_LINUX = sys.platform.startswith("linux")
+IS_MACOS = sys.platform == "darwin"
+
+
+def check_serial_permissions():
+    """
+    Check if the user has permissions to access serial ports on Linux.
+    Warns if user is not in dialout/uucp group.
+    """
+    if not IS_LINUX:
+        return True
+    
+    try:
+        import pwd
+        import grp
+        
+        username = pwd.getpwuid(os.getuid()).pw_name
+        user_gids = os.getgroups()
+        user_groups = set()
+        
+        for gid in user_gids:
+            try:
+                user_groups.add(grp.getgrgid(gid).gr_name)
+            except KeyError:
+                pass
+        
+        # Also check supplementary groups
+        for g in grp.getgrall():
+            if username in g.gr_mem:
+                user_groups.add(g.gr_name)
+        
+        # Check for common serial port groups
+        serial_groups = {'dialout', 'uucp', 'plugdev', 'tty'}
+        has_serial_group = bool(user_groups & serial_groups)
+        
+        if not has_serial_group:
+            print("\n" + "=" * 60)
+            print("  ⚠ WARNING: Serial Port Permissions")
+            print("=" * 60)
+            print(f"  User '{username}' may not have permission to access serial ports.")
+            print("  You may need to add yourself to the 'dialout' group:")
+            print(f"")
+            print(f"    sudo usermod -aG dialout {username}")
+            print(f"")
+            print("  Then log out and back in for changes to take effect.")
+            print("=" * 60 + "\n")
+            return False
+        
+        return True
+        
+    except Exception as e:
+        # Don't fail on permission check errors
+        return True
+
+
+def get_port_example() -> str:
+    """Get a platform-appropriate serial port example string."""
+    if IS_WINDOWS:
+        return "COM4"
+    elif IS_LINUX:
+        return "/dev/ttyUSB0 or /dev/ttyACM0"
+    else:
+        return "/dev/tty.usbserial"
 
 # Node inventory CSV file
 INVENTORY_FILE = "node_inventory.csv"
@@ -404,12 +479,13 @@ def setup_cross_admin(eoc_port: Optional[str] = None):
     
     print("\nTo configure each ICP node:")
     print("  1. Connect the ICP node via USB")
-    print("  2. Enter the COM port when prompted")
+    print("  2. Enter the serial port when prompted")
     print("  3. The script will add EOC admin keys to that node")
     
     for icp in icp_nodes:
         print(f"\n--- Configure {icp.get('long_name')} ({icp.get('node_id')}) ---")
-        port = input(f"Enter COM port for {icp.get('long_name')} (or 's' to skip): ").strip()
+        example_port = get_port_example()
+        port = input(f"Enter port for {icp.get('long_name')} (e.g., {example_port}) or 's' to skip: ").strip()
         
         if port.lower() == 's':
             print("  Skipped.")
@@ -436,22 +512,82 @@ def setup_cross_admin(eoc_port: Optional[str] = None):
 # =============================================================================
 
 def find_uf2_drive() -> str:
-    """Find the UF2 bootloader drive (Windows)."""
-    if sys.platform != "win32":
-        # On Linux/Mac, look for mounted volume
-        possible_mounts = ["/Volumes/RAK4631", "/media/RAK4631", "/mnt/RAK4631"]
-        for mount in possible_mounts:
-            if os.path.exists(mount):
-                return mount
+    """Find the UF2 bootloader drive (cross-platform)."""
+    if IS_WINDOWS:
+        # Windows: Check all drive letters for UF2 bootloader
+        for letter in string.ascii_uppercase:
+            drive = f"{letter}:\\"
+            info_file = os.path.join(drive, "INFO_UF2.TXT")
+            if os.path.exists(info_file):
+                print(f"  Found UF2 bootloader on {drive}")
+                return drive
         return None
     
-    # Windows: Check all drive letters for UF2 bootloader
-    for letter in string.ascii_uppercase:
-        drive = f"{letter}:\\"
-        info_file = os.path.join(drive, "INFO_UF2.TXT")
-        if os.path.exists(info_file):
-            print(f"  Found UF2 bootloader on {drive}")
-            return drive
+    elif IS_LINUX:
+        # Linux: Check common mount points for UF2 device
+        # Get current username for /media/$USER and /run/media/$USER paths
+        try:
+            import pwd
+            username = pwd.getpwuid(os.getuid()).pw_name
+        except Exception:
+            username = os.environ.get('USER', os.environ.get('LOGNAME', ''))
+        
+        # Known UF2 bootloader volume names
+        uf2_names = ['RAK4631', 'RAKBOOT', 'NRF52BOOT', 'MESHTASTIC', 'CURRENT']
+        
+        # Build list of potential mount locations
+        search_bases = [
+            f"/media/{username}",
+            f"/run/media/{username}",  # Fedora/Arch
+            "/media",
+            "/mnt",
+        ]
+        
+        # First, check explicit known paths
+        for base in search_bases:
+            for name in uf2_names:
+                mount = os.path.join(base, name)
+                info_file = os.path.join(mount, "INFO_UF2.TXT")
+                if os.path.exists(info_file):
+                    print(f"  Found UF2 bootloader on {mount}")
+                    return mount
+        
+        # Second, scan mount directories for any UF2 device
+        for base in search_bases:
+            if os.path.isdir(base):
+                try:
+                    for entry in os.listdir(base):
+                        mount = os.path.join(base, entry)
+                        if os.path.isdir(mount):
+                            info_file = os.path.join(mount, "INFO_UF2.TXT")
+                            if os.path.exists(info_file):
+                                print(f"  Found UF2 bootloader on {mount}")
+                                return mount
+                except PermissionError:
+                    continue
+        
+        return None
+    
+    elif IS_MACOS:
+        # macOS: Check /Volumes
+        uf2_names = ['RAK4631', 'RAKBOOT', 'NRF52BOOT', 'MESHTASTIC', 'CURRENT']
+        for name in uf2_names:
+            mount = f"/Volumes/{name}"
+            info_file = os.path.join(mount, "INFO_UF2.TXT")
+            if os.path.exists(info_file):
+                print(f"  Found UF2 bootloader on {mount}")
+                return mount
+        
+        # Scan /Volumes for any UF2 device
+        if os.path.isdir("/Volumes"):
+            for entry in os.listdir("/Volumes"):
+                mount = os.path.join("/Volumes", entry)
+                if os.path.isdir(mount):
+                    info_file = os.path.join(mount, "INFO_UF2.TXT")
+                    if os.path.exists(info_file):
+                        print(f"  Found UF2 bootloader on {mount}")
+                        return mount
+        return None
     
     return None
 
@@ -466,7 +602,12 @@ def wait_for_uf2_drive(timeout: int = 120) -> str:
     print("  ║  DOUBLE-TAP the RESET button on the device NOW       ║")
     print("  ║                                                       ║")
     print("  ║  The device LED should pulse and a new drive         ║")
-    print("  ║  named 'RAK4631' will appear in File Explorer.       ║")
+    if IS_WINDOWS:
+        print("  ║  named 'RAK4631' will appear in File Explorer.       ║")
+    elif IS_LINUX:
+        print("  ║  named 'RAK4631' will auto-mount (check file manager)║")
+    else:
+        print("  ║  named 'RAK4631' will appear in Finder.              ║")
     print("  ╚═══════════════════════════════════════════════════════╝")
     print("")
     print(f"  Waiting for UF2 bootloader drive (timeout: {timeout}s)...")
@@ -514,6 +655,14 @@ def flash_firmware(firmware_path: str, wait: bool = True) -> bool:
     
     try:
         shutil.copy2(firmware_path, dest_path)
+        
+        # On Linux/macOS, ensure data is actually written to the device
+        # before the bootloader processes it
+        if IS_LINUX or IS_MACOS:
+            print("  Syncing filesystem...")
+            os.sync()
+            time.sleep(2)  # Give time for sync to complete
+        
         print("  Firmware copied successfully!")
         print("  Device will reboot automatically...")
         
@@ -722,7 +871,10 @@ def list_serial_ports():
     """List available serial ports with basic info."""
     if not HAS_SERIAL:
         print("pyserial not installed. Install with: pip install pyserial")
-        print("Manually check Device Manager for COM ports.")
+        if IS_WINDOWS:
+            print("Manually check Device Manager for COM ports.")
+        else:
+            print("Manually check with: ls /dev/tty* or dmesg | tail")
         return []
     
     ports = serial.tools.list_ports.comports()
@@ -831,7 +983,7 @@ def select_meshtastic_device(prompt: str = "Select device") -> Optional[str]:
         print("  No Meshtastic devices detected.")
         print("=" * 70)
     
-    print(f"  M. Enter COM port manually")
+    print(f"  M. Enter port manually")
     print(f"  R. Rescan")
     print(f"  0. Cancel")
     print("=" * 70)
@@ -844,7 +996,10 @@ def select_meshtastic_device(prompt: str = "Select device") -> Optional[str]:
         elif choice == 'R':
             return select_meshtastic_device(prompt)  # Rescan
         elif choice == 'M':
-            port = input("Enter COM port (e.g., COM4): ").strip().upper()
+            if IS_WINDOWS:
+                port = input("Enter COM port (e.g., COM4): ").strip().upper()
+            else:
+                port = input("Enter serial port (e.g., /dev/ttyUSB0 or /dev/ttyACM0): ").strip()
             if port:
                 return port
         else:
@@ -1195,14 +1350,20 @@ def provision_new_node_flow():
         else:
             print(f"\nError: {config_file} not found.")
             print("First export configuration from a reference node:")
-            print("  python node_provisioner.py --export --port COM10")
+            if IS_WINDOWS:
+                print("  python node_provisioner.py --export --port COM10")
+            else:
+                print("  python node_provisioner.py --export --port /dev/ttyUSB0")
             return False
     
     url_file = "golden_config_url.txt"
     if not os.path.exists(url_file):
         print(f"\nError: {url_file} not found.")
         print("First export configuration from a reference node:")
-        print("  python node_provisioner.py --export --port COM10")
+        if IS_WINDOWS:
+            print("  python node_provisioner.py --export --port COM10")
+        else:
+            print("  python node_provisioner.py --export --port /dev/ttyUSB0")
         return False
     
     # Load golden config to check existing admin keys
@@ -1458,9 +1619,14 @@ def provision_new_node_flow():
     # Confirm port with user
     port_confirm = input(f"\nUse {target_port}? [Y/n] or enter different port: ").strip()
     if port_confirm.lower() == 'n':
-        port = input("Enter COM port: ").strip().upper()
-    elif port_confirm.upper().startswith('COM'):
+        example_port = get_port_example()
+        port = input(f"Enter serial port (e.g., {example_port}): ").strip()
+        if IS_WINDOWS:
+            port = port.upper()
+    elif IS_WINDOWS and port_confirm.upper().startswith('COM'):
         port = port_confirm.upper()
+    elif not IS_WINDOWS and port_confirm.startswith('/dev/'):
+        port = port_confirm
     else:
         port = target_port
     
@@ -1605,6 +1771,10 @@ def interactive_mode():
     print("  ICP Network Configuration")
     print("=" * 60)
     
+    # Check Linux permissions before listing ports
+    if IS_LINUX:
+        check_serial_permissions()
+    
     # List ports
     list_serial_ports()
     
@@ -1623,7 +1793,10 @@ def interactive_mode():
         print("-" * 50)
         print("\nConnect your fully-configured reference node via USB.")
         print("This will export all settings and channel keys.")
-        port = input("\nEnter COM port of reference node: ").strip()
+        example_port = get_port_example()
+        port = input(f"\nEnter serial port of reference node (e.g., {example_port}): ").strip()
+        if IS_WINDOWS:
+            port = port.upper()
         if port:
             export_config(port, "golden_config.yaml")
         
@@ -1634,7 +1807,10 @@ def interactive_mode():
         show_inventory()
         
     elif choice == "4":
-        port = input("Enter COM port: ").strip()
+        example_port = get_port_example()
+        port = input(f"Enter serial port (e.g., {example_port}): ").strip()
+        if IS_WINDOWS:
+            port = port.upper()
         if port:
             info = get_node_info(port)
             print("\nNode Information:")
@@ -1722,10 +1898,12 @@ def main():
 Workflow:
   1. Configure a reference node manually with all desired settings
   2. Scan the network to discover and inventory all nodes:
-       python node_provisioner.py --scan --port COM10
+       python node_provisioner.py --scan --port COM10        # Windows
+       python node_provisioner.py --scan --port /dev/ttyUSB0 # Linux
   
   3. Export golden configuration:
-       python node_provisioner.py --export --port COM10
+       python node_provisioner.py --export --port COM10        # Windows
+       python node_provisioner.py --export --port /dev/ttyUSB0 # Linux
   
   4. For each new node, run the provisioning wizard:
        python node_provisioner.py
@@ -1738,10 +1916,12 @@ Workflow:
 
 Examples:
   # Scan network and update inventory
-  python node_provisioner.py --scan --port COM10
+  python node_provisioner.py --scan --port COM10           # Windows
+  python node_provisioner.py --scan --port /dev/ttyACM0    # Linux
 
   # Export config from reference node
-  python node_provisioner.py --export --port COM10
+  python node_provisioner.py --export --port COM10         # Windows
+  python node_provisioner.py --export --port /dev/ttyUSB0  # Linux
 
   # Run interactive provisioning wizard (default)
   python node_provisioner.py
@@ -1750,7 +1930,13 @@ Examples:
   python node_provisioner.py --inventory
 
   # Check status of a connected node
-  python node_provisioner.py --status --port COM5
+  python node_provisioner.py --status --port COM5          # Windows
+  python node_provisioner.py --status --port /dev/ttyACM0  # Linux
+
+Linux Notes:
+  Serial ports require 'dialout' group membership:
+    sudo usermod -aG dialout $USER
+    (then log out and back in)
         """
     )
     
