@@ -1,0 +1,103 @@
+# Meshtastic Golden Configuration (node-specific values removed)
+# Exported from: Kennedy North (!2f1b9773)
+# Date: 2026-01-02 13:58
+#
+# Node-specific values NOT included (will be set during provisioning):
+#   - owner (node name)
+#   - owner_short (short name)
+#   - location (GPS coordinates)
+#   - security.privateKey (generated per-node)
+#   - security.publicKey (generated per-node)
+#
+# Admin keys ARE included and will be applied to new nodes.
+# Override during provisioning if different admin access is needed.
+#
+
+canned_messages: Hi|Bye|Yes|No|Ok
+channel_url: https://meshtastic.org/e/#CjUSIFo2WlBPbHUzclpLYjh1cGRITUtmUXF2SllpeHFiVnFvGglUZWxlbWV0cnkoATABOgIIDRIOCAEQBjgBQAJIAVAeaAE
+config:
+  bluetooth:
+    enabled: true
+    fixedPin: 314159
+    mode: FIXED_PIN
+  device:
+    disableTripleClick: true
+    nodeInfoBroadcastSecs: 3600
+    tzdef: PST8PDT,M3.2.0/2:00:00,M11.1.0/2:00:00
+  display:
+    autoScreenCarouselSecs: 10
+    screenOnSecs: 3600
+    wakeOnTapOrMotion: true
+  lora:
+    hopLimit: 2
+    modemPreset: SHORT_FAST
+    region: US
+    sx126xRxBoostedGain: true
+    txEnabled: true
+    txPower: 30
+    usePreset: true
+  network:
+    ntpServer: meshtastic.pool.ntp.org
+  position:
+    broadcastSmartMinimumDistance: 50
+    broadcastSmartMinimumIntervalSecs: 30
+    gpsMode: ENABLED
+    gpsUpdateInterval: 120
+    positionBroadcastSecs: 3600
+    positionBroadcastSmartEnabled: true
+    positionFlags: 928
+  power:
+    lsSecs: 300
+    minWakeSecs: 10
+    sdsSecs: 4294967295
+    waitBluetoothSecs: 60
+  security:
+    adminKey:
+    - base64:av1DzbmiVyuZndN8E2G91hBN1nkQyD4yG5dgK7cPwEw=
+    - base64:B6JDtXW4xifn77tnGlGBxwao/xp7BBZkfTIIwSl2cwI=
+    - 'base64:'
+    serialEnabled: true
+module_config:
+  ambientLighting:
+    blue: 115
+    current: 10
+    green: 151
+    red: 27
+  cannedMessage:
+    enabled: true
+  detectionSensor:
+    detectionTriggerType: LOGIC_HIGH
+    enabled: true
+    minimumBroadcastSecs: 120
+    monitorPin: 28
+  externalNotification:
+    active: true
+    alertMessage: true
+    enabled: true
+    nagTimeout: 60
+    output: 36
+    outputMs: 1000
+  mqtt:
+    address: mqtt.meshtastic.org
+    encryptionEnabled: true
+    password: large4cats
+    root: msh/US
+    username: meshdev
+  paxcounter:
+    paxcounterUpdateInterval: 900
+  remoteHardware:
+    enabled: true
+  storeForward:
+    enabled: true
+  telemetry:
+    airQualityEnabled: true
+    airQualityInterval: 900
+    deviceUpdateInterval: 900
+    environmentDisplayFahrenheit: true
+    environmentMeasurementEnabled: true
+    environmentScreenEnabled: true
+    environmentUpdateInterval: 900
+    powerMeasurementEnabled: true
+    powerScreenEnabled: true
+    powerUpdateInterval: 900
+ringtone: 24:d=32,o=5,b=565:f6,p,f6,4p,p,f6,p,f6,2p,p,b6,p,b6,p,b6,p,b6,p,b,p,b,p,b,p,b,p,b,p,b,p,b,p,b,1p.,2p.,p

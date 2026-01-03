@@ -1,0 +1,16 @@
+# Golden Configuration Reference Info
+# This file documents the source node and admin key configuration
+
+reference_node:
+  node_id: '!2f1b9773'
+  node_num: 790337395
+  long_name: Kennedy North
+  short_name: '9773'
+  hw_model: RAK4631
+  firmware_version: 2.7.17.27b522b55
+  public_key: gZNP/qBLk/98OIaD9Nsfa9IbsBLEAxh+ZcOvHyqJu0s=
+admin_keys:
+- base64:av1DzbmiVyuZndN8E2G91hBN1nkQyD4yG5dgK7cPwEw=
+- base64:B6JDtXW4xifn77tnGlGBxwao/xp7BBZkfTIIwSl2cwI=
+- 'base64:'
+export_date: 2026-01-02 13:58

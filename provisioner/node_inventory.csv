@@ -1,0 +1,12 @@
+node_id,node_num,long_name,short_name,hw_model,public_key,role,location,latitude,longitude,altitude,firmware_version,last_seen,hops,snr,provisioned_date,provisioned_by,notes
+!2f1b9773,!2f1b9773,Kennedy North,9773,RAK4631,gZNP/qBLk/98OIaD9Nsfa9IbsBLEAxh+ZcOvHyqJu0s=,,,37.2527805,-121.9650606,84,,2026-01-02 14:04,,11.25,2026-01-02 14:04,,
+!a20a1984,!a20a1984,Vasona,1984,STATION_G2,Xk5LNUE5WbeFTSiMNLNHnm8ohIspvXQdvlg026mr2HQ=,,,37.2506624,-121.9756032,86,,2026-01-02 14:03,0,5.75,2026-01-02 14:04,,
+!9ce45070,!9ce45070,Vista Del Monte,5070,RAK4631,x7HIkGigSBL2sDCO2oeBwHseaCfGpmm+v3C1IhW0tSQ=,,,37.2506624,-121.9231744,215,,2026-01-02 14:03,0,12.5,2026-01-02 14:04,,
+!a20c30c0,!a20c30c0,Jesuit Center Hub,30c0,STATION_G2,fs3klPR9F7BK8ptAcj4qKZkSSx1FH7JJYQyNLvSfiUs=,,,37.2506624,-121.9756032,92,,2026-01-02 14:00,0,11.25,2026-01-02 14:04,,
+!a20a0fb0,!a20a0fb0,AG6WR-SHJC,0fb0,STATION_G2,av1DzbmiVyuZndN8E2G91hBN1nkQyD4yG5dgK7cPwEw=,,,,,,,2026-01-02 13:59,1,5.5,2026-01-02 14:04,,
+!a20a0de0,!a20a0de0,AG6WR-HomeAttic,0de0,STATION_G2,OS0y7d9KLCU4p9nVJ9zZC1WzN/iqDKSQYcV3XlPQ/AI=,,,,,,,2026-01-02 13:56,0,13.25,2026-01-02 14:04,,
+!1e28ba58,!1e28ba58,Glenno,ba58,RAK4631,8GLK6yumkBC8Iw+OSkke8n0y8wUQ7Kkd+nbdT2T8bkw=,,,37.2506624,-121.9756032,83,,2025-12-19 14:25,0,12.25,2026-01-02 14:04,,
+!a20a0e48,!a20a0e48,AG6WR-Jeep,0e48,STATION_G2,B6JDtXW4xifn77tnGlGBxwao/xp7BBZkfTIIwSl2cwI=,,,37.2506624,-121.9756032,84,,2025-11-15 21:24,0,10.5,2026-01-02 14:04,,
+,,Kennedy North,9773,,,ICP,Calvary Church,,,,,,,,2026-01-02 21:40,golden:golden_config_clean.yaml,
+,,Vista Del Monte,5070,,,ICP,Vista Del Monte ICP,,,,,,,,2026-01-02 21:48,golden:golden_config_clean.yaml,
+,,Vista Del Monte,5070,,,ICP,VDM ICP,,,,,,,,2026-01-02 22:01,golden:golden_config_clean.yaml,
