@@ -1818,6 +1818,28 @@ def provision_new_node_flow():
         else:
             verification_errors.append("Channel configuration may be missing")
             print("  ✗ Channels: NOT CONFIRMED")
+        
+        # Check admin keys
+        # Look for adminKey in the output - count non-empty entries
+        admin_key_count = 0
+        if '"adminKey"' in stdout or "'adminKey'" in stdout:
+            # Count base64 keys (non-empty, not just 'base64:')
+            import re
+            admin_keys_found = re.findall(r'"adminKey":\s*\[(.*?)\]', stdout, re.DOTALL)
+            if admin_keys_found:
+                keys_str = admin_keys_found[0]
+                # Count actual key values (base64 strings that aren't empty)
+                key_matches = re.findall(r'"([A-Za-z0-9+/=]{20,})"', keys_str)
+                admin_key_count = len(key_matches)
+        
+        expected_admin_keys = len(existing_admin_keys) + len(additional_admin_keys)
+        if admin_key_count >= expected_admin_keys and expected_admin_keys > 0:
+            print(f"  ✓ Admin keys: {admin_key_count} configured")
+        elif expected_admin_keys > 0:
+            verification_errors.append(f"Admin keys: expected {expected_admin_keys}, found {admin_key_count}")
+            print(f"  ✗ Admin keys: expected {expected_admin_keys}, found {admin_key_count}")
+        else:
+            print(f"  - Admin keys: {admin_key_count} (none expected)")
     
     # Summary
     if verification_errors:
@@ -1829,6 +1851,9 @@ def provision_new_node_flow():
         print("\nYou may want to manually verify these settings with:")
         print(f"  meshtastic --port {port} --info")
         print("=" * 70)
+    
+    # Calculate total admin keys for display
+    total_admin_keys = len(existing_admin_keys) + len(additional_admin_keys)
     
     # ===========================================
     # COMPLETE
@@ -1844,7 +1869,7 @@ def provision_new_node_flow():
     print(f"  Hardware:      {final_info.get('hw_model', 'Unknown')}")
     print(f"  Firmware:      {final_info.get('firmware_version', 'Unknown')}")
     print(f"  Public Key:    {final_info.get('public_key', 'Unknown')}")
-    print(f"  Admin Keys:    {len(admin_keys_to_add)} configured")
+    print(f"  Admin Keys:    {total_admin_keys} configured ({len(existing_admin_keys)} from golden + {len(additional_admin_keys)} additional)")
     print("=" * 70)
     
     return True
