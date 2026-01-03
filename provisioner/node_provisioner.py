@@ -675,14 +675,6 @@ def flash_firmware(firmware_path: str, wait: bool = True) -> bool:
         print("  Firmware copied successfully!")
         print("  Device will reboot automatically...")
         
-        # Wait for device to reboot and reconnect
-        # After firmware flash, the device needs significant time to:
-        # 1. Complete the flash and reboot
-        # 2. Initialize radio and crypto subsystems
-        # 3. Be ready for PKC admin session negotiation
-        print("\nWaiting for device to reboot (45 seconds)...")
-        time.sleep(45)
-        
         return True
     except Exception as e:
         print(f"Error copying firmware: {e}")
@@ -738,57 +730,69 @@ def run_meshtastic_cmd_quiet(args: list, port: Optional[str] = None, timeout: in
         return -1, "", "Timeout"
 
 
-def wait_for_device_ready(port: str, timeout: int = 90, interval: int = 5) -> bool:
+def wait_for_device_ready(port: str, timeout: int = 90, initial_wait: int = 5, probe_interval: int = 2) -> bool:
     """
     Wait for a Meshtastic device to be ready to accept commands.
     
-    After firmware flash, the device needs time to:
+    After firmware flash or reboot, the device needs time to:
     - Complete boot sequence
     - Initialize radio hardware
     - Initialize crypto/PKC subsystems
     - Be ready for admin session negotiation
     
-    This function polls with --info until the device responds successfully.
+    This function waits briefly, then polls with --info until the device responds.
     
     Args:
-        port: COM port of the device
-        timeout: Maximum seconds to wait
-        interval: Seconds between probe attempts
+        port: Serial port of the device
+        timeout: Maximum total seconds to wait
+        initial_wait: Seconds to wait before first probe (device needs time to start booting)
+        probe_interval: Seconds between probe attempts
         
     Returns:
         True if device became ready, False if timeout
     """
-    print(f"\nWaiting for device on {port} to become ready...")
-    print(f"  (This may take up to {timeout} seconds after firmware flash)")
+    print(f"\n  Waiting for device to be ready (up to {timeout}s)...")
+    
+    # Initial wait - give device time to start rebooting
+    # Show a simple progress indicator
+    print(f"  ", end="", flush=True)
+    for i in range(initial_wait):
+        print(".", end="", flush=True)
+        time.sleep(1)
+    print(" probing...", flush=True)
     
     start_time = time.time()
-    attempts = 0
+    last_status = ""
     
     while time.time() - start_time < timeout:
-        attempts += 1
         elapsed = int(time.time() - start_time)
-        print(f"  Attempt {attempts} ({elapsed}s elapsed)...", end=" ", flush=True)
         
-        returncode, stdout, stderr = run_meshtastic_cmd_quiet(["--info"], port, timeout=15)
+        returncode, stdout, stderr = run_meshtastic_cmd_quiet(["--info"], port, timeout=10)
         
         if returncode == 0 and 'myNodeNum' in stdout:
-            print("✓ Device ready!")
-            # Extra pause to ensure crypto subsystem is fully initialized
-            print("  Allowing extra time for crypto initialization...")
-            time.sleep(5)
+            print(f"  ✓ Device ready! ({elapsed}s)")
+            # Brief pause to ensure crypto subsystem is fully initialized
+            time.sleep(2)
             return True
-        elif 'PermissionError' in stderr or 'WriteFile failed' in stderr:
-            print("device busy (crypto not ready)")
-        elif 'Timeout' in stderr:
-            print("timeout (still booting)")
-        elif returncode != 0:
-            print(f"not ready ({stderr.strip()[:40] if stderr else 'no response'})")
-        else:
-            print("partial response, retrying...")
         
-        time.sleep(interval)
+        # Determine status for display
+        if 'PermissionError' in stderr or 'WriteFile failed' in stderr:
+            status = "busy"
+        elif 'Timeout' in stderr or returncode == -1:
+            status = "booting"
+        elif 'could not open port' in stderr.lower() or 'no such file' in stderr.lower():
+            status = "port not available"
+        else:
+            status = "not ready"
+        
+        # Only print if status changed or every 10 seconds
+        if status != last_status or elapsed % 10 == 0:
+            print(f"  [{elapsed}s] {status}...", flush=True)
+            last_status = status
+        
+        time.sleep(probe_interval)
     
-    print(f"\n  Timeout after {timeout}s waiting for device.")
+    print(f"  ✗ Timeout after {timeout}s waiting for device.")
     return False
 
 
@@ -1631,18 +1635,15 @@ def provision_new_node_flow():
     # Device should come back on the same port after firmware flash
     print(f"\nDevice should reconnect on {target_port}")
     
-    # Confirm port with user
-    port_confirm = input(f"\nUse {target_port}? [Y/n] or enter different port: ").strip()
-    if port_confirm.lower() == 'n':
-        example_port = get_port_example()
-        port = input(f"Enter serial port (e.g., {example_port}): ").strip()
-        if IS_WINDOWS:
-            port = port.upper()
-    elif IS_WINDOWS and port_confirm.upper().startswith('COM'):
-        port = port_confirm.upper()
-    elif not IS_WINDOWS and port_confirm.startswith('/dev/'):
-        port = port_confirm
+    # Confirm port with user - simplified prompt
+    example_port = get_port_example()
+    port_confirm = input(f"\nPress Enter to use {target_port}, or type a different port: ").strip()
+    
+    if port_confirm:
+        # User entered something - use it as the port
+        port = port_confirm.upper() if IS_WINDOWS else port_confirm
     else:
+        # User pressed Enter - use the expected port
         port = target_port
     
     print(f"\nUsing port: {port}")
@@ -1653,7 +1654,7 @@ def provision_new_node_flow():
     # - Radio initialization  
     # - PKC/crypto subsystem initialization
     # - Admin session readiness
-    if not wait_for_device_ready(port, timeout=90, interval=5):
+    if not wait_for_device_ready(port, timeout=90, initial_wait=10, probe_interval=2):
         print("\nDevice did not become ready in time.")
         retry = input("Try to continue anyway? [y/N]: ").strip().lower()
         if retry != 'y':
@@ -1729,10 +1730,7 @@ def provision_new_node_flow():
     
     # Device will reboot after the owner change - wait for it to come back
     print("\n  Device is rebooting after name change...")
-    print("  Waiting for device to become ready...")
-    time.sleep(10)  # Initial wait for reboot to start
-    
-    if not wait_for_device_ready(port, timeout=60, interval=5):
+    if not wait_for_device_ready(port, timeout=60, initial_wait=8, probe_interval=2):
         print("  ⚠ Device did not respond after reboot. Will attempt to continue...")
     
     # ===========================================
