@@ -1713,17 +1713,27 @@ def provision_new_node_flow():
     print("  Waiting for configuration to commit...")
     time.sleep(5)
     
-    # Set node name
-    print(f"\nSetting node name: {node_name}")
+    # Set node name AND enable remote hardware in a SINGLE command
+    # This is critical because --set-owner triggers a reboot.
+    # If we send separate commands, the second one will fail during reboot.
+    print(f"\nSetting node name and enabling remote hardware...")
+    print(f"  Name: {node_name}")
+    print(f"  Short: {short_name}")
+    print(f"  Remote hardware: enabled")
     returncode, stdout, stderr = run_meshtastic_cmd(
-        ["--set-owner", node_name, "--set-owner-short", short_name], port
+        ["--set-owner", node_name, "--set-owner-short", short_name, 
+         "--set", "remote_hardware.enabled", "true"], port
     )
-    time.sleep(2)
+    if returncode != 0:
+        print(f"  Warning: Command returned error: {stderr.strip()[:100]}")
     
-    # Enable remote hardware
-    print("\nEnabling remote hardware module...")
-    run_meshtastic_cmd(["--set", "remote_hardware.enabled", "true"], port)
-    time.sleep(2)
+    # Device will reboot after the owner change - wait for it to come back
+    print("\n  Device is rebooting after name change...")
+    print("  Waiting for device to become ready...")
+    time.sleep(10)  # Initial wait for reboot to start
+    
+    if not wait_for_device_ready(port, timeout=60, interval=5):
+        print("  ⚠ Device did not respond after reboot. Will attempt to continue...")
     
     # ===========================================
     # STEP 6: Add additional admin keys (if any)
@@ -1758,6 +1768,67 @@ def provision_new_node_flow():
     final_info["provisioned_by"] = f"golden:{config_file}"
     
     add_to_inventory(final_info)
+    
+    # ===========================================
+    # STEP 8: Verification
+    # ===========================================
+    print("\n" + "-" * 50)
+    print("STEP 8: Verifying Configuration")
+    print("-" * 50)
+    
+    # Pull current config and verify critical settings
+    verification_errors = []
+    
+    print("\nReading current device configuration...")
+    returncode, stdout, stderr = run_meshtastic_cmd(["--info"], port)
+    
+    if returncode != 0:
+        print(f"  ⚠ Could not read device info: {stderr.strip()[:100]}")
+        verification_errors.append("Could not read device configuration")
+    else:
+        # Check node name
+        actual_name = final_info.get('long_name', '')
+        if actual_name and actual_name != node_name:
+            verification_errors.append(f"Node name mismatch: expected '{node_name}', got '{actual_name}'")
+            print(f"  ✗ Node name: MISMATCH (expected '{node_name}', got '{actual_name}')")
+        elif actual_name:
+            print(f"  ✓ Node name: {actual_name}")
+        
+        # Check remote hardware enabled
+        if 'hasRemoteHardware": true' in stdout or '"hasRemoteHardware": true' in stdout:
+            print("  ✓ Remote hardware: enabled")
+        else:
+            # Do a deeper check via --get
+            print("  Checking remote hardware setting...")
+            rc2, out2, err2 = run_meshtastic_cmd(["--get", "remote_hardware.enabled"], port)
+            if 'true' in out2.lower():
+                print("  ✓ Remote hardware: enabled")
+            else:
+                verification_errors.append("Remote hardware module may not be enabled")
+                print("  ✗ Remote hardware: NOT CONFIRMED")
+        
+        # Check firmware version
+        fw_version = final_info.get('firmware_version', '')
+        if fw_version:
+            print(f"  ✓ Firmware: {fw_version}")
+        
+        # Check channel configuration
+        if 'Telemetry' in stdout or 'PRIMARY' in stdout:
+            print("  ✓ Channels: configured")
+        else:
+            verification_errors.append("Channel configuration may be missing")
+            print("  ✗ Channels: NOT CONFIRMED")
+    
+    # Summary
+    if verification_errors:
+        print("\n" + "=" * 70)
+        print("  ⚠ VERIFICATION WARNINGS")
+        print("=" * 70)
+        for err in verification_errors:
+            print(f"  - {err}")
+        print("\nYou may want to manually verify these settings with:")
+        print(f"  meshtastic --port {port} --info")
+        print("=" * 70)
     
     # ===========================================
     # COMPLETE
