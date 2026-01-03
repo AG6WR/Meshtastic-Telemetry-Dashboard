@@ -75,6 +75,15 @@ IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform.startswith("linux")
 IS_MACOS = sys.platform == "darwin"
 
+# Script directory - use this as base for finding config files
+# This allows running from any directory: python ./provisioner/node_provisioner.py
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def get_script_path(filename: str) -> str:
+    """Get the full path to a file in the script's directory."""
+    return os.path.join(SCRIPT_DIR, filename)
+
 
 def check_serial_permissions():
     """
@@ -136,8 +145,8 @@ def get_port_example() -> str:
     else:
         return "/dev/tty.usbserial"
 
-# Node inventory CSV file
-INVENTORY_FILE = "node_inventory.csv"
+# Node inventory CSV file (in script directory)
+INVENTORY_FILE = get_script_path("node_inventory.csv")
 INVENTORY_FIELDS = [
     "node_id",
     "node_num", 
@@ -1013,11 +1022,11 @@ def select_meshtastic_device(prompt: str = "Select device") -> Optional[str]:
         print("  Invalid selection. Try again.")
 
 
-def export_config(port: str, output_dir: str = ".") -> bool:
+def export_config(port: str, output_dir: str = None) -> bool:
     """
     Export configuration from a node, creating multiple organized files.
     
-    Creates:
+    Creates (in script directory):
       - golden_config_raw.yaml: Full unmodified export
       - golden_config_clean.yaml: Config with node-specific values removed
       - golden_config_url.txt: Channel URL (contains PSKs)
@@ -1025,7 +1034,12 @@ def export_config(port: str, output_dir: str = ".") -> bool:
     """
     import yaml
     
+    # Default to script directory for output
+    if output_dir is None:
+        output_dir = SCRIPT_DIR
+    
     print(f"\nExporting configuration from {port}...")
+    print(f"  Output directory: {output_dir}")
     
     # Get node info first
     node_info = get_node_info(port)
@@ -1341,25 +1355,28 @@ def provision_new_node_flow():
     print("  Complete setup flow - all steps required")
     print("=" * 70)
     
-    # Check prerequisites
-    config_file = "golden_config_clean.yaml"
+    # Check prerequisites - look in script directory
+    config_file = get_script_path("golden_config_clean.yaml")
     if not os.path.exists(config_file):
         # Try legacy name
-        if os.path.exists("golden_config.yaml"):
-            config_file = "golden_config.yaml"
+        legacy_file = get_script_path("golden_config.yaml")
+        if os.path.exists(legacy_file):
+            config_file = legacy_file
         else:
-            print(f"\nError: {config_file} not found.")
-            print("First export configuration from a reference node:")
+            print(f"\nError: golden_config_clean.yaml not found.")
+            print(f"  Looked in: {SCRIPT_DIR}")
+            print("\nFirst export configuration from a reference node:")
             if IS_WINDOWS:
                 print("  python node_provisioner.py --export --port COM10")
             else:
                 print("  python node_provisioner.py --export --port /dev/ttyUSB0")
             return False
     
-    url_file = "golden_config_url.txt"
+    url_file = get_script_path("golden_config_url.txt")
     if not os.path.exists(url_file):
-        print(f"\nError: {url_file} not found.")
-        print("First export configuration from a reference node:")
+        print(f"\nError: golden_config_url.txt not found.")
+        print(f"  Looked in: {SCRIPT_DIR}")
+        print("\nFirst export configuration from a reference node:")
         if IS_WINDOWS:
             print("  python node_provisioner.py --export --port COM10")
         else:
@@ -1798,7 +1815,7 @@ def interactive_mode():
         port = select_meshtastic_device("Select reference node")
         
         if port:
-            export_config(port, "golden_config.yaml")
+            export_config(port)  # Uses SCRIPT_DIR by default
         
     elif choice == "2":
         provision_new_node_flow()
