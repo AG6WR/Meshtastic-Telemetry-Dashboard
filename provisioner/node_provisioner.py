@@ -797,35 +797,42 @@ def wait_for_device_ready(port: str, timeout: int = 90, initial_wait: int = 5, p
 
 
 # Known Meshtastic device USB VID/PID combinations
-# Format: (VID, PID, description)
+# Format: (VID, PID, description, is_definite)
+# is_definite=True means this VID/PID is specifically a Meshtastic device
+# is_definite=False means this is a generic adapter that MIGHT be Meshtastic
 MESHTASTIC_USB_IDS = [
-    (0x239A, 0x8029, "RAK4631 / nRF52840"),      # RAK4631, WisMesh Pocket
-    (0x239A, 0x0029, "RAK4631 / nRF52840"),      # Alternate PID
-    (0x239A, None, "Adafruit nRF52840"),         # Any Adafruit VID device
-    (0x3032, 0x1001, "Heltec / STATION_G2"),     # Heltec devices
-    (0x303A, 0x1001, "ESP32-S3"),                # ESP32-S3 based devices
-    (0x10C4, 0xEA60, "Silicon Labs CP210x"),     # Some ESP32 boards (needs probe)
-    (0x1A86, 0x7523, "CH340"),                   # Some ESP32 boards (needs probe)
+    # Definite Meshtastic devices - always probe these
+    (0x239A, 0x8029, "RAK4631 / nRF52840", True),      # RAK4631, WisMesh Pocket
+    (0x239A, 0x0029, "RAK4631 / nRF52840", True),      # Alternate PID
+    (0x239A, None, "Adafruit nRF52840", True),         # Any Adafruit VID device
+    (0x3032, 0x1001, "Heltec / STATION_G2", True),     # Heltec devices
+    (0x303A, 0x1001, "ESP32-S3", True),                # ESP32-S3 based devices
+    # Generic USB-serial adapters - only probe on explicit rescan
+    (0x10C4, 0xEA60, "Silicon Labs CP210x", False),    # Generic adapter, many uses
+    (0x1A86, 0x7523, "CH340", False),                  # Generic adapter, many uses
 ]
 
 
-def is_likely_meshtastic(port_info) -> tuple[bool, str]:
+def is_likely_meshtastic(port_info) -> tuple[bool, bool, str]:
     """
     Check if a serial port is likely a Meshtastic device based on USB VID/PID.
-    Returns (is_likely, reason_string).
+    Returns (is_likely, is_definite, reason_string).
+    
+    is_definite=True means the VID/PID is specifically for Meshtastic hardware.
+    is_definite=False means it's a generic adapter that might be Meshtastic.
     """
     vid = port_info.vid
     pid = port_info.pid
     
     if vid is None:
-        return False, "No USB VID"
+        return False, False, "No USB VID"
     
-    for known_vid, known_pid, desc in MESHTASTIC_USB_IDS:
+    for known_vid, known_pid, desc, is_definite in MESHTASTIC_USB_IDS:
         if vid == known_vid:
             if known_pid is None or pid == known_pid:
-                return True, desc
+                return True, is_definite, desc
     
-    return False, ""
+    return False, False, ""
 
 
 def probe_meshtastic_device(port: str, timeout: int = 8) -> Optional[dict]:
@@ -899,11 +906,19 @@ def list_serial_ports():
     return [p.device for p in ports]
 
 
-def discover_meshtastic_devices(probe_uncertain: bool = True) -> list[dict]:
+def discover_meshtastic_devices(probe_all: bool = False) -> list[dict]:
     """
     Scan all serial ports and identify Meshtastic devices.
-    Uses USB VID/PID for fast identification, with optional probing for uncertain devices.
-    Returns list of dicts with port info and node details.
+    
+    By default, only probes devices with definite Meshtastic USB VID/PIDs
+    (RAK4631, Heltec, ESP32-S3, etc.). Generic USB-serial adapters (CP210x, CH340)
+    are only probed if probe_all=True (user selected 'R' for rescan).
+    
+    Args:
+        probe_all: If True, also probe generic USB-serial adapters that might be Meshtastic
+        
+    Returns:
+        List of dicts with port info and node details.
     """
     if not HAS_SERIAL:
         print("pyserial not installed. Cannot auto-detect devices.")
@@ -913,30 +928,32 @@ def discover_meshtastic_devices(probe_uncertain: bool = True) -> list[dict]:
     
     print(f"\nScanning {len(ports)} serial port(s) for Meshtastic devices...")
     
-    devices = []
-    uncertain_ports = []
+    definite_devices = []
+    possible_devices = []
     
-    # First pass: identify by VID/PID (instant)
+    # First pass: categorize by VID/PID (instant)
     for port in ports:
-        is_likely, reason = is_likely_meshtastic(port)
+        is_likely, is_definite, reason = is_likely_meshtastic(port)
         
-        if is_likely:
-            # High confidence - mark for probing
-            devices.append({
+        if is_likely and is_definite:
+            # Definite Meshtastic hardware - always probe
+            definite_devices.append({
                 'port': port.device,
                 'description': port.description,
                 'reason': reason,
-                'needs_probe': True,
             })
-        elif port.vid is not None:
-            # Has USB VID but not recognized - might still be Meshtastic
-            # Only probe if it looks like a serial adapter
-            desc_lower = port.description.lower()
-            if 'serial' in desc_lower and 'bluetooth' not in desc_lower:
-                uncertain_ports.append(port)
+        elif is_likely and not is_definite:
+            # Generic adapter that might be Meshtastic - only probe if requested
+            possible_devices.append({
+                'port': port.device,
+                'description': port.description,
+                'reason': reason,
+            })
     
-    # Second pass: probe likely devices to get node info
-    for dev in devices:
+    devices = []
+    
+    # Second pass: probe definite Meshtastic devices
+    for dev in definite_devices:
         port_name = dev['port']
         print(f"  {port_name}: {dev['reason']}...", end=" ", flush=True)
         
@@ -948,42 +965,44 @@ def discover_meshtastic_devices(probe_uncertain: bool = True) -> list[dict]:
             dev['short_name'] = info.get('short_name', '')
             dev['confirmed'] = True
             print(f"✓ {dev['long_name']} ({dev['node_id']})")
+            devices.append(dev)
         else:
-            dev['confirmed'] = False
             print("(no response)")
     
-    # Filter to confirmed devices
-    devices = [d for d in devices if d.get('confirmed')]
-    
-    # Third pass (optional): probe uncertain ports
-    if probe_uncertain and uncertain_ports:
-        print(f"\n  Checking {len(uncertain_ports)} other USB serial device(s)...")
-        for port in uncertain_ports:
-            print(f"  {port.device}...", end=" ", flush=True)
-            info = probe_meshtastic_device(port.device, timeout=5)
+    # Third pass (optional): probe generic adapters if requested
+    if probe_all and possible_devices:
+        print(f"\n  Probing {len(possible_devices)} generic USB-serial adapter(s)...")
+        for dev in possible_devices:
+            port_name = dev['port']
+            print(f"  {port_name}: {dev['reason']}...", end=" ", flush=True)
+            info = probe_meshtastic_device(port_name, timeout=5)
             if info:
-                print(f"✓ {info.get('long_name', 'Meshtastic')} ({info.get('node_id', '?')})")
-                devices.append({
-                    'port': port.device,
-                    'description': port.description,
-                    'node_id': info.get('node_id', '?'),
-                    'long_name': info.get('long_name', 'Unknown'),
-                    'short_name': info.get('short_name', ''),
-                    'confirmed': True,
-                })
+                dev['node_id'] = info.get('node_id', '?')
+                dev['long_name'] = info.get('long_name', 'Unknown')
+                dev['short_name'] = info.get('short_name', '')
+                dev['confirmed'] = True
+                print(f"✓ {dev['long_name']} ({dev['node_id']})")
+                devices.append(dev)
             else:
                 print("not Meshtastic")
+    elif possible_devices:
+        # Tell user there are other ports they could try
+        print(f"\n  ({len(possible_devices)} generic USB-serial port(s) not probed - use 'R' to scan all)")
     
     print(f"\n  Found {len(devices)} Meshtastic device(s)")
     return devices
 
 
-def select_meshtastic_device(prompt: str = "Select device") -> Optional[str]:
+def select_meshtastic_device(prompt: str = "Select device", probe_all: bool = False) -> Optional[str]:
     """
     Discover Meshtastic devices and let user select one.
     Returns the selected COM port, or None if cancelled.
+    
+    Args:
+        prompt: Text to show in the selection prompt
+        probe_all: If True, probe all USB-serial adapters (used after 'R' rescan)
     """
-    devices = discover_meshtastic_devices()
+    devices = discover_meshtastic_devices(probe_all=probe_all)
     
     print("\n" + "=" * 70)
     if devices:
@@ -997,7 +1016,7 @@ def select_meshtastic_device(prompt: str = "Select device") -> Optional[str]:
         print("=" * 70)
     
     print(f"  M. Enter port manually")
-    print(f"  R. Rescan")
+    print(f"  R. Rescan (probe all serial ports)")
     print(f"  0. Cancel")
     print("=" * 70)
     
@@ -1007,7 +1026,7 @@ def select_meshtastic_device(prompt: str = "Select device") -> Optional[str]:
         if choice == '0':
             return None
         elif choice == 'R':
-            return select_meshtastic_device(prompt)  # Rescan
+            return select_meshtastic_device(prompt, probe_all=True)  # Rescan with full probe
         elif choice == 'M':
             if IS_WINDOWS:
                 port = input("Enter COM port (e.g., COM4): ").strip().upper()
@@ -1751,10 +1770,10 @@ def provision_new_node_flow():
             time.sleep(1)
     
     # ===========================================
-    # STEP 7: Record to inventory
+    # STEP 7: Verification
     # ===========================================
     print("\n" + "-" * 50)
-    print("STEP 7: Recording to Inventory")
+    print("STEP 7: Verifying Configuration")
     print("-" * 50)
     
     time.sleep(2)
@@ -1764,15 +1783,6 @@ def provision_new_node_flow():
     final_info["role"] = role
     final_info["location"] = location
     final_info["provisioned_by"] = f"golden:{config_file}"
-    
-    add_to_inventory(final_info)
-    
-    # ===========================================
-    # STEP 8: Verification
-    # ===========================================
-    print("\n" + "-" * 50)
-    print("STEP 8: Verifying Configuration")
-    print("-" * 50)
     
     # Pull current config and verify critical settings
     verification_errors = []
@@ -1842,13 +1852,24 @@ def provision_new_node_flow():
     # Summary
     if verification_errors:
         print("\n" + "=" * 70)
-        print("  ⚠ VERIFICATION WARNINGS")
+        print("  ⚠ VERIFICATION FAILED")
         print("=" * 70)
         for err in verification_errors:
             print(f"  - {err}")
+        print("\n  Node has NOT been recorded to inventory.")
         print("\nYou may want to manually verify these settings with:")
         print(f"  meshtastic --port {port} --info")
         print("=" * 70)
+        return False
+    
+    # ===========================================
+    # STEP 8: Record to inventory (only if verification passed)
+    # ===========================================
+    print("\n" + "-" * 50)
+    print("STEP 8: Recording to Inventory")
+    print("-" * 50)
+    
+    add_to_inventory(final_info)
     
     # Calculate total admin keys for display
     total_admin_keys = len(existing_admin_keys) + len(additional_admin_keys)
