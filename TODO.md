@@ -214,6 +214,47 @@ Replaces "Online/Offline" with button-style indicator:
 
 ---
 
+### Node Provisioner Tool (provisioner/)
+
+**Purpose**: Streamlined provisioning of new Meshtastic nodes for ICP network deployment. Handles firmware flashing, channel/config application, and admin key setup.
+
+#### Status
+
+- [x] **Core provisioning flow** - Flash firmware, apply config, set node name (Windows + Linux)
+- [x] **Linux/Raspberry Pi support** - Platform detection, UF2 drive paths, permission checks
+- [x] **Verification step** - STEP 8 confirms settings were applied correctly
+- [x] **Unified device-ready waiting** - Probe-based readiness check with progress indicator
+
+#### Testing Status
+
+| Feature | Windows | Linux/Pi | Notes |
+|---------|---------|----------|-------|
+| Option 1: Provision new node | ✅ | ✅ | Full flow tested |
+| Option 2: Flash firmware only | ❓ | ❓ | Needs testing |
+| Option 3: Apply config only | ❓ | ❓ | Needs testing |
+| Option 4: Read node info | ❓ | ❓ | Needs testing |
+| Option 5: Update inventory | ❓ | ❓ | Needs testing |
+| Option 6: Add admin keys | ❓ | ❓ | Needs testing |
+| Option 7: Factory reset | ❓ | ❓ | Needs testing |
+
+#### Pending Testing
+
+- [ ] **Test remaining menu options** (Options 2-7)
+  - Flash firmware only (Option 2)
+  - Apply config to existing node (Option 3)
+  - Read node info (Option 4)
+  - Update inventory file (Option 5)
+  - Add admin keys to node (Option 6)
+  - Factory reset (Option 7)
+
+- [ ] **Edge cases**
+  - Multiple devices connected
+  - Device disconnection mid-provisioning
+  - Invalid/missing config files
+  - Firmware file not found
+
+---
+
 ### Hardware Integration Features
 - [x] **Current Sense Scaling** (v2.0.2b - DONE)
   - Location: Ch3 Current telemetry display (ICP Main Batt current)
