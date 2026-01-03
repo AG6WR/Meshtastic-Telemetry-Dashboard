@@ -1446,40 +1446,35 @@ def provision_new_node_flow():
     print("STEP 2: Firmware Selection")
     print("-" * 50)
     
-    # Look for .uf2 files in current directory and common locations
+    # Look for .uf2 files in script directory and common locations
     uf2_files = []
     search_paths = [
-        ".",
-        "./firmware",
-        os.path.expanduser("~/Downloads"),
+        SCRIPT_DIR,  # Script's directory (where golden configs are)
+        os.path.join(SCRIPT_DIR, "firmware"),  # firmware subdirectory
+        os.path.expanduser("~/Downloads"),  # User's downloads folder
+        ".",  # Current working directory (fallback)
     ]
-    for path in search_paths:
-        if os.path.exists(path):
-            for f in os.listdir(path):
-                if f.endswith(".uf2"):
-                    uf2_files.append(os.path.join(path, f))
     
-    if len(uf2_files) == 1:
-        # Suggest the single firmware file found, but allow override
-        firmware_path = uf2_files[0]
-        print(f"\n  Suggested firmware: {firmware_path}")
-        print(f"  1. Use this firmware")
-        print(f"  2. Enter different path")
-        
-        while True:
-            choice = input("\nSelect [1/2]: ").strip()
-            if choice == "1":
-                break
-            elif choice == "2":
-                while True:
-                    firmware_path = input("Enter firmware path: ").strip()
-                    if os.path.exists(firmware_path):
-                        break
-                    print("  Error: File not found.")
-                break
-            else:
-                print("  Please enter 1 or 2")
-    elif uf2_files:
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_paths = []
+    for path in search_paths:
+        abs_path = os.path.abspath(path)
+        if abs_path not in seen:
+            seen.add(abs_path)
+            unique_paths.append(path)
+    
+    for path in unique_paths:
+        if os.path.exists(path):
+            try:
+                for f in os.listdir(path):
+                    if f.lower().endswith(".uf2"):
+                        full_path = os.path.join(path, f)
+                        uf2_files.append(full_path)
+            except PermissionError:
+                continue
+    
+    if uf2_files:
         print("\nFound firmware files:")
         for i, f in enumerate(uf2_files, 1):
             print(f"  {i}. {f}")
@@ -1500,6 +1495,9 @@ def provision_new_node_flow():
             except ValueError:
                 print("  Error: Invalid selection.")
     else:
+        print("\nNo .uf2 firmware files found in:")
+        for path in unique_paths:
+            print(f"  - {path}")
         while True:
             firmware_path = input("\nEnter firmware .uf2 file path: ").strip()
             if os.path.exists(firmware_path):
