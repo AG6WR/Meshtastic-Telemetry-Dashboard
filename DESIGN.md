@@ -1,9 +1,11 @@
 # Meshtastic Telemetry Dashboard - Design Architecture
 
 ## Version History
+- **v2.1.0a** (2026-01-01): ICP Status Broadcasting system complete - auto status reports, help request
 - **v2.0.3b** (2025-12-31): Per-node current sensor scaling complete - node detail shows raw/scale/scaled
 - **v2.0.3a** (2025-12-30): Per-node current sensor scaling - different shunt resistors per node
 - **v2.0.2b** (2025-12-29): Current sense scaling feature with Hardware settings tab
+- **v2.0.1a** (2025-12-19): Qt Message Reception - full messaging support in Qt dashboard
 - **v1.3.1** (2025-12-18): Fixed checkbox rendering in Message Center, connected Alerts button
 - **v1.3.0** (2025-12-17): Qt/PySide6 UI port - all dialogs and main dashboard ported
 - **v1.2.x** (2025-12): Messaging feature, virtual keyboard for Wayland
@@ -459,6 +461,204 @@ When a node is forgotten, the system performs comprehensive cleanup:
 - `latest_data.json` - Persistent node data (Last Heard, telemetry values)
 - `logs/meshtastic_monitor.log` - Application log
 - `logs/<node_id>/` - Per-node CSV telemetry logs
+
+---
+
+## Messaging System (v1.2.0+)
+
+### Architecture
+
+The messaging system enables direct text communication between Meshtastic nodes through the dashboard interface.
+
+#### Message Protocol
+
+**Message Format:**
+- Maximum length: 150 characters (enforced at UI level)
+- Character encoding: UTF-8
+- Transport: Meshtastic TEXT_MESSAGE_APP portnum
+- Channel: Uses default channel (index 0)
+
+**Message Types:**
+- **Direct Messages:** Sent to specific node ID(s)
+- **Bulletins:** Broadcast to all nodes (`^all` destination)
+
+#### Storage Architecture
+
+Messages are persisted to `config/messages.json` with the following structure:
+
+```python
+{
+    'message_id': '<sender_short>_<timestamp_ms>',  # e.g., "0de0_1734112345678"
+    'from_node_id': '!a20a0de0',
+    'from_name': 'NodeName',
+    'to_node_ids': ['!a20a0fb0'],  # Empty list for bulletins
+    'is_bulletin': False,
+    'text': 'Message content (max 150 chars)',
+    'timestamp': 1734112345.678,
+    'direction': 'sent' or 'received',
+    'read': False,
+    'read_at': None,
+    'delivery_status': 'pending', 'delivered', or 'failed',
+    'delivered_at': None,
+    'read_receipts': {
+        'node_id': {'read': False, 'read_at': None}
+    }
+}
+```
+
+#### Message Manager (`message_manager.py`)
+
+Handles message persistence and retrieval:
+- **Automatic retention:** Keeps last 1000 messages
+- **Thread-safe:** Uses file locking for concurrent access
+- **Filtering:** Query by node, direction, read status
+- **Cleanup:** Automatic old message deletion
+
+#### Components
+
+**Message Composition (`message_dialog_qt.py`):**
+- Recipient selection with checkboxes
+- Character counter (150 char limit)
+- Send to multiple recipients or broadcast to all
+- Reply pre-populates recipient
+
+**Message Center (`message_list_window_qt.py`):**
+- Chronological message list
+- Filters: Unread, Sent, Received, Bulletins, Archived
+- Actions: View, Reply, Mark Read/Unread, Archive, Delete
+- Unread badge on Messages button
+
+**Message Display:**
+- **Card Display:** Recent messages show on recipient's card with ✉ icon
+- **Notification Banner:** Yellow banner at bottom rotates through recent messages
+- **Banner Format:** `<HH:MM> **FromName** to **ToName**: message text`
+- **Banner Duration:** 10 minutes with 5-second rotation for multiple messages
+
+### Message Flow
+
+**Sending:**
+1. User composes message in Message Dialog
+2. Message stored locally as 'sent'
+3. Transmitted via Meshtastic interface
+4. Delivery status updated on ACK/NACK
+
+**Receiving:**
+1. Data collector receives TEXT message packet
+2. Message Manager stores as 'received'
+3. Card display updated with ✉ icon
+4. Notification banner shown for 10 minutes
+5. Unread count badge updated
+
+### Display Logic
+
+Messages appear on the **recipient's card**, not the sender's:
+- Direct message TO you → Shows on your home card
+- Bulletin (`^all`) → Shows on all cards including home
+- Message FROM you → Shown in Message Center but not on cards
+
+This makes the home card function as your inbox.
+
+---
+
+## ICP Status Broadcasting System (v2.1.0+)
+
+### Purpose
+
+Enables Emergency Operations Centers (EOC) and Incident Command Posts (ICP) to monitor operational status of all stations without manual reporting.
+
+### Design Philosophy
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Status determination | Local calculation | Prevents inconsistent status across dashboards |
+| Manual data | Excluded | Stale data worse than no data; staff won't maintain |
+| Motion sensor | Informational only | Staffed/unstaffed is contextual, not good/bad |
+| Send Help flag | Manual only | Event-driven, high-value, self-clearing |
+
+### Status Calculation
+
+Uses existing color thresholds from node detail window:
+
+| Parameter | Green | Yellow | Red |
+|-----------|-------|--------|-----|
+| Battery % | >50% | 25-50% | <25% |
+| Voltage | ≥4.0V | 3.5-4.0V | <3.5V |
+| Temperature | 0-35°C | 35-45°C or <0°C | >45°C |
+
+**Aggregation:** Overall status = worst component status ("weakest link" model)
+
+### Message Protocol
+
+ICP status messages use structured format, filtered from normal message display:
+
+```
+Prefix: [ICP-STATUS]
+Format: [ICP-STATUS]<status>|<reasons>|<help>|<version>|<timestamp>
+
+Examples:
+[ICP-STATUS]GREEN||NO|2.1.0|1735689600
+[ICP-STATUS]YELLOW|Battery|NO|2.1.0|1735689600
+[ICP-STATUS]RED|Battery,Temperature|YES|2.1.0|1735689600
+```
+
+**Fields:**
+- `status`: GREEN | YELLOW | RED
+- `reasons`: Comma-separated warning reasons (empty if GREEN)
+- `help`: YES | NO (help requested flag)
+- `version`: Dashboard version string
+- `timestamp`: Unix epoch seconds
+
+### Broadcasting
+
+**Timing:**
+- **Heartbeat:** Every 15 minutes
+- **On change:** Immediate broadcast when status changes
+- **Help request:** Immediate broadcast with help flag
+
+**Implementation (`icp_status.py`):**
+- `ICPStatusBroadcaster` - Calculates and sends status
+- `ICPStatusReceiver` - Parses incoming status messages
+- Thread-safe with automatic timer management
+- Auto-clear help flag after 1 hour
+
+### Card Display
+
+Status replaces "Online/Offline" indicator with button-style display:
+
+| Condition | Background | Text | Animation |
+|-----------|------------|------|-----------|
+| Status GREEN | Green | "Online" | None |
+| Status YELLOW | Yellow | Reason: "Battery" | None |
+| Status RED | Red | Reason: "Temp" | None |
+| Help Requested | Red | "Send Help" | Blink 1Hz |
+| Node offline | Last status color | "Offline" | None |
+| Offline + was Help | Red | "Offline" | Blink continues |
+
+**Multiple reasons:** Displays comma-separated (e.g., "Battery, Temp")
+
+### Send Help Button
+
+**UI Flow:**
+1. User clicks "Send Help" button in header
+2. Confirmation dialog: "Request assistance from other ICPs/EOC?"
+3. If confirmed: Flag set, immediate broadcast, button blinks
+4. "Clear Help" button appears (local only)
+5. Clear requires confirmation
+6. Auto-clear after 1 hour
+
+**Remote dashboards:** Cannot clear another ICP's help flag (local action only)
+
+### Integration
+
+**Data Collector:**
+- Initializes `ICPStatusBroadcaster` on connection
+- Subscribes to status changes for card updates
+- Filters `[ICP-STATUS]` messages from Message Center
+
+**Card Renderer:**
+- `StatusIndicator` widget with blink animation
+- Click handler for local ICP status display
+- Color-coded status with reason text
 
 ---
 
