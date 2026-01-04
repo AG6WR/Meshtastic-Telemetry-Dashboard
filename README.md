@@ -8,6 +8,9 @@ A comprehensive Python-based monitoring system for Meshtastic mesh networks with
 
 - **Real-time Multi-Node Monitoring** - Track multiple Meshtastic nodes simultaneously
 - **CERT ICP Ready** - Professional telemetry dashboard for emergency communications
+- **Direct Messaging System** - Send and receive text messages between nodes with message center
+- **ICP Status Broadcasting** - Automatic status reporting between ICPs/EOCs with help request capability
+- **Qt/PySide6 Interface** - Modern, touch-friendly UI optimized for Raspberry Pi touchscreens
 - **Intelligent Voltage Display** - Handles both main voltage and Ch3 voltage readings
 - **Per-Node Alert Configuration** - Customize alert settings for each node individually
 - **Dark Theme Interface** - Easy on the eyes for 24/7 monitoring operations
@@ -54,26 +57,31 @@ brew install python3
 **Linux (Ubuntu/Debian):**
 ```bash
 sudo apt update
-sudo apt install python3 python3-pip python3-tkinter
+sudo apt install python3 python3-pip
 ```
 
 **Raspberry Pi:**
 ```bash
 # Usually pre-installed, but update if needed
 sudo apt update
-sudo apt install python3 python3-pip python3-tkinter git
+sudo apt install python3 python3-pip git
+# Qt6 libraries for PySide6
+sudo apt install qt6-base-dev
 ```
 
 #### 2. Required Python Libraries
 ```bash
-# Install Meshtastic Python library
-pip install meshtastic
+# Install all dependencies from requirements file
+pip install -r requirements.txt
 
-# Install matplotlib for enhanced plotting
+# Or install individually:
+pip install meshtastic
+pip install PySide6>=6.5.0
 pip install matplotlib>=3.7.0
 
 # Verify installation
 python -c "import meshtastic; print('Meshtastic installed successfully')"
+python -c "import PySide6; print('PySide6 installed successfully')"
 python -c "import matplotlib; print('Matplotlib installed successfully')"
 ```
 
@@ -94,7 +102,10 @@ cp config/app_config_template.json config/app_config.json
 # Edit configuration
 nano config/app_config.json  # or use your preferred editor
 
-# Run dashboard
+# Run dashboard (Qt version - recommended)
+python run_monitor_qt.py
+
+# Or run Tkinter version (legacy)
 python run_monitor.py
 ```
 
@@ -195,14 +206,35 @@ Deploy multiple Raspberry Pi monitoring stations:
 ## 📊 Usage
 
 ### Dashboard Interface
-- **Node Status** - Real-time connection status with color coding
-- **Telemetry Data** - Temperature, voltage, SNR, and more
+- **Node Status** - Real-time connection status with color coding and ICP status broadcasting
+- **Telemetry Data** - Temperature, voltage, SNR, current, humidity, and more
+- **Message Center** - Send and receive direct messages between nodes with message history
 - **Alert Configuration** - Per-node customizable alert settings
 - **Data Logging** - Automatic CSV logging with daily rotation
-- **Enhanced Plotting** - Professional telemetry visualization with matplotlib
+- **Enhanced Plotting** - Professional telemetry visualization with Qt/matplotlib
+- **Touch-Friendly** - Optimized for Raspberry Pi touchscreen operation
+
+### Messaging Features
+The dashboard includes a full-featured messaging system:
+- **Direct Messages** - Send private messages to individual nodes or broadcast to all
+- **Message Center** - View all conversations, mark as read/unread, archive or delete
+- **Unread Indicators** - Badge showing unread message count on Messages button
+- **Message Notifications** - Visual banner showing recent incoming messages
+- **Reply Function** - Quick reply to received messages
+- **Message History** - Persistent storage of sent and received messages
+- **Recipient Selection** - Easy checkbox-based selection for multiple recipients
+
+### ICP Status Broadcasting
+For emergency operations coordination:
+- **Automatic Status Reports** - Each ICP broadcasts its operational status every 15 minutes
+- **Status Indicators** - Green/Yellow/Red status based on battery, voltage, and temperature
+- **Send Help Request** - Manual help request broadcast with blinking indicator
+- **Remote Monitoring** - View operational status of all ICPs from any location
+- **Status Details** - Reason display shows which parameters are causing warnings
+- **Version Tracking** - Dashboard version included in status broadcasts
 
 ### Telemetry Plotting Features
-The dashboard includes professional matplotlib-based plotting with:
+The dashboard includes professional Qt/matplotlib-based plotting with:
 - **Intelligent Time Axis** - Automatically formats time labels based on data range:
   - < 24 hours: Shows times (00:00, 03:00, 06:00)
   - 1-7 days: Shows dates with times (12/06 00:00, 12/07 00:00)
@@ -233,13 +265,29 @@ The dashboard includes professional matplotlib-based plotting with:
 - All available data
 
 ### Alert Management
-1. Click **"Node Alerts"** button
+1. Click **"Alerts"** button in main dashboard
 2. Configure alerts per node:
    - ✅ **Voltage Alerts** - For nodes with voltage sensors
    - ✅ **Temperature Alerts** - Configurable thresholds
+   - ✅ **Motion Alerts** - Detect motion events
    - ✅ **Offline Alerts** - Custom timeout periods
 3. Save configuration
 4. Alerts automatically respect your settings
+
+### Sending Messages
+1. Click **"Messages"** button to open Message Center
+2. Click **"Compose"** to create a new message
+3. Select recipient(s) using checkboxes or "All Nodes" for broadcast
+4. Type your message (max 150 characters)
+5. Click **"Send"** to transmit
+6. Messages appear in recipient's message list
+
+### Viewing Message History
+1. Click **"Messages"** button (shows unread count badge)
+2. View all conversations in chronological order
+3. Click **"View"** to see message details
+4. Use **"Reply"** to respond to a message
+5. Mark messages as read/unread or archive them
 
 ## 🔧 Troubleshooting
 
@@ -267,25 +315,36 @@ sudo raspi-config
 
 ### Getting Help
 - Check logs in `logs/` directory
-- Run with `python run_monitor.py --debug` for verbose output
+- Run with `python run_monitor_qt.py --debug` for verbose output
 - Review Meshtastic connection with `meshtastic --info`
 
 ## 📝 Development
 
 ### Project Structure
 ```
-enhanced-meshtastic-dashboard/
-├── run_monitor.py           # Main application launcher
-├── dashboard.py             # GUI dashboard interface
+meshtastic-telemetry-dashboard/
+├── run_monitor_qt.py        # Qt application launcher (recommended)
+├── run_monitor.py           # Legacy Tkinter launcher
+├── dashboard_qt.py          # Qt/PySide6 dashboard interface
+├── card_renderer_qt.py      # Qt card widget renderer
+├── message_dialog_qt.py     # Qt message composition dialog
+├── message_list_window_qt.py # Qt message center window
+├── node_detail_window_qt.py # Qt node detail window
+├── plotter_qt.py            # Qt data visualization
+├── settings_dialog_qt.py    # Qt settings dialog
+├── node_alert_config_qt.py  # Qt per-node alert configuration
+├── qt_styles.py             # Centralized Qt styling
 ├── config_manager.py        # Configuration management
 ├── connection_manager.py    # Meshtastic interface handling
 ├── data_collector.py        # Telemetry data collection
+├── message_manager.py       # Message storage and retrieval
+├── icp_status.py            # ICP status broadcasting/receiving
 ├── alert_system.py          # Alert processing and notifications
-├── plotter.py              # Data visualization
-├── node_alert_config.py     # Per-node alert configuration
 ├── config/                  # Configuration files
-│   └── app_config_template.json
+│   ├── app_config_template.json
+│   └── messages.json        # Message storage (created at runtime)
 ├── logs/                    # Data logging (created at runtime)
+├── provisioner/             # Node provisioning tools
 └── docs/                    # Documentation
 ```
 

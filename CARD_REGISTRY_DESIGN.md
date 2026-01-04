@@ -1,10 +1,12 @@
 # Card Field Registry Architecture Design
 
-**STATUS: 🚧 IN DEVELOPMENT - Do not merge to main docs yet**
+**STATUS: ⚠️ OBSOLETE - Superseded by Qt/PySide6 Port (v1.3.0)**
+
+**NOTE: This design document is historical. The Tkinter-based card system has been replaced with a cleaner Qt/PySide6 architecture in `card_renderer_qt.py` (v1.3.0, December 2025) which uses a more maintainable component-based approach. This registry concept is no longer needed.**
 
 **Created:** 2025-12-13  
-**Target Version:** 1.1.0  
-**Related Files:** `dashboard.py`, `card_field_registry.py` (to be created)
+**Target Version:** 1.1.0 (Never implemented)  
+**Related Files:** `dashboard.py` (Tkinter - legacy), `card_renderer_qt.py` (Qt - current)
 
 ---
 

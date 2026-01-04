@@ -1,5 +1,7 @@
 # Messaging Feature Implementation Plan
 
+**NOTE: This document is historical. The messaging feature has been fully implemented as of v1.2.0 (December 2025) and enhanced in v2.0.1a with Qt support. See README.md and DESIGN.md for current documentation.**
+
 ## Overview
 Add text messaging capability to the Meshtastic Telemetry Dashboard with the following features:
 - Send messages to individual nodes via context menu
